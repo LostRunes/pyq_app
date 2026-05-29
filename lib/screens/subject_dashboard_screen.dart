@@ -95,8 +95,8 @@ class _SubjectDashboardScreenState
                   fontWeight: FontWeight.w600,
                 ),
                 tabs: const [
-                  Tab(text: "PYQs"),
                   Tab(text: "Topics"),
+                  Tab(text: "PYQs"),
                   Tab(text: "Notes"),
                   Tab(text: "Progress"),
                 ],
@@ -106,6 +106,7 @@ class _SubjectDashboardScreenState
               children: [
                 TabBarView(
                   children: [
+                    _TopicTab(subjectId: widget.subject.id),
                     _LinkTab(
                       title: 'Subject PYQs',
                       subtitle:
@@ -115,7 +116,6 @@ class _SubjectDashboardScreenState
                       link: widget.subject.pyqDriveLink,
                       imagePath: 'assets/images/panda.png',
                     ),
-                    _TopicTab(subjectId: widget.subject.id),
                     _LinkTab(
                       title: 'Subject Notes',
                       subtitle:
