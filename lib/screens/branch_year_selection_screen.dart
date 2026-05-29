@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/branch.dart';
-import '../models/year.dart';
 import '../core/providers.dart';
 import '../widgets/theme_toggle_button.dart';
 
@@ -17,12 +16,11 @@ class BranchYearSelectionScreen extends ConsumerStatefulWidget {
 class _BranchYearSelectionScreenState
     extends ConsumerState<BranchYearSelectionScreen> {
   Branch? selectedBranch;
-  Year? selectedYear;
+  int? selectedSemester;
 
   @override
   Widget build(BuildContext context) {
     final branchesAsync = ref.watch(branchesProvider);
-    final yearsAsync = ref.watch(yearsProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -63,7 +61,7 @@ class _BranchYearSelectionScreenState
               ),
               const SizedBox(height: 12),
               Text(
-                'Select your branch and year to start studying.',
+                'Select your branch and semester to start studying.',
                 textAlign: TextAlign.center,
                 style: Theme.of(
                   context,
@@ -102,45 +100,41 @@ class _BranchYearSelectionScreenState
               const SizedBox(height: 24),
               _buildSelectionCard(
                 context,
-                label: 'Year',
+                label: 'Semester',
                 icon: Icons.calendar_today_outlined,
-                child: yearsAsync.when(
-                  data: (years) => DropdownButtonHideUnderline(
-                    child: DropdownButtonFormField<Year>(
-                      isExpanded: true,
-                      value: selectedYear,
-                      items: years
-                          .map(
-                            (y) =>
-                                DropdownMenuItem(value: y, child: Text(y.name)),
-                          )
-                          .toList(),
-                      onChanged: (y) => setState(() => selectedYear = y),
-                      decoration: const InputDecoration(
-                        hintText: 'Select year',
-                        border: InputBorder.none,
-                        enabledBorder: InputBorder.none,
-                        focusedBorder: InputBorder.none,
-                        contentPadding: EdgeInsets.zero,
-                      ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButtonFormField<int>(
+                    isExpanded: true,
+                    value: selectedSemester,
+                    items: List.generate(8, (index) => index + 1)
+                        .map(
+                          (sem) =>
+                              DropdownMenuItem(value: sem, child: Text('Semester $sem')),
+                        )
+                        .toList(),
+                    onChanged: (sem) => setState(() => selectedSemester = sem),
+                    decoration: const InputDecoration(
+                      hintText: 'Select semester',
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      contentPadding: EdgeInsets.zero,
                     ),
                   ),
-                  loading: () => const Center(child: LinearProgressIndicator()),
-                  error: (e, _) => Text('Error: $e'),
                 ),
               ),
               const SizedBox(
                 height: 48,
               ), // Replaced Spacer with fixed height for scrollability
               ElevatedButton(
-                onPressed: (selectedBranch != null && selectedYear != null)
+                onPressed: (selectedBranch != null && selectedSemester != null)
                     ? () {
                         Navigator.pushNamed(
                           context,
                           '/subjects',
                           arguments: {
                             'branchId': selectedBranch!.id,
-                            'yearId': selectedYear!.id,
+                            'semester': selectedSemester,
                           },
                         );
                       }

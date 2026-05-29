@@ -95,8 +95,8 @@ class _SubjectDashboardScreenState
                   fontWeight: FontWeight.w600,
                 ),
                 tabs: const [
-                  Tab(text: "PYQs"),
                   Tab(text: "Topics"),
+                  Tab(text: "PYQs"),
                   Tab(text: "Notes"),
                   Tab(text: "Progress"),
                 ],
@@ -106,6 +106,7 @@ class _SubjectDashboardScreenState
               children: [
                 TabBarView(
                   children: [
+                    _TopicTab(subjectId: widget.subject.id),
                     _LinkTab(
                       title: 'Subject PYQs',
                       subtitle:
@@ -115,7 +116,6 @@ class _SubjectDashboardScreenState
                       link: widget.subject.pyqDriveLink,
                       imagePath: 'assets/images/panda.png',
                     ),
-                    _TopicTab(subjectId: widget.subject.id),
                     _LinkTab(
                       title: 'Subject Notes',
                       subtitle:
@@ -271,19 +271,33 @@ class _LinkTab extends StatelessWidget {
   }
 }
 
-class _TopicTab extends ConsumerWidget {
+class _TopicTab extends ConsumerStatefulWidget {
   final String subjectId;
 
   const _TopicTab({required this.subjectId});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final topicsAsync = ref.watch(dashboardTopicsProvider(subjectId));
+  ConsumerState<_TopicTab> createState() => _TopicTabState();
+}
+
+class _TopicTabState extends ConsumerState<_TopicTab> {
+  String _sortMode = 'Sequential'; // Default to Sequential
+
+  @override
+  Widget build(BuildContext context) {
+    final topicsAsync = ref.watch(dashboardTopicsProvider(widget.subjectId));
 
     return topicsAsync.when(
       data: (topics) {
-        if (topics.isEmpty)
+        if (topics.isEmpty) {
           return const Center(child: Text('No topics found.'));
+        }
+
+        // Sort copy of topics based on current sort mode
+        final List<Topic> displayedTopics = List<Topic>.from(topics);
+        if (_sortMode == 'Importance') {
+          displayedTopics.sort((a, b) => b.importanceScore.compareTo(a.importanceScore));
+        }
 
         // Calculate max score for normalization
         final maxScore = topics.isEmpty
@@ -299,11 +313,13 @@ class _TopicTab extends ConsumerWidget {
             _buildDownloadButton(
               context,
               ref,
-              topics.first.subjectId,
+              displayedTopics.first.subjectId,
               'Topics',
             ),
             const SizedBox(height: 16),
-            ...topics.map((topic) {
+            _buildSortingToggle(context),
+            const SizedBox(height: 16),
+            ...displayedTopics.map((topic) {
               final progress = maxScore == 0
                   ? 0.0
                   : (topic.importanceScore / maxScore).clamp(0.0, 1.0);
@@ -328,6 +344,87 @@ class _TopicTab extends ConsumerWidget {
       },
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(child: Text('Error: $e')),
+    );
+  }
+
+  Widget _buildSortingToggle(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Container(
+      height: 50,
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: theme.colorScheme.primary.withOpacity(0.1),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: GestureDetector(
+              onTap: () {
+                setState(() {
+                  _sortMode = 'Sequential';
+                });
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeInOut,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: _sortMode == 'Sequential'
+                      ? theme.colorScheme.primary
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Text(
+                  'Sequential',
+                  style: GoogleFonts.outfit(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: _sortMode == 'Sequential'
+                        ? Colors.white
+                        : theme.colorScheme.onSurface.withOpacity(0.6),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Expanded(
+            child: GestureDetector(
+              onTap: () {
+                setState(() {
+                  _sortMode = 'Importance';
+                });
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeInOut,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: _sortMode == 'Importance'
+                      ? theme.colorScheme.primary
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Text(
+                  'Importance',
+                  style: GoogleFonts.outfit(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: _sortMode == 'Importance'
+                        ? Colors.white
+                        : theme.colorScheme.onSurface.withOpacity(0.6),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

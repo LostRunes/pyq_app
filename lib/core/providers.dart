@@ -37,9 +37,9 @@ final yearsProvider = FutureProvider<List<Year>>((ref) {
   return service.getYears();
 });
 
-final subjectsProvider = FutureProvider.family<List<Subject>, ({String branchId, String yearId})>((ref, arg) {
+final subjectsProvider = FutureProvider.family<List<Subject>, ({String branchId, int semester})>((ref, arg) {
   final service = ref.watch(supabaseServiceProvider);
-  return service.getSubjects(branchId: arg.branchId, yearId: arg.yearId);
+  return service.getSubjectsBySemester(branchId: arg.branchId, semester: arg.semester);
 });
 
 final topicsProvider = FutureProvider.family<List<Topic>, String>((ref, subjectId) {
