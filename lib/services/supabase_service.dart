@@ -109,7 +109,7 @@ class SupabaseService {
   Future<List<Question>> getQuestionsByTopic(String topicId) async {
     final res = await supabase
         .from('question_topics')
-        .select('questions(id, question_text, difficulty)')
+        .select('questions(id, question_text, difficulty, question_pyq_map(pyq_sources(id, year, exam_type, season, question_number)))')
         .eq('topic_id', topicId);
     return (res as List)
         .map((e) => Question.fromJson(e['questions']))
