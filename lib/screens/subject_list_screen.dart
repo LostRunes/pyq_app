@@ -37,7 +37,7 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen> with Sing
 
     _wobbleController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 2),
+      duration: const Duration(milliseconds: 900),
     )..repeat(reverse: true);
   }
 
@@ -117,23 +117,23 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen> with Sing
           AnimatedPositioned(
             duration: const Duration(milliseconds: 350),
             curve: Curves.easeInOutCubic,
-            left: (_currentIndex * tabWidth) + (tabWidth - 80) / 2,
-            top: 15,
+            left: (_currentIndex * tabWidth) + (tabWidth - 84) / 2,
+            top: 13,
             child: AnimatedBuilder(
               animation: _wobbleController,
               builder: (context, child) {
                 final val = _wobbleController.value;
                 // Undulating organic border radius simulating a liquid water droplet
                 return Container(
-                  width: 80,
-                  height: 48,
+                  width: 84,
+                  height: 52,
                   decoration: BoxDecoration(
                     color: aquaticActiveBg,
                     borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(20 + 8 * val),
-                      topRight: Radius.circular(28 - 8 * val),
-                      bottomLeft: Radius.circular(24 - 6 * val),
-                      bottomRight: Radius.circular(22 + 6 * val),
+                      topLeft: Radius.circular(26 + 12 * val),
+                      topRight: Radius.circular(34 - 12 * val),
+                      bottomLeft: Radius.circular(30 - 10 * val),
+                      bottomRight: Radius.circular(28 + 10 * val),
                     ),
                     border: Border.all(
                       color: aquaticActive.withOpacity(0.25 * val),
