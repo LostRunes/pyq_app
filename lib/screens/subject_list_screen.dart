@@ -18,7 +18,8 @@ class SubjectListScreen extends ConsumerStatefulWidget {
   ConsumerState<SubjectListScreen> createState() => _SubjectListScreenState();
 }
 
-class _SubjectListScreenState extends ConsumerState<SubjectListScreen> with SingleTickerProviderStateMixin {
+class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
+    with SingleTickerProviderStateMixin {
   late int _currentSemester;
   int _currentIndex = 0; // 0: Subjects, 1: Dashboard, 2: Settings
 
@@ -65,7 +66,8 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen> with Sing
     return Scaffold(
       appBar: AppBar(
         title: Text(_getAppBarTitle()),
-        automaticallyImplyLeading: _currentIndex == 0, // Back button only on Subjects tab
+        automaticallyImplyLeading:
+            _currentIndex == 0, // Back button only on Subjects tab
       ),
       body: IndexedStack(
         index: _currentIndex,
@@ -84,18 +86,20 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen> with Sing
     final tabWidth = size.width / 3;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
 
-    // Aquatic Teal / Ocean Blue Color Palette
-    const aquaticBgStart = Color(0xFF0D323A);
-    const aquaticBgEnd = Color(0xFF071F24);
-    const aquaticActive = Color(0xFF00E5FF); // Bright Cyan Water Highlight
-    const aquaticActiveBg = Color(0x2200E5FF); // Translucent Aqua Water Bubble
-    const aquaticInactive = Color(0xFF759CA3);
+    // Warm Deep Orange / Roasted Sienna Color Palette
+    const orangeBgStart = Color(
+      0xFF421E0B,
+    ); // Deep Warm Sienna (pleasant dark orange)
+    const orangeBgEnd = Color(0xFF240E04); // Dark Roasted Coffee
+    const orangeActive = Color(0xFFFFB74D); // Soft Glowing Peach-Orange
+    const orangeActiveBg = Color(0x22FFB74D); // Translucent Orange Water Bubble
+    const orangeInactive = Color(0xFFA68D7D); // Muted Earthy Brown-Gray
 
     return Container(
       height: 80 + bottomPadding,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [aquaticBgStart, aquaticBgEnd],
+          colors: [orangeBgStart, orangeBgEnd],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
         ),
@@ -128,7 +132,7 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen> with Sing
                   width: 84,
                   height: 52,
                   decoration: BoxDecoration(
-                    color: aquaticActiveBg,
+                    color: orangeActiveBg,
                     borderRadius: BorderRadius.only(
                       topLeft: Radius.circular(26 + 12 * val),
                       topRight: Radius.circular(34 - 12 * val),
@@ -136,7 +140,7 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen> with Sing
                       bottomRight: Radius.circular(28 + 10 * val),
                     ),
                     border: Border.all(
-                      color: aquaticActive.withOpacity(0.25 * val),
+                      color: orangeActive.withOpacity(0.25 * val),
                       width: 1.5,
                     ),
                   ),
@@ -150,9 +154,27 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen> with Sing
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildNavBarItem(0, Icons.book_rounded, 'Subjects', aquaticActive, aquaticInactive),
-                _buildNavBarItem(1, Icons.leaderboard_rounded, 'Dashboard', aquaticActive, aquaticInactive),
-                _buildNavBarItem(2, Icons.settings_rounded, 'Settings', aquaticActive, aquaticInactive),
+                _buildNavBarItem(
+                  0,
+                  Icons.book_rounded,
+                  'Subjects',
+                  orangeActive,
+                  orangeInactive,
+                ),
+                _buildNavBarItem(
+                  1,
+                  Icons.leaderboard_rounded,
+                  'Dashboard',
+                  orangeActive,
+                  orangeInactive,
+                ),
+                _buildNavBarItem(
+                  2,
+                  Icons.settings_rounded,
+                  'Settings',
+                  orangeActive,
+                  orangeInactive,
+                ),
               ],
             ),
           ),
@@ -161,7 +183,13 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen> with Sing
     );
   }
 
-  Widget _buildNavBarItem(int index, IconData icon, String label, Color activeColor, Color inactiveColor) {
+  Widget _buildNavBarItem(
+    int index,
+    IconData icon,
+    String label,
+    Color activeColor,
+    Color inactiveColor,
+  ) {
     final isSelected = _currentIndex == index;
 
     return GestureDetector(
@@ -252,9 +280,7 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen> with Sing
                 Navigator.pushNamed(
                   context,
                   '/subject_dashboard',
-                  arguments: {
-                    'subject': subject,
-                  },
+                  arguments: {'subject': subject},
                 );
               },
               borderRadius: BorderRadius.circular(32),
@@ -297,17 +323,13 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen> with Sing
                         children: [
                           Text(
                             subject.name,
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleMedium
+                            style: Theme.of(context).textTheme.titleMedium
                                 ?.copyWith(fontWeight: FontWeight.w800),
                           ),
                           const SizedBox(height: 6),
                           Text(
                             'Code: ${subject.code}',
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
+                            style: Theme.of(context).textTheme.bodyMedium
                                 ?.copyWith(fontWeight: FontWeight.w600),
                           ),
                         ],
@@ -334,7 +356,12 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen> with Sing
 
   Widget _buildDashboardPage(BuildContext context) {
     final theme = Theme.of(context);
-    final subjectsAsync = ref.watch(subjectsProvider((branchId: widget.branchId, semester: _uploadSemester ?? _currentSemester)));
+    final subjectsAsync = ref.watch(
+      subjectsProvider((
+        branchId: widget.branchId,
+        semester: _uploadSemester ?? _currentSemester,
+      )),
+    );
 
     final List<Map<String, dynamic>> leaderboard = [
       {'rank': 1, 'roll': '22CS30024', 'points': 1480},
@@ -360,7 +387,9 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen> with Sing
             decoration: BoxDecoration(
               color: theme.colorScheme.surface,
               borderRadius: BorderRadius.circular(28),
-              border: Border.all(color: theme.colorScheme.primary.withOpacity(0.1)),
+              border: Border.all(
+                color: theme.colorScheme.primary.withOpacity(0.1),
+              ),
               boxShadow: [
                 BoxShadow(
                   color: theme.colorScheme.primary.withOpacity(0.04),
@@ -374,7 +403,10 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen> with Sing
               children: [
                 Row(
                   children: [
-                    Icon(Icons.cloud_upload_rounded, color: theme.colorScheme.primary),
+                    Icon(
+                      Icons.cloud_upload_rounded,
+                      color: theme.colorScheme.primary,
+                    ),
                     const SizedBox(width: 8),
                     Text(
                       'Upload Study Notes 📚',
@@ -394,11 +426,22 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen> with Sing
                         value: _uploadSemester,
                         decoration: const InputDecoration(
                           labelText: 'Semester',
-                          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
                         ),
-                        style: GoogleFonts.outfit(color: theme.colorScheme.onSurface, fontSize: 13),
+                        style: GoogleFonts.outfit(
+                          color: theme.colorScheme.onSurface,
+                          fontSize: 13,
+                        ),
                         items: List.generate(8, (i) => i + 1)
-                            .map((sem) => DropdownMenuItem(value: sem, child: Text('S$sem')))
+                            .map(
+                              (sem) => DropdownMenuItem(
+                                value: sem,
+                                child: Text('S$sem'),
+                              ),
+                            )
                             .toList(),
                         onChanged: (sem) {
                           setState(() {
@@ -413,19 +456,37 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen> with Sing
                       flex: 3,
                       child: subjectsAsync.when(
                         data: (subs) {
-                          if (_uploadSubject != null && !subs.any((s) => s.id == _uploadSubject!.id)) {
+                          if (_uploadSubject != null &&
+                              !subs.any((s) => s.id == _uploadSubject!.id)) {
                             _uploadSubject = null;
                           }
                           return DropdownButtonFormField<Subject>(
                             value: _uploadSubject,
-                            hint: Text('Select Subject', style: GoogleFonts.outfit(fontSize: 12)),
+                            hint: Text(
+                              'Select Subject',
+                              style: GoogleFonts.outfit(fontSize: 12),
+                            ),
                             decoration: const InputDecoration(
                               labelText: 'Subject',
-                              contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
                             ),
-                            style: GoogleFonts.outfit(color: theme.colorScheme.onSurface, fontSize: 12),
+                            style: GoogleFonts.outfit(
+                              color: theme.colorScheme.onSurface,
+                              fontSize: 12,
+                            ),
                             items: subs
-                                .map((s) => DropdownMenuItem(value: s, child: Text(s.name, overflow: TextOverflow.ellipsis)))
+                                .map(
+                                  (s) => DropdownMenuItem(
+                                    value: s,
+                                    child: Text(
+                                      s.name,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                )
                                 .toList(),
                             onChanged: (sub) {
                               setState(() {
@@ -437,12 +498,18 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen> with Sing
                         loading: () => Container(
                           height: 48,
                           alignment: Alignment.center,
-                          child: const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+                          child: const SizedBox(
+                            height: 16,
+                            width: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
                         ),
                         error: (_, __) => DropdownButtonFormField<Subject>(
                           items: const [],
                           onChanged: null,
-                          decoration: const InputDecoration(labelText: 'Error loading subjects'),
+                          decoration: const InputDecoration(
+                            labelText: 'Error loading subjects',
+                          ),
                         ),
                       ),
                     ),
@@ -457,25 +524,34 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen> with Sing
                             SnackBar(
                               content: Row(
                                 children: [
-                                  const Icon(Icons.check_circle_rounded, color: Colors.white),
+                                  const Icon(
+                                    Icons.check_circle_rounded,
+                                    color: Colors.white,
+                                  ),
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
                                       'Notes uploaded for ${_uploadSubject!.name}! Points +50 ✨',
-                                      style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+                                      style: GoogleFonts.outfit(
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                                   ),
                                 ],
                               ),
                               backgroundColor: theme.colorScheme.primary,
                               behavior: SnackBarBehavior.floating,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
                             ),
                           );
                         },
                   style: ElevatedButton.styleFrom(
                     minimumSize: const Size.fromHeight(48),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                   ),
                   child: const Text('Upload Notes'),
                 ),
@@ -588,7 +664,9 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen> with Sing
             decoration: BoxDecoration(
               color: theme.colorScheme.surface,
               borderRadius: BorderRadius.circular(28),
-              border: Border.all(color: theme.colorScheme.primary.withOpacity(0.1)),
+              border: Border.all(
+                color: theme.colorScheme.primary.withOpacity(0.1),
+              ),
               boxShadow: [
                 BoxShadow(
                   color: theme.colorScheme.primary.withOpacity(0.04),
@@ -626,10 +704,18 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen> with Sing
                 DropdownButtonFormField<int>(
                   value: _currentSemester,
                   decoration: const InputDecoration(
-                    contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 16,
+                    ),
                   ),
                   items: List.generate(8, (i) => i + 1)
-                      .map((sem) => DropdownMenuItem(value: sem, child: Text('Semester $sem')))
+                      .map(
+                        (sem) => DropdownMenuItem(
+                          value: sem,
+                          child: Text('Semester $sem'),
+                        ),
+                      )
                       .toList(),
                   onChanged: (sem) {
                     if (sem != null) {
@@ -654,7 +740,9 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen> with Sing
             decoration: BoxDecoration(
               color: theme.colorScheme.surface,
               borderRadius: BorderRadius.circular(28),
-              border: Border.all(color: theme.colorScheme.primary.withOpacity(0.1)),
+              border: Border.all(
+                color: theme.colorScheme.primary.withOpacity(0.1),
+              ),
               boxShadow: [
                 BoxShadow(
                   color: theme.colorScheme.primary.withOpacity(0.04),
@@ -682,7 +770,9 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen> with Sing
                 const SizedBox(height: 16),
                 Text(
                   'PYQ App',
-                  style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
                 Text(
                   'Version 1.0.0 (Royace Build)',
@@ -703,7 +793,11 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen> with Sing
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.favorite_rounded, color: theme.colorScheme.tertiary, size: 20),
+                    Icon(
+                      Icons.favorite_rounded,
+                      color: theme.colorScheme.tertiary,
+                      size: 20,
+                    ),
                     const SizedBox(width: 8),
                     Text(
                       'Made with Love for Students',
