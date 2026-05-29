@@ -53,6 +53,30 @@ class QuestionListScreen extends ConsumerWidget {
               itemCount: questions.length,
               itemBuilder: (context, i) {
                 final question = questions[i];
+                final theme = Theme.of(context);
+                final firstSource = question.pyqSources.isNotEmpty ? question.pyqSources.first : null;
+                
+                String qNum = '';
+                String examInfo = '';
+                if (firstSource != null) {
+                  qNum = firstSource.questionNumber.trim();
+                  if (qNum.isNotEmpty) {
+                    if (RegExp(r'^\d+$').hasMatch(qNum)) {
+                      qNum = 'Q. $qNum';
+                    } else if (!qNum.toLowerCase().startsWith('q')) {
+                      qNum = 'Q. $qNum';
+                    }
+                  }
+                  
+                  if (firstSource.examType.isNotEmpty && firstSource.year.isNotEmpty) {
+                    examInfo = '${firstSource.examType} ${firstSource.year}';
+                  } else if (firstSource.year.isNotEmpty) {
+                    examInfo = firstSource.year;
+                  } else if (firstSource.examType.isNotEmpty) {
+                    examInfo = firstSource.examType;
+                  }
+                }
+
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 16),
                   child: InkWell(
@@ -67,11 +91,11 @@ class QuestionListScreen extends ConsumerWidget {
                     child: Container(
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.surface,
+                        color: theme.colorScheme.surface,
                         borderRadius: BorderRadius.circular(28),
                         boxShadow: [
                           BoxShadow(
-                            color: Theme.of(context).colorScheme.primary.withOpacity(0.05),
+                            color: theme.colorScheme.primary.withOpacity(0.05),
                             blurRadius: 15,
                             offset: const Offset(0, 8),
                           ),
@@ -82,29 +106,47 @@ class QuestionListScreen extends ConsumerWidget {
                         children: [
                           Row(
                             children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: _getDifficultyColor(question.difficulty).withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  question.difficulty.toUpperCase(),
-                                  style: GoogleFonts.outfit(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                    color: _getDifficultyColor(question.difficulty),
-                                  ),
+                              Expanded(
+                                child: Wrap(
+                                  spacing: 8,
+                                  runSpacing: 6,
+                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                  children: [
+                                    if (qNum.isNotEmpty)
+                                      _buildTag(
+                                        context,
+                                        qNum,
+                                        theme.colorScheme.tertiary.withOpacity(0.2),
+                                        theme.colorScheme.onSurface.withOpacity(0.6),
+                                      ),
+                                    if (examInfo.isNotEmpty)
+                                      _buildTag(
+                                        context,
+                                        examInfo,
+                                        theme.colorScheme.primary.withOpacity(0.1),
+                                        theme.colorScheme.primary,
+                                      ),
+                                    _buildTag(
+                                      context,
+                                      question.difficulty.toUpperCase(),
+                                      _getDifficultyColor(question.difficulty).withOpacity(0.1),
+                                      _getDifficultyColor(question.difficulty),
+                                    ),
+                                  ],
                                 ),
                               ),
-                              const Spacer(),
-                              Icon(Icons.arrow_forward_ios_rounded, size: 16, color: Theme.of(context).colorScheme.primary.withOpacity(0.3)),
+                              const SizedBox(width: 8),
+                              Icon(
+                                Icons.arrow_forward_ios_rounded,
+                                size: 16,
+                                color: theme.colorScheme.primary.withOpacity(0.3),
+                              ),
                             ],
                           ),
                           const SizedBox(height: 12),
                           Text(
                             question.questionText,
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            style: theme.textTheme.titleMedium?.copyWith(
                                   fontWeight: FontWeight.w600,
                                   height: 1.4,
                                 ),
@@ -124,6 +166,24 @@ class QuestionListScreen extends ConsumerWidget {
           if (isLoading)
             const LoadingOverlay(message: 'Preparing your topic PDF... ✨'),
         ],
+      ),
+    );
+  }
+
+  Widget _buildTag(BuildContext context, String text, Color bgColor, Color textColor) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        text,
+        style: GoogleFonts.outfit(
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+          color: textColor,
+        ),
       ),
     );
   }
