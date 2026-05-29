@@ -18,7 +18,7 @@ class SubjectListScreen extends ConsumerStatefulWidget {
   ConsumerState<SubjectListScreen> createState() => _SubjectListScreenState();
 }
 
-class _SubjectListScreenState extends ConsumerState<SubjectListScreen> {
+class _SubjectListScreenState extends ConsumerState<SubjectListScreen> with SingleTickerProviderStateMixin {
   late int _currentSemester;
   int _currentIndex = 0; // 0: Subjects, 1: Dashboard, 2: Settings
 
@@ -26,11 +26,25 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen> {
   int? _uploadSemester;
   Subject? _uploadSubject;
 
+  // Animation controller for fluid water bubble wobble
+  late AnimationController _wobbleController;
+
   @override
   void initState() {
     super.initState();
     _currentSemester = widget.semester;
     _uploadSemester = _currentSemester;
+
+    _wobbleController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _wobbleController.dispose();
+    super.dispose();
   }
 
   String _getAppBarTitle() {
@@ -66,44 +80,89 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen> {
   }
 
   Widget _buildCuteBottomNavBar(BuildContext context) {
-    final theme = Theme.of(context);
-    final primaryColor = theme.colorScheme.primary;
+    final size = MediaQuery.of(context).size;
+    final tabWidth = size.width / 3;
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
 
-    return Padding(
-      padding: const EdgeInsets.only(left: 24, right: 24, bottom: 28, top: 8),
-      child: Container(
-        height: 72,
-        decoration: BoxDecoration(
-          color: theme.colorScheme.surface,
-          borderRadius: BorderRadius.circular(36),
-          boxShadow: [
-            BoxShadow(
-              color: primaryColor.withOpacity(0.12),
-              blurRadius: 20,
-              offset: const Offset(0, 10),
-            ),
-          ],
-          border: Border.all(
-            color: primaryColor.withOpacity(0.08),
-            width: 1.5,
+    // Aquatic Teal / Ocean Blue Color Palette
+    const aquaticBgStart = Color(0xFF0D323A);
+    const aquaticBgEnd = Color(0xFF071F24);
+    const aquaticActive = Color(0xFF00E5FF); // Bright Cyan Water Highlight
+    const aquaticActiveBg = Color(0x2200E5FF); // Translucent Aqua Water Bubble
+    const aquaticInactive = Color(0xFF759CA3);
+
+    return Container(
+      height: 80 + bottomPadding,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [aquaticBgStart, aquaticBgEnd],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(32),
+          topRight: Radius.circular(32),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black26,
+            blurRadius: 15,
+            offset: Offset(0, -4),
           ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _buildNavBarItem(0, Icons.book_rounded, 'Subjects'),
-            _buildNavBarItem(1, Icons.leaderboard_rounded, 'Dashboard'),
-            _buildNavBarItem(2, Icons.settings_rounded, 'Settings'),
-          ],
-        ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          // Animated Fluid Water Drop behind the active tab
+          AnimatedPositioned(
+            duration: const Duration(milliseconds: 350),
+            curve: Curves.easeInOutCubic,
+            left: (_currentIndex * tabWidth) + (tabWidth - 80) / 2,
+            top: 15,
+            child: AnimatedBuilder(
+              animation: _wobbleController,
+              builder: (context, child) {
+                final val = _wobbleController.value;
+                // Undulating organic border radius simulating a liquid water droplet
+                return Container(
+                  width: 80,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: aquaticActiveBg,
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(20 + 8 * val),
+                      topRight: Radius.circular(28 - 8 * val),
+                      bottomLeft: Radius.circular(24 - 6 * val),
+                      bottomRight: Radius.circular(22 + 6 * val),
+                    ),
+                    border: Border.all(
+                      color: aquaticActive.withOpacity(0.25 * val),
+                      width: 1.5,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          // Nav Bar Items
+          Positioned.fill(
+            bottom: bottomPadding,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildNavBarItem(0, Icons.book_rounded, 'Subjects', aquaticActive, aquaticInactive),
+                _buildNavBarItem(1, Icons.leaderboard_rounded, 'Dashboard', aquaticActive, aquaticInactive),
+                _buildNavBarItem(2, Icons.settings_rounded, 'Settings', aquaticActive, aquaticInactive),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildNavBarItem(int index, IconData icon, String label) {
-    final theme = Theme.of(context);
+  Widget _buildNavBarItem(int index, IconData icon, String label, Color activeColor, Color inactiveColor) {
     final isSelected = _currentIndex == index;
-    final primaryColor = theme.colorScheme.primary;
 
     return GestureDetector(
       onTap: () {
@@ -111,41 +170,32 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen> {
           _currentIndex = index;
         });
       },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOutBack,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          color: isSelected ? primaryColor.withOpacity(0.12) : Colors.transparent,
-          borderRadius: BorderRadius.circular(24),
-        ),
-        child: Row(
+      behavior: HitTestBehavior.opaque,
+      child: SizedBox(
+        width: MediaQuery.of(context).size.width / 3,
+        height: 80,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             AnimatedScale(
-              scale: isSelected ? 1.15 : 1.0,
-              duration: const Duration(milliseconds: 300),
+              scale: isSelected ? 1.25 : 1.0,
+              duration: const Duration(milliseconds: 250),
               curve: Curves.easeOutBack,
               child: Icon(
                 icon,
-                color: isSelected ? primaryColor : theme.colorScheme.onSurface.withOpacity(0.5),
+                color: isSelected ? activeColor : inactiveColor,
                 size: 24,
               ),
             ),
-            if (isSelected) ...[
-              const SizedBox(width: 8),
-              AnimatedOpacity(
-                opacity: isSelected ? 1.0 : 0.0,
-                duration: const Duration(milliseconds: 300),
-                child: Text(
-                  label,
-                  style: GoogleFonts.outfit(
-                    color: primaryColor,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                  ),
-                ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: GoogleFonts.outfit(
+                color: isSelected ? activeColor : inactiveColor,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                fontSize: 11,
               ),
-            ],
+            ),
           ],
         ),
       ),
