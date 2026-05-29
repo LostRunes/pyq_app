@@ -6,17 +6,17 @@ import '../core/providers.dart';
 
 class SubjectListScreen extends ConsumerWidget {
   final String branchId;
-  final String yearId;
+  final int semester;
   const SubjectListScreen({
     super.key,
     required this.branchId,
-    required this.yearId,
+    required this.semester,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final subjectsAsync = ref.watch(
-      subjectsProvider((branchId: branchId, yearId: yearId)),
+      subjectsProvider((branchId: branchId, semester: semester)),
     );
     return Scaffold(
       appBar: AppBar(

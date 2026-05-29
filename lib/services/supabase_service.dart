@@ -23,12 +23,12 @@ class SupabaseService {
     return (res as List).map((e) => Year.fromJson(e)).toList();
   }
 
-  Future<List<Subject>> getSubjects({required String branchId, required String yearId}) async {
+  Future<List<Subject>> getSubjectsBySemester({required String branchId, required int semester}) async {
     final res = await supabase
         .from('branch_subjects')
-        .select('subjects(id, name, code, pyq_drive_link, notes_drive_link, course_outcome_link), semester')
+        .select('subjects(id, name, code, pyq_drive_link, notes_drive_link, course_outcome_link)')
         .eq('branch_id', branchId)
-        .eq('year_id', yearId);
+        .eq('semester', semester);
     return (res as List)
         .map((e) => Subject.fromJson(e['subjects']))
         .toList();

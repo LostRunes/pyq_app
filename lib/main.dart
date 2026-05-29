@@ -54,7 +54,7 @@ class PyqApp extends ConsumerWidget {
                   as Map<String, dynamic>;
           return SubjectListScreen(
             branchId: args['branchId'],
-            yearId: args['yearId'],
+            semester: args['semester'],
           );
         },
         '/subject_dashboard': (context) {
