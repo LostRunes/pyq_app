@@ -22,7 +22,6 @@ class SubjectDashboardScreen extends ConsumerStatefulWidget {
 
 class _SubjectDashboardScreenState
     extends ConsumerState<SubjectDashboardScreen> {
-
   @override
   void initState() {
     super.initState();
@@ -88,9 +87,7 @@ class _SubjectDashboardScreenState
     return DefaultTabController(
       length: tabs.length,
       child: Scaffold(
-        appBar: AppBar(
-          automaticallyImplyLeading: true,
-        ),
+        appBar: AppBar(automaticallyImplyLeading: true),
         body: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -119,9 +116,7 @@ class _SubjectDashboardScreenState
             Expanded(
               child: Stack(
                 children: [
-                  TabBarView(
-                    children: tabViews,
-                  ),
+                  TabBarView(children: tabViews),
                   Consumer(
                     builder: (context, ref, child) {
                       final isLoading = ref.watch(pdfLoadingProvider);
