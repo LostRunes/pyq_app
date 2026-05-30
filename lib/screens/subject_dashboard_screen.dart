@@ -9,6 +9,8 @@ import '../widgets/topic_card.dart';
 import '../widgets/topic_detail_sheet.dart';
 import '../services/pdf_service.dart';
 import '../widgets/loading_overlay.dart';
+import '../services/drive_service.dart';
+import '../utils/drive_utils.dart';
 
 class SubjectDashboardScreen extends ConsumerStatefulWidget {
   final Subject subject;
@@ -25,14 +27,6 @@ class _SubjectDashboardScreenState
   @override
   void initState() {
     super.initState();
-  }
-
-  Future<void> _launchUrl(String? urlString) async {
-    if (urlString == null || urlString.isEmpty) return;
-    final Uri url = Uri.parse(urlString);
-    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
-      throw Exception('Could not launch $urlString');
-    }
   }
 
   @override
@@ -53,23 +47,13 @@ class _SubjectDashboardScreenState
 
     final tabViews = [
       _TopicTab(subjectId: widget.subject.id),
-      _LinkTab(
+      _DriveExplorerTab(
         title: 'Subject PYQs',
-        subtitle:
-            'Access the complete Google Drive folder for previous year questions.',
-        buttonLabel: 'Open PYQ Drive',
-        icon: Icons.folder_shared_rounded,
-        link: widget.subject.pyqDriveLink,
-        imagePath: 'assets/images/panda.png',
+        driveLink: widget.subject.pyqDriveLink,
       ),
-      _LinkTab(
+      _DriveExplorerTab(
         title: 'Subject Notes',
-        subtitle:
-            'Access study materials, lecture notes, and hand-written guides.',
-        buttonLabel: 'Open Notes Drive',
-        icon: Icons.menu_book_rounded,
-        link: widget.subject.notesDriveLink,
-        imagePath: 'assets/images/raccoon.png',
+        driveLink: widget.subject.notesDriveLink,
       ),
       if (hasHandout)
         _LinkTab(
@@ -183,12 +167,13 @@ class _LinkTab extends StatelessWidget {
             child: ElevatedButton.icon(
               onPressed: (link != null && link!.isNotEmpty)
                   ? () async {
+                      final messenger = ScaffoldMessenger.of(context);
                       final Uri url = Uri.parse(link!);
                       if (!await launchUrl(
                         url,
                         mode: LaunchMode.externalApplication,
                       )) {
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        messenger.showSnackBar(
                           const SnackBar(
                             content: Text('Could not open the link.'),
                           ),
@@ -208,6 +193,269 @@ class _LinkTab extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _DriveExplorerTab extends StatefulWidget {
+  final String title;
+  final String? driveLink;
+
+  const _DriveExplorerTab({
+    required this.title,
+    required this.driveLink,
+  });
+
+  @override
+  State<_DriveExplorerTab> createState() => _DriveExplorerTabState();
+}
+
+class _DriveExplorerTabState extends State<_DriveExplorerTab> {
+  final driveService = DriveService();
+  List files = [];
+  bool isLoading = true;
+  String? errorMessage;
+  late String currentFolderId;
+
+  @override
+  void initState() {
+    super.initState();
+    _initAndLoad();
+  }
+
+  void _initAndLoad() {
+    if (widget.driveLink != null && widget.driveLink!.isNotEmpty) {
+      try {
+        currentFolderId = extractFolderId(widget.driveLink!);
+        loadFiles();
+      } catch (e) {
+        setState(() {
+          isLoading = false;
+          errorMessage = e.toString();
+        });
+      }
+    } else {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
+  Future<void> loadFiles() async {
+    setState(() {
+      isLoading = true;
+      errorMessage = null;
+    });
+
+    try {
+      final data = await driveService.fetchFolderContents(currentFolderId);
+      data.sort((a, b) {
+        final aFolder = a["mimeType"] == "application/vnd.google-apps.folder";
+        final bFolder = b["mimeType"] == "application/vnd.google-apps.folder";
+        if (aFolder == bFolder) return 0;
+        return aFolder ? -1 : 1;
+      });
+
+      setState(() {
+        files = data;
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        isLoading = false;
+        errorMessage = "Failed to load files: $e";
+      });
+    }
+  }
+
+  Future<void> openItem(Map item) async {
+    final isFolder = item["mimeType"] == "application/vnd.google-apps.folder";
+
+    if (isFolder) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => Scaffold(
+            appBar: AppBar(
+              title: Text(
+                item["name"],
+                style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+              ),
+            ),
+            body: _DriveExplorerTab(
+              title: item["name"],
+              driveLink: "https://drive.google.com/drive/folders/${item["id"]}",
+            ),
+          ),
+        ),
+      );
+    } else {
+      final url = item["webViewLink"];
+      if (url != null && url.isNotEmpty) {
+        await launchUrl(
+          Uri.parse(url),
+          mode: LaunchMode.externalApplication,
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    if (widget.driveLink == null || widget.driveLink!.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.link_off_rounded, size: 64, color: theme.colorScheme.onSurface.withOpacity(0.3)),
+              const SizedBox(height: 16),
+              Text(
+                "No Drive folder linked.",
+                style: GoogleFonts.outfit(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: theme.colorScheme.onSurface.withOpacity(0.5),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (isLoading) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: 20),
+            Text(
+              "Fetching files from Google Drive...",
+              style: GoogleFonts.outfit(
+                color: theme.colorScheme.onSurface.withOpacity(0.6),
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (errorMessage != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.error_outline_rounded, size: 64, color: theme.colorScheme.error),
+              const SizedBox(height: 16),
+              Text(
+                "Something went wrong",
+                style: GoogleFonts.outfit(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: theme.colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                errorMessage!,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.outfit(
+                  color: theme.colorScheme.onSurface.withOpacity(0.6),
+                ),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: loadFiles,
+                icon: const Icon(Icons.refresh_rounded),
+                label: const Text("Retry"),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (files.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.folder_open_rounded, size: 64, color: theme.colorScheme.onSurface.withOpacity(0.3)),
+            const SizedBox(height: 16),
+            Text(
+              "This folder is empty.",
+              style: GoogleFonts.outfit(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: theme.colorScheme.onSurface.withOpacity(0.5),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: files.length,
+      itemBuilder: (context, index) {
+        final item = files[index];
+        final isFolder = item["mimeType"] == "application/vnd.google-apps.folder";
+
+        return Card(
+          elevation: 0,
+          margin: const EdgeInsets.only(bottom: 12),
+          color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: BorderSide(
+              color: theme.colorScheme.outlineVariant.withOpacity(0.3),
+            ),
+          ),
+          child: ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            leading: Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: (isFolder ? Colors.amber : Colors.blue).withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                isFolder ? Icons.folder_rounded : Icons.description_rounded,
+                color: isFolder ? Colors.amber[700] : Colors.blue[700],
+                size: 24,
+              ),
+            ),
+            title: Text(
+              item["name"] ?? "Unnamed Item",
+              style: GoogleFonts.outfit(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: theme.colorScheme.onSurface,
+              ),
+            ),
+            trailing: Icon(
+              Icons.chevron_right_rounded,
+              color: theme.colorScheme.onSurface.withOpacity(0.3),
+            ),
+            onTap: () => openItem(item),
+          ),
+        );
+      },
     );
   }
 }
