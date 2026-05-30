@@ -51,54 +51,54 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
 
   @override
   Widget build(BuildContext context) {
-    final brandTitle = Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(10),
-          child: Image.asset(
-            'assets/images/reva_logo.png',
-            height: 38,
-            width: 38,
-            fit: BoxFit.cover,
-          ),
-        ),
-        const SizedBox(width: 10),
-        Text(
-          'REVA',
-          style: GoogleFonts.outfit(
-            fontWeight: FontWeight.w900,
-            fontSize: 22,
-            letterSpacing: 1.2,
-          ),
-        ),
-      ],
-    );
-
     return Scaffold(
       appBar: AppBar(
-        title: brandTitle,
-        centerTitle: false,
-        automaticallyImplyLeading:
-            _currentIndex == 0, // Back button only on Subjects tab
+        automaticallyImplyLeading: false,
+        leadingWidth: 110,
+        leading: Row(
+          children: [
+            const SizedBox(width: 8),
+            IconButton(
+              icon: const Icon(Icons.notifications_none_rounded),
+              onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('No new notifications. 🔔')),
+                );
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.search_rounded),
+              onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Search feature coming soon! 🔍')),
+                );
+              },
+            ),
+          ],
+        ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.search_rounded),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Search feature coming soon! 🔍')),
-              );
-            },
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'REVA',
+                style: GoogleFonts.outfit(
+                  fontWeight: FontWeight.w900,
+                  fontSize: 22,
+                  letterSpacing: 1.2,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Image.asset(
+                'assets/images/reva_logo.png',
+                height: 38,
+                width: 38,
+                fit: BoxFit.contain,
+              ),
+              const SizedBox(width: 16),
+            ],
           ),
-          IconButton(
-            icon: const Icon(Icons.notifications_none_rounded),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('No new notifications. 🔔')),
-              );
-            },
-          ),
-          const SizedBox(width: 8),
         ],
       ),
       body: IndexedStack(
@@ -296,6 +296,33 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
                       fontSize: 32,
                       fontWeight: FontWeight.w900,
                       color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    behavior: HitTestBehavior.opaque,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.arrow_back_ios_new_rounded,
+                            size: 16,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Back',
+                            style: GoogleFonts.outfit(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
