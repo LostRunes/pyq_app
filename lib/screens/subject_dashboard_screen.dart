@@ -63,7 +63,6 @@ class _SubjectDashboardScreenState
 
   @override
   Widget build(BuildContext context) {
-    final isLoading = ref.watch(pdfLoadingProvider);
     final theme = Theme.of(context);
 
     final hasHandout =
@@ -128,10 +127,17 @@ class _SubjectDashboardScreenState
                     _ProgressTab(subjectId: widget.subject.id),
                   ],
                 ),
-                if (isLoading)
-                  const LoadingOverlay(
-                    message: 'Generating your subject PDF... ✨',
-                  ),
+                Consumer(
+                  builder: (context, ref, child) {
+                    final isLoading = ref.watch(pdfLoadingProvider);
+                    if (isLoading) {
+                      return const LoadingOverlay(
+                        message: 'Generating your subject PDF... ✨',
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  },
+                ),
               ],
             ),
           ),
