@@ -424,6 +424,7 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
                       flex: 2,
                       child: DropdownButtonFormField<int>(
                         value: _uploadSemester,
+                        isExpanded: true,
                         decoration: const InputDecoration(
                           labelText: 'Semester',
                           contentPadding: EdgeInsets.symmetric(
@@ -462,6 +463,7 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
                           }
                           return DropdownButtonFormField<Subject>(
                             value: _uploadSubject,
+                            isExpanded: true,
                             hint: Text(
                               'Select Subject',
                               style: GoogleFonts.outfit(fontSize: 12),
@@ -505,6 +507,7 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
                           ),
                         ),
                         error: (_, __) => DropdownButtonFormField<Subject>(
+                          isExpanded: true,
                           items: const [],
                           onChanged: null,
                           decoration: const InputDecoration(
