@@ -8,6 +8,7 @@ import 'screens/topic_list_screen.dart';
 import 'screens/question_list_screen.dart';
 import 'screens/question_detail_screen.dart';
 import 'screens/subject_dashboard_screen.dart';
+import 'screens/splash_screen.dart';
 import 'models/subject.dart';
 import 'core/providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -40,14 +41,15 @@ class PyqApp extends ConsumerWidget {
     final themeMode = ref.watch(themeModeProvider);
 
     return MaterialApp(
-      title: 'PYQ App',
+      title: 'REVA',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
       themeMode: themeMode,
       initialRoute: '/',
       routes: {
-        '/': (context) => const BranchYearSelectionScreen(),
+        '/': (context) => const SplashScreen(),
+        '/selection': (context) => const BranchYearSelectionScreen(),
         '/subjects': (context) {
           final args =
               ModalRoute.of(context)!.settings.arguments

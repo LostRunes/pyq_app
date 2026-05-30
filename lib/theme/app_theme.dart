@@ -12,8 +12,8 @@ class AppTheme {
   static const Color lightText = Color(0xFF3D2F27); // Dark Coffee
   static const Color lightSubText = Color(0xFF7A6456); // Muted Earth Brown
 
-  static const Color darkBg = Color(0xFF261F1B); // Rich Deep Cocoa
-  static const Color darkSurface = Color(0xFF332A25); // Warm Dark Brown
+  static const Color darkBg = Color(0xFF1E110A); // Pleasant Dark Sienna Orange
+  static const Color darkSurface = Color(0xFF2B1A12); // Lighter Warm Dark Orange
   static const Color darkText = Color(0xFFFBF8F5); // Crisp Off-white
   static const Color darkSubText = Color(0xFFBCA99C);
 

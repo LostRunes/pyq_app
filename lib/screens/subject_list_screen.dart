@@ -21,7 +21,7 @@ class SubjectListScreen extends ConsumerStatefulWidget {
 class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
     with SingleTickerProviderStateMixin {
   late int _currentSemester;
-  int _currentIndex = 0; // 0: Subjects, 1: Dashboard, 2: Settings
+  int _currentIndex = 0; // 0: Subjects, 1: Syllabus, 2: Dashboard, 3: Settings
 
   // For dummy upload notes form
   int? _uploadSemester;
@@ -48,31 +48,65 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
     super.dispose();
   }
 
-  String _getAppBarTitle() {
-    switch (_currentIndex) {
-      case 0:
-        return 'Subjects';
-      case 1:
-        return 'Dashboard';
-      case 2:
-        return 'Settings';
-      default:
-        return 'Subjects';
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_getAppBarTitle()),
-        automaticallyImplyLeading:
-            _currentIndex == 0, // Back button only on Subjects tab
+        automaticallyImplyLeading: false,
+        leadingWidth: 110,
+        leading: Row(
+          children: [
+            const SizedBox(width: 8),
+            IconButton(
+              icon: const Icon(Icons.notifications_none_rounded),
+              onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('No new notifications. 🔔')),
+                );
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.search_rounded),
+              onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Search feature coming soon! 🔍'),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+        actions: [
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'REVA',
+                style: GoogleFonts.outfit(
+                  fontWeight: FontWeight.w900,
+                  fontSize: 22,
+                  letterSpacing: 1.2,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Image.asset(
+                'assets/images/reva_logo.png',
+                height: 38,
+                width: 38,
+                fit: BoxFit.contain,
+              ),
+              const SizedBox(width: 16),
+            ],
+          ),
+        ],
       ),
       body: IndexedStack(
         index: _currentIndex,
         children: [
           _buildSubjectsPage(context),
+          _buildSemestersPage(context),
           _buildDashboardPage(context),
           _buildSettingsPage(context),
         ],
@@ -83,35 +117,47 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
 
   Widget _buildCuteBottomNavBar(BuildContext context) {
     final size = MediaQuery.of(context).size;
-    final tabWidth = size.width / 3;
+    final tabWidth = size.width / 4;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Warm Deep Orange / Roasted Sienna Color Palette
-    const orangeBgStart = Color(
-      0xFF421E0B,
-    ); // Deep Warm Sienna (pleasant dark orange)
-    const orangeBgEnd = Color(0xFF240E04); // Dark Roasted Coffee
-    const orangeActive = Color(0xFFFFB74D); // Soft Glowing Peach-Orange
-    const orangeActiveBg = Color(0x22FFB74D); // Translucent Orange Water Bubble
-    const orangeInactive = Color(0xFFA68D7D); // Muted Earthy Brown-Gray
+    // Lighter theme-matching palette in light mode, original warm deep palette in dark mode
+    final Color orangeBgStart = isDark
+        ? const Color(0xFF421E0B)
+        : const Color.fromARGB(255, 251, 203, 158);
+    final Color orangeBgEnd = isDark
+        ? const Color(0xFF240E04)
+        : const Color.fromARGB(255, 238, 206, 154);
+    final Color orangeActive = isDark
+        ? const Color(0xFFFFB74D)
+        : const Color.fromARGB(255, 90, 41, 0);
+    final Color orangeActiveBg = isDark
+        ? const Color(0x22FFB74D)
+        : const Color(0x1AD37D3E);
+    final Color orangeInactive = isDark
+        ? const Color.fromARGB(255, 231, 171, 133)
+        : const Color(0x997A6456);
+    final Color shadowColor = isDark
+        ? Colors.black38
+        : Colors.black.withOpacity(0.06);
 
     return Container(
       height: 80 + bottomPadding,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [orangeBgStart, orangeBgEnd],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
         ),
-        borderRadius: BorderRadius.only(
+        borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(32),
           topRight: Radius.circular(32),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black26,
+            color: shadowColor,
             blurRadius: 15,
-            offset: Offset(0, -4),
+            offset: const Offset(0, -4),
           ),
         ],
       ),
@@ -163,13 +209,20 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
                 ),
                 _buildNavBarItem(
                   1,
+                  Icons.collections_bookmark_rounded,
+                  'Syllabus',
+                  orangeActive,
+                  orangeInactive,
+                ),
+                _buildNavBarItem(
+                  2,
                   Icons.leaderboard_rounded,
                   'Dashboard',
                   orangeActive,
                   orangeInactive,
                 ),
                 _buildNavBarItem(
-                  2,
+                  3,
                   Icons.settings_rounded,
                   'Settings',
                   orangeActive,
@@ -200,7 +253,7 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
       },
       behavior: HitTestBehavior.opaque,
       child: SizedBox(
-        width: MediaQuery.of(context).size.width / 3,
+        width: MediaQuery.of(context).size.width / 4,
         height: 80,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -235,122 +288,283 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
       subjectsProvider((branchId: widget.branchId, semester: _currentSemester)),
     );
 
-    return subjectsAsync.when(
-      data: (subjects) => ListView.builder(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        itemCount: subjects.length + 1,
-        itemBuilder: (context, i) {
-          if (i == 0) {
-            return Container(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+    return RefreshIndicator(
+      onRefresh: () async {
+        await ref.refresh(
+          subjectsProvider((
+            branchId: widget.branchId,
+            semester: _currentSemester,
+          )).future,
+        );
+      },
+      child: subjectsAsync.when(
+        data: (subjects) => ListView.builder(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          itemCount: subjects.length + 1,
+          itemBuilder: (context, i) {
+            if (i == 0) {
+              return Container(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
                       children: [
                         Text(
-                          'Choose your path!',
-                          style: Theme.of(context).textTheme.headlineSmall
-                              ?.copyWith(fontWeight: FontWeight.w900),
+                          'Subjects',
+                          style: GoogleFonts.outfit(
+                            fontSize: 32,
+                            fontWeight: FontWeight.w900,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Select a subject to begin.',
-                          style: Theme.of(context).textTheme.bodyMedium,
+                        const Spacer(),
+                        GestureDetector(
+                          onTap: () => Navigator.pop(context),
+                          behavior: HitTestBehavior.opaque,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 4,
+                              horizontal: 8,
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.arrow_back_ios_new_rounded,
+                                  size: 16,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Back',
+                                  style: GoogleFonts.outfit(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.primary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       ],
                     ),
-                  ),
-                  SizedBox(
-                    height: 140,
-                    width: 140,
-                    child: Image.asset('assets/images/panda.png'),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          final subject = subjects[i - 1];
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 16),
-            child: InkWell(
-              onTap: () {
-                Navigator.pushNamed(
-                  context,
-                  '/subject_dashboard',
-                  arguments: {'subject': subject},
-                );
-              },
-              borderRadius: BorderRadius.circular(32),
-              child: Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface,
-                  borderRadius: BorderRadius.circular(32),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.primary.withOpacity(0.08),
-                      blurRadius: 20,
-                      offset: const Offset(0, 10),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Choose your path!',
+                                style: Theme.of(context).textTheme.headlineSmall
+                                    ?.copyWith(fontWeight: FontWeight.w900),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Select a subject to begin.',
+                                style: Theme.of(context).textTheme.bodyMedium,
+                              ),
+                            ],
+                          ),
+                        ),
+                        SizedBox(
+                          height: 140,
+                          width: 140,
+                          child: Image.asset('assets/images/panda.png'),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 64,
-                      height: 64,
-                      decoration: BoxDecoration(
+              );
+            }
+
+            final subject = subjects[i - 1];
+            final isIconLeft = (i - 1) % 2 == 0;
+
+            final iconWidget = Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: Theme.of(
+                  context,
+                ).colorScheme.secondary.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Icon(
+                Icons.book_rounded,
+                color: Theme.of(context).colorScheme.primary,
+                size: 32,
+              ),
+            );
+
+            final textWidget = Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  subject.name,
+                  style: Theme.of(context).textTheme.titleMedium
+                      ?.copyWith(fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Code: ${subject.code}',
+                  style: Theme.of(context).textTheme.bodyMedium
+                      ?.copyWith(fontWeight: FontWeight.w600),
+                ),
+              ],
+            );
+
+            /*
+            // Old Version: Standard layout (Icon then Text, with trailing arrow)
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: InkWell(
+                onTap: () {
+                  Navigator.pushNamed(
+                    context,
+                    '/subject_dashboard',
+                    arguments: {'subject': subject},
+                  );
+                },
+                borderRadius: BorderRadius.circular(32),
+                child: Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surface,
+                    borderRadius: BorderRadius.circular(32),
+                    boxShadow: [
+                      BoxShadow(
                         color: Theme.of(
                           context,
-                        ).colorScheme.secondary.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(20),
+                        ).colorScheme.primary.withOpacity(0.08),
+                        blurRadius: 20,
+                        offset: const Offset(0, 10),
                       ),
-                      child: Icon(
-                        Icons.book_rounded,
-                        color: Theme.of(context).colorScheme.primary,
-                        size: 32,
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 64,
+                        height: 64,
+                        decoration: BoxDecoration(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.secondary.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Icon(
+                          Icons.book_rounded,
+                          color: Theme.of(context).colorScheme.primary,
+                          size: 32,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 20),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            subject.name,
-                            style: Theme.of(context).textTheme.titleMedium
-                                ?.copyWith(fontWeight: FontWeight.w800),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            'Code: ${subject.code}',
-                            style: Theme.of(context).textTheme.bodyMedium
-                                ?.copyWith(fontWeight: FontWeight.w600),
-                          ),
-                        ],
+                      const SizedBox(width: 20),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              subject.name,
+                              style: Theme.of(context).textTheme.titleMedium
+                                  ?.copyWith(fontWeight: FontWeight.w800),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Code: ${subject.code}',
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(fontWeight: FontWeight.w600),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    Icon(
-                      Icons.arrow_forward_ios_rounded,
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.primary.withOpacity(0.4),
-                      size: 20,
-                    ),
-                  ],
+                      Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.primary.withOpacity(0.4),
+                        size: 20,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+            */
+
+            // New Version: Alternating layout (Odd: Icon -> Text; Even: Text -> Icon) without trailing arrow
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: InkWell(
+                onTap: () {
+                  Navigator.pushNamed(
+                    context,
+                    '/subject_dashboard',
+                    arguments: {'subject': subject},
+                  );
+                },
+                borderRadius: BorderRadius.circular(32),
+                child: Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surface,
+                    borderRadius: BorderRadius.circular(32),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.primary.withOpacity(0.08),
+                        blurRadius: 20,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      if (isIconLeft) ...[
+                        iconWidget,
+                        const SizedBox(width: 20),
+                      ],
+                      Expanded(
+                        child: textWidget,
+                      ),
+                      if (!isIconLeft) ...[
+                        const SizedBox(width: 20),
+                        iconWidget,
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: [
+            SizedBox(
+              height: MediaQuery.of(context).size.height * 0.4,
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Text(
+                    'Error: $e\n\nPull down to retry',
+                    textAlign: TextAlign.center,
+                  ),
                 ),
               ),
             ),
-          );
-        },
+          ],
+        ),
       ),
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Error: $e')),
     );
   }
 
@@ -381,6 +595,15 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          Text(
+            'Dashboard',
+            style: GoogleFonts.outfit(
+              fontSize: 32,
+              fontWeight: FontWeight.w900,
+              color: theme.colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 24),
           // Upload Notes Panel
           Container(
             padding: const EdgeInsets.all(20),
@@ -424,6 +647,7 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
                       flex: 2,
                       child: DropdownButtonFormField<int>(
                         value: _uploadSemester,
+                        isExpanded: true,
                         decoration: const InputDecoration(
                           labelText: 'Semester',
                           contentPadding: EdgeInsets.symmetric(
@@ -462,6 +686,7 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
                           }
                           return DropdownButtonFormField<Subject>(
                             value: _uploadSubject,
+                            isExpanded: true,
                             hint: Text(
                               'Select Subject',
                               style: GoogleFonts.outfit(fontSize: 12),
@@ -505,6 +730,7 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
                           ),
                         ),
                         error: (_, __) => DropdownButtonFormField<Subject>(
+                          isExpanded: true,
                           items: const [],
                           onChanged: null,
                           decoration: const InputDecoration(
@@ -659,6 +885,15 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          Text(
+            'Settings',
+            style: GoogleFonts.outfit(
+              fontSize: 32,
+              fontWeight: FontWeight.w900,
+              color: theme.colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 24),
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
@@ -813,6 +1048,170 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSemestersPage(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 16),
+      itemCount: 9, // index 0 is header, 1-8 are semesters
+      itemBuilder: (context, index) {
+        if (index == 0) {
+          return Padding(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Syllabus',
+                  style: GoogleFonts.outfit(
+                    fontSize: 32,
+                    fontWeight: FontWeight.w900,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Explore subjects across all semesters.',
+                  style: theme.textTheme.bodyMedium,
+                ),
+              ],
+            ),
+          );
+        }
+
+        final sem = index;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
+              child: Text(
+                'Semester $sem',
+                style: GoogleFonts.outfit(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+            ),
+            _SemesterSubjectsList(branchId: widget.branchId, semester: sem),
+            const SizedBox(height: 8),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _SemesterSubjectsList extends ConsumerWidget {
+  final String branchId;
+  final int semester;
+
+  const _SemesterSubjectsList({required this.branchId, required this.semester});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final subjectsAsync = ref.watch(
+      subjectsProvider((branchId: branchId, semester: semester)),
+    );
+
+    return subjectsAsync.when(
+      data: (subjects) {
+        if (subjects.isEmpty) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8, horizontal: 24),
+            child: Text(
+              'No subjects found for this semester.',
+              style: TextStyle(
+                fontStyle: FontStyle.italic,
+                fontSize: 13,
+                color: Colors.grey,
+              ),
+            ),
+          );
+        }
+
+        return ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          itemCount: subjects.length,
+          itemBuilder: (context, idx) {
+            final subject = subjects[idx];
+            return Card(
+              margin: const EdgeInsets.only(bottom: 8),
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.primary.withOpacity(0.15),
+                ),
+              ),
+              child: ListTile(
+                dense: true,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 4,
+                ),
+                leading: Icon(
+                  Icons.book_rounded,
+                  color: Theme.of(context).colorScheme.primary,
+                  size: 20,
+                ),
+                title: Text(
+                  subject.name,
+                  style: GoogleFonts.outfit(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+                subtitle: Text(
+                  'Code: ${subject.code}',
+                  style: GoogleFonts.outfit(fontSize: 12, color: Colors.grey),
+                ),
+                /*
+                // Old Version: Had a trailing arrow
+                trailing: const Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  size: 14,
+                  color: Colors.grey,
+                ),
+                */
+
+                onTap: () {
+                  Navigator.pushNamed(
+                    context,
+                    '/subject_dashboard',
+                    arguments: {'subject': subject},
+                  );
+                },
+              ),
+            );
+          },
+        );
+      },
+      loading: () => const Padding(
+        padding: EdgeInsets.symmetric(vertical: 12),
+        child: Center(
+          child: SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
+      ),
+      error: (e, _) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 24),
+        child: Text(
+          'Error: $e',
+          style: const TextStyle(color: Colors.red, fontSize: 12),
+        ),
       ),
     );
   }
