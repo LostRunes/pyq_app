@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../core/providers.dart';
 import '../models/subject.dart';
+import '../models/branch.dart';
 
 class SubjectListScreen extends ConsumerStatefulWidget {
   final String branchId;
@@ -21,6 +22,7 @@ class SubjectListScreen extends ConsumerStatefulWidget {
 class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
     with SingleTickerProviderStateMixin {
   late int _currentSemester;
+  late String _currentBranchId;
   int _currentIndex = 0; // 0: Subjects, 1: Syllabus, 2: Dashboard, 3: Settings
 
   // For dummy upload notes form
@@ -34,6 +36,7 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
   void initState() {
     super.initState();
     _currentSemester = widget.semester;
+    _currentBranchId = widget.branchId;
     _uploadSemester = _currentSemester;
 
     _wobbleController = AnimationController(
@@ -285,14 +288,14 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
 
   Widget _buildSubjectsPage(BuildContext context) {
     final subjectsAsync = ref.watch(
-      subjectsProvider((branchId: widget.branchId, semester: _currentSemester)),
+      subjectsProvider((branchId: _currentBranchId, semester: _currentSemester)),
     );
 
     return RefreshIndicator(
       onRefresh: () async {
         await ref.refresh(
           subjectsProvider((
-            branchId: widget.branchId,
+            branchId: _currentBranchId,
             semester: _currentSemester,
           )).future,
         );
@@ -572,7 +575,7 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
     final theme = Theme.of(context);
     final subjectsAsync = ref.watch(
       subjectsProvider((
-        branchId: widget.branchId,
+        branchId: _currentBranchId,
         semester: _uploadSemester ?? _currentSemester,
       )),
     );
@@ -966,6 +969,68 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
                     }
                   },
                 ),
+                const SizedBox(height: 20),
+                Text(
+                  'Change Selected Branch',
+                  style: GoogleFonts.outfit(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.onSurface.withOpacity(0.6),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                ref.watch(branchesProvider).when(
+                  data: (branches) {
+                    final currentBranch = branches.firstWhere(
+                      (b) => b.id == _currentBranchId,
+                      orElse: () => branches.first,
+                    );
+                    return DropdownButtonFormField<Branch>(
+                      value: currentBranch,
+                      isExpanded: true,
+                      decoration: const InputDecoration(
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 16,
+                        ),
+                      ),
+                      items: branches
+                          .map(
+                            (b) => DropdownMenuItem(
+                              value: b,
+                              child: Text(
+                                b.name,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (branch) {
+                        if (branch != null) {
+                          setState(() {
+                            _currentBranchId = branch.id;
+                          });
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Switched to ${branch.name}! ⚡'),
+                              duration: const Duration(seconds: 1),
+                            ),
+                          );
+                        }
+                      },
+                    );
+                  },
+                  loading: () => const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(8.0),
+                      child: CircularProgressIndicator(),
+                    ),
+                  ),
+                  error: (err, _) => Text(
+                    'Error loading branches: $err',
+                    style: const TextStyle(color: Colors.red),
+                  ),
+                ),
               ],
             ),
           ),
@@ -1098,7 +1163,7 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
                 ),
               ),
             ),
-            _SemesterSubjectsList(branchId: widget.branchId, semester: sem),
+            _SemesterSubjectsList(branchId: _currentBranchId, semester: sem),
             const SizedBox(height: 8),
           ],
         );
