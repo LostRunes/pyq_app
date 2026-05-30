@@ -85,33 +85,45 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
     final size = MediaQuery.of(context).size;
     final tabWidth = size.width / 3;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Warm Deep Orange / Roasted Sienna Color Palette
-    const orangeBgStart = Color(
-      0xFF421E0B,
-    ); // Deep Warm Sienna (pleasant dark orange)
-    const orangeBgEnd = Color(0xFF240E04); // Dark Roasted Coffee
-    const orangeActive = Color(0xFFFFB74D); // Soft Glowing Peach-Orange
-    const orangeActiveBg = Color(0x22FFB74D); // Translucent Orange Water Bubble
-    const orangeInactive = Color(0xFFA68D7D); // Muted Earthy Brown-Gray
+    // Lighter theme-matching palette in light mode, original warm deep palette in dark mode
+    final Color orangeBgStart = isDark
+        ? const Color(0xFF421E0B)
+        : const Color.fromARGB(255, 251, 203, 158);
+    final Color orangeBgEnd = isDark
+        ? const Color(0xFF240E04)
+        : const Color.fromARGB(255, 238, 206, 154);
+    final Color orangeActive = isDark
+        ? const Color(0xFFFFB74D)
+        : const Color.fromARGB(255, 90, 41, 0);
+    final Color orangeActiveBg = isDark
+        ? const Color(0x22FFB74D)
+        : const Color(0x1AD37D3E);
+    final Color orangeInactive = isDark
+        ? const Color.fromARGB(255, 231, 171, 133)
+        : const Color(0x997A6456);
+    final Color shadowColor = isDark
+        ? Colors.black38
+        : Colors.black.withOpacity(0.06);
 
     return Container(
       height: 80 + bottomPadding,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [orangeBgStart, orangeBgEnd],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
         ),
-        borderRadius: BorderRadius.only(
+        borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(32),
           topRight: Radius.circular(32),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black26,
+            color: shadowColor,
             blurRadius: 15,
-            offset: Offset(0, -4),
+            offset: const Offset(0, -4),
           ),
         ],
       ),

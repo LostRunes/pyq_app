@@ -302,7 +302,9 @@ class _TopicTabState extends ConsumerState<_TopicTab> {
         // Sort copy of topics based on current sort mode
         final List<Topic> displayedTopics = List<Topic>.from(topics);
         if (_sortMode == 'Importance') {
-          displayedTopics.sort((a, b) => b.importanceScore.compareTo(a.importanceScore));
+          displayedTopics.sort(
+            (a, b) => b.importanceScore.compareTo(a.importanceScore),
+          );
         }
 
         // Calculate max score for normalization
