@@ -21,71 +21,131 @@ class _BranchYearSelectionScreenState
   @override
   Widget build(BuildContext context) {
     final branchesAsync = ref.watch(branchesProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
         actions: const [
           ThemeToggleButton(),
         ],
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: 5),
-              Center(
-                child: Container(
-                  height: 180,
-                  width: 180,
-                  decoration: BoxDecoration(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.primary.withOpacity(0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Image.asset(
-                    'assets/images/cat.png',
-                    fit: BoxFit.contain,
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: isDark
+            ? BoxDecoration(
+                image: DecorationImage(
+                  image: const AssetImage('assets/images/darktheme_bg.png'),
+                  fit: BoxFit.cover,
+                  colorFilter: ColorFilter.mode(
+                    const Color(0xFF171330).withOpacity(0.55),
+                    BlendMode.srcOver,
                   ),
                 ),
-              ),
-              const SizedBox(height: 32),
-              Text(
-                'Welcome back! ✨',
-                textAlign: TextAlign.center,
-                style: Theme.of(
+              )
+            : null,
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(height: 5),
+                Center(
+                  child: Container(
+                    height: 180,
+                    width: 180,
+                    decoration: BoxDecoration(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.primary.withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Image.asset(
+                      'assets/images/cat.png',
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 32),
+                Text(
+                  'Welcome back! ✨',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.displaySmall?.copyWith(fontWeight: FontWeight.w900),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Select your branch and semester to start studying.',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 48),
+                _buildSelectionCard(
                   context,
-                ).textTheme.displaySmall?.copyWith(fontWeight: FontWeight.w900),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Select your branch and semester to start studying.',
-                textAlign: TextAlign.center,
-                style: Theme.of(
+                  label: 'Branch',
+                  icon: Icons.account_tree_outlined,
+                  child: branchesAsync.when(
+                    data: (branches) => DropdownButtonHideUnderline(
+                      child: DropdownButtonFormField<Branch>(
+                        isExpanded: true,
+                        value: selectedBranch,
+                        items: branches
+                            .map(
+                              (b) => DropdownMenuItem(
+                                value: b,
+                                child: Text(
+                                  b.name,
+                                  style: TextStyle(
+                                    color: isDark ? Colors.white : Colors.black87,
+                                  ),
+                                ),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (b) => setState(() => selectedBranch = b),
+                        decoration: const InputDecoration(
+                          hintText: 'Select branch',
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                      ),
+                    ),
+                    loading: () => const Center(child: LinearProgressIndicator()),
+                    error: (e, _) => Text('Error: $e'),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                _buildSelectionCard(
                   context,
-                ).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w500),
-              ),
-              const SizedBox(height: 48),
-              _buildSelectionCard(
-                context,
-                label: 'Branch',
-                icon: Icons.account_tree_outlined,
-                child: branchesAsync.when(
-                  data: (branches) => DropdownButtonHideUnderline(
-                    child: DropdownButtonFormField<Branch>(
+                  label: 'Semester',
+                  icon: Icons.calendar_today_outlined,
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButtonFormField<int>(
                       isExpanded: true,
-                      value: selectedBranch,
-                      items: branches
+                      value: selectedSemester,
+                      items: List.generate(8, (index) => index + 1)
                           .map(
-                            (b) =>
-                                DropdownMenuItem(value: b, child: Text(b.name)),
+                            (sem) => DropdownMenuItem(
+                              value: sem,
+                              child: Text(
+                                'Semester $sem',
+                                style: TextStyle(
+                                  color: isDark ? Colors.white : Colors.black87,
+                                ),
+                              ),
+                            ),
                           )
                           .toList(),
-                      onChanged: (b) => setState(() => selectedBranch = b),
+                      onChanged: (sem) => setState(() => selectedSemester = sem),
                       decoration: const InputDecoration(
-                        hintText: 'Select branch',
+                        hintText: 'Select semester',
                         border: InputBorder.none,
                         enabledBorder: InputBorder.none,
                         focusedBorder: InputBorder.none,
@@ -93,56 +153,28 @@ class _BranchYearSelectionScreenState
                       ),
                     ),
                   ),
-                  loading: () => const Center(child: LinearProgressIndicator()),
-                  error: (e, _) => Text('Error: $e'),
                 ),
-              ),
-              const SizedBox(height: 24),
-              _buildSelectionCard(
-                context,
-                label: 'Semester',
-                icon: Icons.calendar_today_outlined,
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButtonFormField<int>(
-                    isExpanded: true,
-                    value: selectedSemester,
-                    items: List.generate(8, (index) => index + 1)
-                        .map(
-                          (sem) =>
-                              DropdownMenuItem(value: sem, child: Text('Semester $sem')),
-                        )
-                        .toList(),
-                    onChanged: (sem) => setState(() => selectedSemester = sem),
-                    decoration: const InputDecoration(
-                      hintText: 'Select semester',
-                      border: InputBorder.none,
-                      enabledBorder: InputBorder.none,
-                      focusedBorder: InputBorder.none,
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                  ),
+                const SizedBox(
+                  height: 48,
+                ), // Replaced Spacer with fixed height for scrollability
+                ElevatedButton(
+                  onPressed: (selectedBranch != null && selectedSemester != null)
+                      ? () {
+                          Navigator.pushNamed(
+                            context,
+                            '/subjects',
+                            arguments: {
+                              'branchId': selectedBranch!.id,
+                              'semester': selectedSemester,
+                            },
+                          );
+                        }
+                      : null,
+                  child: const Text('Continue'),
                 ),
-              ),
-              const SizedBox(
-                height: 48,
-              ), // Replaced Spacer with fixed height for scrollability
-              ElevatedButton(
-                onPressed: (selectedBranch != null && selectedSemester != null)
-                    ? () {
-                        Navigator.pushNamed(
-                          context,
-                          '/subjects',
-                          arguments: {
-                            'branchId': selectedBranch!.id,
-                            'semester': selectedSemester,
-                          },
-                        );
-                      }
-                    : null,
-                child: const Text('Continue'),
-              ),
-              const SizedBox(height: 40),
-            ],
+                const SizedBox(height: 40),
+              ],
+            ),
           ),
         ),
       ),

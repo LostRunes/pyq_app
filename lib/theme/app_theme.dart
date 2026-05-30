@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
-  // Richer Earthy Palette
+  // Richer Earthy Palette (Light Mode)
   static const Color primaryColor = Color(0xFFD37D3E); // Deep Toffee / Burnt Sienna
   static const Color secondaryColor = Color(0xFF8BA682); // Muted Sage
   static const Color accentColor = Color(0xFFE08E9D); // Deeper Rose
@@ -12,10 +12,14 @@ class AppTheme {
   static const Color lightText = Color(0xFF3D2F27); // Dark Coffee
   static const Color lightSubText = Color(0xFF7A6456); // Muted Earth Brown
 
-  static const Color darkBg = Color(0xFF1E110A); // Pleasant Dark Sienna Orange
-  static const Color darkSurface = Color(0xFF2B1A12); // Lighter Warm Dark Orange
-  static const Color darkText = Color(0xFFFBF8F5); // Crisp Off-white
-  static const Color darkSubText = Color(0xFFBCA99C);
+  // Magical Violet / Starry Night Palette (Dark Mode)
+  static const Color darkPrimary = Color(0xFFC0A6FF); // Soft glowing lavender
+  static const Color darkSecondary = Color(0xFF8A7CB5); // Muted lavender
+  static const Color darkAccent = Color(0xFFFFBCE8); // Pastel pink/rose
+  static const Color darkBg = Color(0xFF171330); // Deep magical night sky purple
+  static const Color darkSurface = Color(0xFF251E4E); // Deep violet surface
+  static const Color darkText = Color(0xFFFFFFFF); // Pure white
+  static const Color darkSubText = Color(0xFFB8AEDB); // Lavender muted subtext
 
   static ThemeData get light => _buildTheme(Brightness.light);
   static ThemeData get dark => _buildTheme(Brightness.dark);
@@ -23,24 +27,28 @@ class AppTheme {
   static ThemeData _buildTheme(Brightness brightness) {
     final bool isDark = brightness == Brightness.dark;
     
+    final primary = isDark ? darkPrimary : primaryColor;
+    final secondary = isDark ? darkSecondary : secondaryColor;
+    final tertiary = isDark ? darkAccent : accentColor;
+
     return ThemeData(
       useMaterial3: true,
       brightness: brightness,
       colorScheme: ColorScheme.fromSeed(
-        seedColor: primaryColor,
-        primary: primaryColor,
-        secondary: secondaryColor,
-        tertiary: accentColor,
+        seedColor: primary,
+        primary: primary,
+        secondary: secondary,
+        tertiary: tertiary,
         surface: isDark ? darkSurface : lightSurface,
         background: isDark ? darkBg : lightBg,
-        onPrimary: Colors.white,
+        onPrimary: isDark ? const Color(0xFF171330) : Colors.white,
         onSurface: isDark ? darkText : lightText,
         onBackground: isDark ? darkText : lightText,
         brightness: brightness,
       ),
       scaffoldBackgroundColor: isDark ? darkBg : lightBg,
       cardTheme: CardThemeData(
-        color: isDark ? darkSurface : lightSurface,
+        color: isDark ? darkSurface.withOpacity(0.85) : lightSurface,
         elevation: 0,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
       ),
@@ -77,18 +85,18 @@ class AppTheme {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: primaryColor,
-          foregroundColor: Colors.white,
+          backgroundColor: primary,
+          foregroundColor: isDark ? const Color(0xFF171330) : Colors.white,
           minimumSize: const Size.fromHeight(64),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
           elevation: 2,
-          shadowColor: primaryColor.withOpacity(0.3),
+          shadowColor: primary.withOpacity(0.3),
           textStyle: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w800),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: isDark ? darkSurface : lightSurface,
+        fillColor: isDark ? darkSurface.withOpacity(0.7) : lightSurface,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(24),
           borderSide: BorderSide.none,
@@ -96,13 +104,13 @@ class AppTheme {
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(24),
           borderSide: BorderSide(
-            color: isDark ? Colors.white10 : primaryColor.withOpacity(0.2), 
+            color: isDark ? Colors.white10 : primary.withOpacity(0.2), 
             width: 1.5
           ),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(24),
-          borderSide: const BorderSide(color: primaryColor, width: 2.5),
+          borderSide: BorderSide(color: primary, width: 2.5),
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
       ),
