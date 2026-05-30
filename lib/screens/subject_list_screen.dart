@@ -21,7 +21,7 @@ class SubjectListScreen extends ConsumerStatefulWidget {
 class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
     with SingleTickerProviderStateMixin {
   late int _currentSemester;
-  int _currentIndex = 0; // 0: Subjects, 1: Dashboard, 2: Settings
+  int _currentIndex = 0; // 0: Subjects, 1: Syllabus, 2: Dashboard, 3: Settings
 
   // For dummy upload notes form
   int? _uploadSemester;
@@ -105,6 +105,7 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
         index: _currentIndex,
         children: [
           _buildSubjectsPage(context),
+          _buildSemestersPage(context),
           _buildDashboardPage(context),
           _buildSettingsPage(context),
         ],
@@ -115,7 +116,7 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
 
   Widget _buildCuteBottomNavBar(BuildContext context) {
     final size = MediaQuery.of(context).size;
-    final tabWidth = size.width / 3;
+    final tabWidth = size.width / 4;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -207,13 +208,20 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
                 ),
                 _buildNavBarItem(
                   1,
+                  Icons.collections_bookmark_rounded,
+                  'Syllabus',
+                  orangeActive,
+                  orangeInactive,
+                ),
+                _buildNavBarItem(
+                  2,
                   Icons.leaderboard_rounded,
                   'Dashboard',
                   orangeActive,
                   orangeInactive,
                 ),
                 _buildNavBarItem(
-                  2,
+                  3,
                   Icons.settings_rounded,
                   'Settings',
                   orangeActive,
@@ -244,7 +252,7 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
       },
       behavior: HitTestBehavior.opaque,
       child: SizedBox(
-        width: MediaQuery.of(context).size.width / 3,
+        width: MediaQuery.of(context).size.width / 4,
         height: 80,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -950,6 +958,163 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSemestersPage(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 16),
+      itemCount: 9, // index 0 is header, 1-8 are semesters
+      itemBuilder: (context, index) {
+        if (index == 0) {
+          return Padding(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Syllabus',
+                  style: GoogleFonts.outfit(
+                    fontSize: 32,
+                    fontWeight: FontWeight.w900,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Explore subjects across all semesters.',
+                  style: theme.textTheme.bodyMedium,
+                ),
+              ],
+            ),
+          );
+        }
+
+        final sem = index;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
+              child: Text(
+                'Semester $sem',
+                style: GoogleFonts.outfit(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+            ),
+            _SemesterSubjectsList(
+              branchId: widget.branchId,
+              semester: sem,
+            ),
+            const SizedBox(height: 8),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _SemesterSubjectsList extends ConsumerWidget {
+  final String branchId;
+  final int semester;
+
+  const _SemesterSubjectsList({
+    required this.branchId,
+    required this.semester,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final subjectsAsync = ref.watch(
+      subjectsProvider((branchId: branchId, semester: semester)),
+    );
+
+    return subjectsAsync.when(
+      data: (subjects) {
+        if (subjects.isEmpty) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8, horizontal: 24),
+            child: Text(
+              'No subjects found for this semester.',
+              style: TextStyle(fontStyle: FontStyle.italic, fontSize: 13, color: Colors.grey),
+            ),
+          );
+        }
+
+        return ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          itemCount: subjects.length,
+          itemBuilder: (context, idx) {
+            final subject = subjects[idx];
+            return Card(
+              margin: const EdgeInsets.only(bottom: 8),
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.15),
+                ),
+              ),
+              child: ListTile(
+                dense: true,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                leading: Icon(
+                  Icons.book_rounded,
+                  color: Theme.of(context).colorScheme.primary,
+                  size: 20,
+                ),
+                title: Text(
+                  subject.name,
+                  style: GoogleFonts.outfit(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+                subtitle: Text(
+                  'Code: ${subject.code}',
+                  style: GoogleFonts.outfit(
+                    fontSize: 12,
+                    color: Colors.grey,
+                  ),
+                ),
+                trailing: const Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  size: 14,
+                  color: Colors.grey,
+                ),
+                onTap: () {
+                  Navigator.pushNamed(
+                    context,
+                    '/subject_dashboard',
+                    arguments: {'subject': subject},
+                  );
+                },
+              ),
+            );
+          },
+        );
+      },
+      loading: () => const Padding(
+        padding: EdgeInsets.symmetric(vertical: 12),
+        child: Center(
+          child: SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
+      ),
+      error: (e, _) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 24),
+        child: Text('Error: $e', style: const TextStyle(color: Colors.red, fontSize: 12)),
       ),
     );
   }
