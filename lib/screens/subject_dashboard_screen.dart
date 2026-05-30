@@ -22,35 +22,10 @@ class SubjectDashboardScreen extends ConsumerStatefulWidget {
 
 class _SubjectDashboardScreenState
     extends ConsumerState<SubjectDashboardScreen> {
-  bool _showHint = false;
-  double _hintOpacity = 0.0;
 
   @override
   void initState() {
     super.initState();
-    _triggerHint();
-  }
-
-  void _triggerHint() {
-    if (widget.subject.courseOutcomeLink != null &&
-        widget.subject.courseOutcomeLink!.isNotEmpty) {
-      Future.delayed(const Duration(milliseconds: 800), () {
-        if (mounted) {
-          setState(() {
-            _showHint = true;
-            _hintOpacity = 1.0;
-          });
-          Future.delayed(const Duration(seconds: 3), () {
-            if (mounted) {
-              setState(() => _hintOpacity = 0.0);
-              Future.delayed(const Duration(milliseconds: 500), () {
-                if (mounted) setState(() => _showHint = false);
-              });
-            }
-          });
-        }
-      });
-    }
   }
 
   Future<void> _launchUrl(String? urlString) async {
@@ -69,136 +44,100 @@ class _SubjectDashboardScreenState
         widget.subject.courseOutcomeLink != null &&
         widget.subject.courseOutcomeLink!.isNotEmpty;
 
+    final tabs = [
+      const Tab(text: "Topics"),
+      const Tab(text: "PYQs"),
+      const Tab(text: "Notes"),
+      if (hasHandout) const Tab(text: "Course Handout"),
+      const Tab(text: "Progress"),
+    ];
+
+    final tabViews = [
+      _TopicTab(subjectId: widget.subject.id),
+      _LinkTab(
+        title: 'Subject PYQs',
+        subtitle:
+            'Access the complete Google Drive folder for previous year questions.',
+        buttonLabel: 'Open PYQ Drive',
+        icon: Icons.folder_shared_rounded,
+        link: widget.subject.pyqDriveLink,
+        imagePath: 'assets/images/panda.png',
+      ),
+      _LinkTab(
+        title: 'Subject Notes',
+        subtitle:
+            'Access study materials, lecture notes, and hand-written guides.',
+        buttonLabel: 'Open Notes Drive',
+        icon: Icons.menu_book_rounded,
+        link: widget.subject.notesDriveLink,
+        imagePath: 'assets/images/raccoon.png',
+      ),
+      if (hasHandout)
+        _LinkTab(
+          title: 'Course Handout',
+          subtitle:
+              'Access the official course handout, syllabus, and learning outcomes.',
+          buttonLabel: 'Open Course Handout',
+          icon: Icons.description_outlined,
+          link: widget.subject.courseOutcomeLink,
+          imagePath: 'assets/images/cat.png',
+        ),
+      _ProgressTab(subjectId: widget.subject.id),
+    ];
+
     return DefaultTabController(
-      length: 4,
-      child: Stack(
-        children: [
-          Scaffold(
-            appBar: AppBar(
-              automaticallyImplyLeading: true,
-              title: Text(widget.subject.name),
-              actions: [
-                if (hasHandout)
-                  IconButton(
-                    icon: const Icon(Icons.description_outlined),
-                    tooltip: 'Course Handout',
-                    onPressed: () =>
-                        _launchUrl(widget.subject.courseOutcomeLink),
-                  ),
-              ],
-              bottom: TabBar(
-                isScrollable: true,
-                tabAlignment: TabAlignment.start,
-                indicatorSize: TabBarIndicatorSize.label,
-                labelStyle: GoogleFonts.outfit(fontWeight: FontWeight.w900),
-                unselectedLabelStyle: GoogleFonts.outfit(
-                  fontWeight: FontWeight.w600,
+      length: tabs.length,
+      child: Scaffold(
+        appBar: AppBar(
+          automaticallyImplyLeading: true,
+        ),
+        body: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+              child: Text(
+                widget.subject.name,
+                style: GoogleFonts.outfit(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w900,
+                  color: theme.colorScheme.onSurface,
                 ),
-                tabs: const [
-                  Tab(text: "Topics"),
-                  Tab(text: "PYQs"),
-                  Tab(text: "Notes"),
-                  Tab(text: "Progress"),
+              ),
+            ),
+            TabBar(
+              isScrollable: true,
+              tabAlignment: TabAlignment.start,
+              indicatorSize: TabBarIndicatorSize.label,
+              labelStyle: GoogleFonts.outfit(fontWeight: FontWeight.w900),
+              unselectedLabelStyle: GoogleFonts.outfit(
+                fontWeight: FontWeight.w600,
+              ),
+              tabs: tabs,
+            ),
+            const SizedBox(height: 8),
+            Expanded(
+              child: Stack(
+                children: [
+                  TabBarView(
+                    children: tabViews,
+                  ),
+                  Consumer(
+                    builder: (context, ref, child) {
+                      final isLoading = ref.watch(pdfLoadingProvider);
+                      if (isLoading) {
+                        return const LoadingOverlay(
+                          message: 'Generating your subject PDF... ✨',
+                        );
+                      }
+                      return const SizedBox.shrink();
+                    },
+                  ),
                 ],
               ),
             ),
-            body: Stack(
-              children: [
-                TabBarView(
-                  children: [
-                    _TopicTab(subjectId: widget.subject.id),
-                    _LinkTab(
-                      title: 'Subject PYQs',
-                      subtitle:
-                          'Access the complete Google Drive folder for previous year questions.',
-                      buttonLabel: 'Open PYQ Drive',
-                      icon: Icons.folder_shared_rounded,
-                      link: widget.subject.pyqDriveLink,
-                      imagePath: 'assets/images/panda.png',
-                    ),
-                    _LinkTab(
-                      title: 'Subject Notes',
-                      subtitle:
-                          'Access study materials, lecture notes, and hand-written guides.',
-                      buttonLabel: 'Open Notes Drive',
-                      icon: Icons.menu_book_rounded,
-                      link: widget.subject.notesDriveLink,
-                      imagePath: 'assets/images/raccoon.png',
-                    ),
-                    _ProgressTab(subjectId: widget.subject.id),
-                  ],
-                ),
-                Consumer(
-                  builder: (context, ref, child) {
-                    final isLoading = ref.watch(pdfLoadingProvider);
-                    if (isLoading) {
-                      return const LoadingOverlay(
-                        message: 'Generating your subject PDF... ✨',
-                      );
-                    }
-                    return const SizedBox.shrink();
-                  },
-                ),
-              ],
-            ),
-          ),
-          if (_showHint && hasHandout)
-            AnimatedPositioned(
-              duration: const Duration(milliseconds: 600),
-              curve: Curves.easeOutBack,
-              top:
-                  MediaQuery.of(context).padding.top +
-                  (_hintOpacity == 1.0 ? 42 : 62),
-              right: 12,
-              child: AnimatedOpacity(
-                opacity: _hintOpacity,
-                duration: const Duration(milliseconds: 400),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(right: 12),
-                      child: Icon(
-                        Icons.arrow_upward,
-                        color: theme.colorScheme.primary,
-                        size: 28,
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 10,
-                      ),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            theme.colorScheme.primary,
-                            theme.colorScheme.primary.withOpacity(0.8),
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: theme.colorScheme.primary.withOpacity(0.3),
-                            blurRadius: 12,
-                            offset: const Offset(0, 6),
-                          ),
-                        ],
-                      ),
-                      child: Text(
-                        'View Course Handout',
-                        style: GoogleFonts.outfit(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }
