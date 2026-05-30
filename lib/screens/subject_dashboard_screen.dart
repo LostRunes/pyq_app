@@ -75,52 +75,9 @@ class _SubjectDashboardScreenState
         children: [
           Scaffold(
             appBar: AppBar(
-              automaticallyImplyLeading: false,
-              leadingWidth: 110,
-              leading: Row(
-                children: [
-                  const SizedBox(width: 8),
-                  IconButton(
-                    icon: const Icon(Icons.notifications_none_rounded),
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('No new notifications. 🔔')),
-                      );
-                    },
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.search_rounded),
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Search feature coming soon! 🔍')),
-                      );
-                    },
-                  ),
-                ],
-              ),
+              automaticallyImplyLeading: true,
+              title: Text(widget.subject.name),
               actions: [
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'REVA',
-                      style: GoogleFonts.outfit(
-                        fontWeight: FontWeight.w900,
-                        fontSize: 22,
-                        letterSpacing: 1.2,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Image.asset(
-                      'assets/images/reva_logo.png',
-                      height: 38,
-                      width: 38,
-                      fit: BoxFit.contain,
-                    ),
-                    const SizedBox(width: 16),
-                  ],
-                ),
                 if (hasHandout)
                   IconButton(
                     icon: const Icon(Icons.description_outlined),
@@ -128,71 +85,21 @@ class _SubjectDashboardScreenState
                     onPressed: () =>
                         _launchUrl(widget.subject.courseOutcomeLink),
                   ),
-                const SizedBox(width: 8),
               ],
-              bottom: PreferredSize(
-                preferredSize: const Size.fromHeight(135),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: GestureDetector(
-                          onTap: () => Navigator.pop(context),
-                          behavior: HitTestBehavior.opaque,
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.arrow_back_ios_new_rounded,
-                                size: 14,
-                                color: Theme.of(context).colorScheme.primary,
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                'Back',
-                                style: GoogleFonts.outfit(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
-                                  color: Theme.of(context).colorScheme.primary,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-                      child: Text(
-                        widget.subject.name,
-                        style: GoogleFonts.outfit(
-                          fontSize: 28,
-                          fontWeight: FontWeight.w900,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                      ),
-                    ),
-                    TabBar(
-                      isScrollable: true,
-                      tabAlignment: TabAlignment.start,
-                      indicatorSize: TabBarIndicatorSize.label,
-                      labelStyle: GoogleFonts.outfit(fontWeight: FontWeight.w900),
-                      unselectedLabelStyle: GoogleFonts.outfit(
-                        fontWeight: FontWeight.w600,
-                      ),
-                      tabs: const [
-                        Tab(text: "Topics"),
-                        Tab(text: "PYQs"),
-                        Tab(text: "Notes"),
-                        Tab(text: "Progress"),
-                      ],
-                    ),
-                  ],
+              bottom: TabBar(
+                isScrollable: true,
+                tabAlignment: TabAlignment.start,
+                indicatorSize: TabBarIndicatorSize.label,
+                labelStyle: GoogleFonts.outfit(fontWeight: FontWeight.w900),
+                unselectedLabelStyle: GoogleFonts.outfit(
+                  fontWeight: FontWeight.w600,
                 ),
+                tabs: const [
+                  Tab(text: "Topics"),
+                  Tab(text: "PYQs"),
+                  Tab(text: "Notes"),
+                  Tab(text: "Progress"),
+                ],
               ),
             ),
             body: Stack(
