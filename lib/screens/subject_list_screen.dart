@@ -290,42 +290,46 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Subjects',
-                    style: GoogleFonts.outfit(
-                      fontSize: 32,
-                      fontWeight: FontWeight.w900,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    behavior: HitTestBehavior.opaque,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.arrow_back_ios_new_rounded,
-                            size: 16,
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Back',
-                            style: GoogleFonts.outfit(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
-                          ),
-                        ],
+                  Row(
+                    children: [
+                      Text(
+                        'Subjects',
+                        style: GoogleFonts.outfit(
+                          fontSize: 32,
+                          fontWeight: FontWeight.w900,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
                       ),
-                    ),
+                      const Spacer(),
+                      GestureDetector(
+                        onTap: () => Navigator.pop(context),
+                        behavior: HitTestBehavior.opaque,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.arrow_back_ios_new_rounded,
+                                size: 16,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Back',
+                                style: GoogleFonts.outfit(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 4),
                   Row(
                     children: [
                       Expanded(
