@@ -55,20 +55,20 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
       mainAxisSize: MainAxisSize.min,
       children: [
         ClipRRect(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(10),
           child: Image.asset(
             'assets/images/reva_logo.png',
-            height: 28,
-            width: 28,
+            height: 38,
+            width: 38,
             fit: BoxFit.cover,
           ),
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: 10),
         Text(
           'REVA',
           style: GoogleFonts.outfit(
             fontWeight: FontWeight.w900,
-            fontSize: 20,
+            fontSize: 22,
             letterSpacing: 1.2,
           ),
         ),
@@ -78,9 +78,28 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
     return Scaffold(
       appBar: AppBar(
         title: brandTitle,
-        centerTitle: true,
+        centerTitle: false,
         automaticallyImplyLeading:
             _currentIndex == 0, // Back button only on Subjects tab
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.search_rounded),
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Search feature coming soon! 🔍')),
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.notifications_none_rounded),
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('No new notifications. 🔔')),
+              );
+            },
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: IndexedStack(
         index: _currentIndex,

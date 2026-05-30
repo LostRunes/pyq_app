@@ -79,27 +79,43 @@ class _SubjectDashboardScreenState
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(10),
                     child: Image.asset(
                       'assets/images/reva_logo.png',
-                      height: 28,
-                      width: 28,
+                      height: 38,
+                      width: 38,
                       fit: BoxFit.cover,
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 10),
                   Text(
                     'REVA',
                     style: GoogleFonts.outfit(
                       fontWeight: FontWeight.w900,
-                      fontSize: 20,
+                      fontSize: 22,
                       letterSpacing: 1.2,
                     ),
                   ),
                 ],
               ),
-              centerTitle: true,
+              centerTitle: false,
               actions: [
+                IconButton(
+                  icon: const Icon(Icons.search_rounded),
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Search feature coming soon! 🔍')),
+                    );
+                  },
+                ),
+                IconButton(
+                  icon: const Icon(Icons.notifications_none_rounded),
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('No new notifications. 🔔')),
+                    );
+                  },
+                ),
                 if (hasHandout)
                   IconButton(
                     icon: const Icon(Icons.description_outlined),
@@ -107,6 +123,7 @@ class _SubjectDashboardScreenState
                     onPressed: () =>
                         _launchUrl(widget.subject.courseOutcomeLink),
                   ),
+                const SizedBox(width: 8),
               ],
               bottom: PreferredSize(
                 preferredSize: const Size.fromHeight(100),
