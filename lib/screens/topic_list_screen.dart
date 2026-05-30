@@ -17,8 +17,10 @@ class TopicListScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final topicsAsync = ref.watch(topicsProvider(subjectId));
     final isLoading = ref.watch(pdfLoadingProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
         title: Text(subjectName),
         actions: [
@@ -49,153 +51,209 @@ class TopicListScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: Stack(
-        children: [
-          Column(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(24),
-                child: Row(
-                  children: [
-                SizedBox(
-                  height: 130,
-                  width: 130,
-                  child: Image.asset('assets/images/raccoon.png'),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Diving into...',
-                        style: Theme.of(context).textTheme.headlineSmall
-                            ?.copyWith(fontWeight: FontWeight.w900),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Which topic shall we tackle?',
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                    ],
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: isDark
+            ? BoxDecoration(
+                image: DecorationImage(
+                  image: const AssetImage('assets/images/darktheme_bg.png'),
+                  fit: BoxFit.cover,
+                  colorFilter: ColorFilter.mode(
+                    const Color(0xFF171330).withOpacity(0.55),
+                    BlendMode.srcOver,
                   ),
                 ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: topicsAsync.when(
-              data: (topics) => ListView.builder(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 0,
-                ),
-                itemCount: topics.length,
-                itemBuilder: (context, i) {
-                  final topic = topics[i];
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: InkWell(
-                      onTap: () {
-                        Navigator.pushNamed(
-                          context,
-                          '/questions',
-                          arguments: {
-                            'topicId': topic.id,
-                            'topicName': topic.name,
-                          },
-                        );
-                      },
-                      borderRadius: BorderRadius.circular(32),
-                      child: Container(
-                        padding: const EdgeInsets.all(24),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.surface,
-                          borderRadius: BorderRadius.circular(32),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.primary.withOpacity(0.08),
-                              blurRadius: 20,
-                              offset: const Offset(0, 10),
-                            ),
-                          ],
+              )
+            : null,
+        child: SafeArea(
+          child: Stack(
+            children: [
+              Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    child: Row(
+                      children: [
+                        SizedBox(
+                          height: 130,
+                          width: 130,
+                          child: Image.asset('assets/images/raccoon.png'),
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 14,
-                                    vertical: 8,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.primary.withOpacity(0.15),
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                  child: Text(
-                                    'Topic ${i + 1}',
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Diving into...',
+                                style: Theme.of(context).textTheme.headlineSmall
+                                    ?.copyWith(fontWeight: FontWeight.w900),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Which topic shall we tackle?',
+                                style: Theme.of(context).textTheme.bodyMedium,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: topicsAsync.when(
+                      data: (topics) => topics.isEmpty
+                          ? Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Image.asset('assets/images/lil_octopus.png', height: 130),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    "No topics found for this subject.",
                                     style: GoogleFonts.outfit(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w900,
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.primary,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                                     ),
                                   ),
-                                ),
-                                const Spacer(),
-                                Icon(
-                                  Icons.arrow_forward_ios_rounded,
-                                  color: Theme.of(
-                                    context,
-                                  ).colorScheme.primary.withOpacity(0.3),
-                                  size: 18,
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              topic.name,
-                              style: Theme.of(context).textTheme.titleLarge
-                                  ?.copyWith(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.w800,
+                                ],
+                              ),
+                            )
+                          : ListView.builder(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 0,
+                              ),
+                              itemCount: topics.length,
+                              itemBuilder: (context, i) {
+                                final topic = topics[i];
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: 16),
+                                  child: InkWell(
+                                    onTap: () {
+                                      Navigator.pushNamed(
+                                        context,
+                                        '/questions',
+                                        arguments: {
+                                          'topicId': topic.id,
+                                          'topicName': topic.name,
+                                        },
+                                      );
+                                    },
+                                    borderRadius: BorderRadius.circular(32),
+                                    child: Container(
+                                      padding: const EdgeInsets.all(24),
+                                      decoration: BoxDecoration(
+                                        color: Theme.of(context).colorScheme.surface,
+                                        borderRadius: BorderRadius.circular(32),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Theme.of(
+                                              context,
+                                            ).colorScheme.primary.withOpacity(0.08),
+                                            blurRadius: 20,
+                                            offset: const Offset(0, 10),
+                                          ),
+                                        ],
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(
+                                                  horizontal: 14,
+                                                  vertical: 8,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color: Theme.of(
+                                                    context,
+                                                  ).colorScheme.primary.withOpacity(0.15),
+                                                  borderRadius: BorderRadius.circular(16),
+                                                ),
+                                                child: Text(
+                                                  'Topic ${i + 1}',
+                                                  style: GoogleFonts.outfit(
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.w900,
+                                                    color: Theme.of(
+                                                      context,
+                                                    ).colorScheme.primary,
+                                                  ),
+                                                ),
+                                              ),
+                                              const Spacer(),
+                                              Icon(
+                                                Icons.arrow_forward_ios_rounded,
+                                                color: Theme.of(
+                                                  context,
+                                                ).colorScheme.primary.withOpacity(0.3),
+                                                size: 18,
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 16),
+                                          Text(
+                                            topic.name,
+                                            style: Theme.of(context).textTheme.titleLarge
+                                                ?.copyWith(
+                                                  fontSize: 20,
+                                                  fontWeight: FontWeight.w800,
+                                                ),
+                                          ),
+                                          const SizedBox(height: 10),
+                                          Text(
+                                            topic.summary ?? '',
+                                            style: Theme.of(context).textTheme.bodyMedium
+                                                ?.copyWith(
+                                                  height: 1.6,
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                            maxLines: 3,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
                                   ),
+                                );
+                              },
                             ),
-                            const SizedBox(height: 10),
-                            Text(
-                              topic.summary ?? '',
-                              style: Theme.of(context).textTheme.bodyMedium
-                                  ?.copyWith(
-                                    height: 1.6,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                              maxLines: 3,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
+                      loading: () => const Center(child: CircularProgressIndicator()),
+                      error: (e, _) => Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24.0),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Image.asset('assets/images/sad_raccoon.png', height: 130),
+                              const SizedBox(height: 16),
+                              Text(
+                                'Failed to load topics: $e',
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.outfit(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
-                  );
-                },
+                  ),
+                ],
               ),
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(child: Text('Error: $e')),
-            ),
+              if (isLoading)
+                const LoadingOverlay(message: 'Generating your subject PDF... This might take a moment.'),
+            ],
           ),
-        ],
+        ),
       ),
-      if (isLoading)
-        const LoadingOverlay(message: 'Generating your subject PDF... This might take a moment.'),
-    ],
-  ),
-);
-}
+    );
+  }
 }

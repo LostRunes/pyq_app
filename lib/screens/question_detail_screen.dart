@@ -19,148 +19,169 @@ class QuestionDetailScreen extends ConsumerWidget {
     final questionAsync = ref.watch(questionDetailProvider(questionId));
     final pyqAsync = ref.watch(pyqSourcesProvider(questionId));
     final imagesAsync = ref.watch(imagesProvider(questionId));
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
         title: const Text('Question Detail'),
       ),
-      body: questionAsync.when(
-        data: (question) => SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Metadata Tags
-              pyqAsync.when(
-                data: (pyqs) => Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: pyqs.expand((pyq) => [
-                    _buildMetaTag(context, '${pyq.examType} ${pyq.year}', Theme.of(context).colorScheme.primary.withOpacity(0.1), Theme.of(context).colorScheme.primary),
-                    _buildMetaTag(context, '${pyq.season}', Theme.of(context).colorScheme.secondary.withOpacity(0.1), Theme.of(context).colorScheme.secondary),
-                    _buildMetaTag(context, pyq.questionNumber, Theme.of(context).colorScheme.tertiary.withOpacity(0.2), Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
-                  ]).toList(),
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: isDark
+            ? BoxDecoration(
+                image: DecorationImage(
+                  image: const AssetImage('assets/images/darktheme_bg.png'),
+                  fit: BoxFit.cover,
+                  colorFilter: ColorFilter.mode(
+                    const Color(0xFF171330).withOpacity(0.55),
+                    BlendMode.srcOver,
+                  ),
                 ),
-                loading: () => const SizedBox.shrink(),
-                error: (e, _) => const SizedBox.shrink(),
-              ),
-              const SizedBox(height: 24),
-              // Main Question Card (Paper-like)
-              Container(
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface,
-                  borderRadius: BorderRadius.circular(32),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Theme.of(context).colorScheme.primary.withOpacity(0.06),
-                      blurRadius: 25,
-                      offset: const Offset(0, 10),
-                    ),
-                  ],
+              )
+            : null,
+        child: SafeArea(
+          child: questionAsync.when(
+          data: (question) => SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Metadata Tags
+                pyqAsync.when(
+                  data: (pyqs) => Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: pyqs.expand((pyq) => [
+                      _buildMetaTag(context, '${pyq.examType} ${pyq.year}', Theme.of(context).colorScheme.primary.withOpacity(0.1), Theme.of(context).colorScheme.primary),
+                      _buildMetaTag(context, '${pyq.season}', Theme.of(context).colorScheme.secondary.withOpacity(0.1), Theme.of(context).colorScheme.secondary),
+                      _buildMetaTag(context, pyq.questionNumber, Theme.of(context).colorScheme.tertiary.withOpacity(0.2), Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
+                    ]).toList(),
+                  ),
+                  loading: () => const SizedBox.shrink(),
+                  error: (e, _) => const SizedBox.shrink(),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(32),
-                      child: Text(
-                        question.questionText,
-                        style: GoogleFonts.outfit(
-                          fontSize: 20,
-                          height: 1.6,
-                          fontWeight: FontWeight.w500,
-                          color: Theme.of(context).colorScheme.onSurface,
+                const SizedBox(height: 24),
+                // Main Question Card (Paper-like)
+                Container(
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surface,
+                    borderRadius: BorderRadius.circular(32),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Theme.of(context).colorScheme.primary.withOpacity(0.06),
+                        blurRadius: 25,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(32),
+                        child: Text(
+                          question.questionText,
+                          style: GoogleFonts.outfit(
+                            fontSize: 20,
+                            height: 1.6,
+                            fontWeight: FontWeight.w500,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
                         ),
                       ),
-                    ),
-                    imagesAsync.when(
-                      data: (images) => images.isEmpty
-                          ? const SizedBox.shrink()
-                          : Padding(
-                              padding: const EdgeInsets.only(bottom: 32, left: 20, right: 20),
-                              child: Column(
-                                children: images
-                                    .map((img) => Padding(
-                                          padding: const EdgeInsets.only(bottom: 16),
-                                          child: ClipRRect(
-                                            borderRadius: BorderRadius.circular(24),
-                                            child: Image.network(
-                                              img.imageUrl,
-                                              loadingBuilder: (context, child, progress) {
-                                                if (progress == null) return child;
-                                                return Container(
-                                                  height: 200,
-                                                  color: Theme.of(context).colorScheme.surfaceVariant,
-                                                  child: const Center(child: CircularProgressIndicator()),
-                                                );
-                                              },
+                      imagesAsync.when(
+                        data: (images) => images.isEmpty
+                            ? const SizedBox.shrink()
+                            : Padding(
+                                padding: const EdgeInsets.only(bottom: 32, left: 20, right: 20),
+                                child: Column(
+                                  children: images
+                                      .map((img) => Padding(
+                                            padding: const EdgeInsets.only(bottom: 16),
+                                            child: ClipRRect(
+                                              borderRadius: BorderRadius.circular(24),
+                                              child: Image.network(
+                                                img.imageUrl,
+                                                loadingBuilder: (context, child, progress) {
+                                                  if (progress == null) return child;
+                                                  return Container(
+                                                    height: 200,
+                                                    color: Theme.of(context).colorScheme.surfaceVariant,
+                                                    child: const Center(child: CircularProgressIndicator()),
+                                                  );
+                                                },
+                                              ),
                                             ),
-                                          ),
-                                        ))
-                                    .toList(),
+                                          ))
+                                      .toList(),
+                                ),
                               ),
-                            ),
-                      loading: () => const Padding(
-                        padding: EdgeInsets.all(32),
-                        child: Center(child: CircularProgressIndicator()),
+                        loading: () => const Padding(
+                          padding: EdgeInsets.all(32),
+                          child: Center(child: CircularProgressIndicator()),
+                        ),
+                        error: (e, _) => Padding(
+                          padding: const EdgeInsets.all(32),
+                          child: Text('Error loading images: $e'),
+                        ),
                       ),
-                      error: (e, _) => Padding(
-                        padding: const EdgeInsets.all(32),
-                        child: Text('Error loading images: $e'),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 40),
-              // AI Solve Button
-              Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Theme.of(context).colorScheme.primary, Theme.of(context).colorScheme.primary.withOpacity(0.8)],
+                    ],
                   ),
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
-                      blurRadius: 15,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
                 ),
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    showModalBottomSheet(
-                      context: context,
-                      isScrollControlled: true,
+                const SizedBox(height: 40),
+                // AI Solve Button
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Theme.of(context).colorScheme.primary, Theme.of(context).colorScheme.primary.withOpacity(0.8)],
+                    ),
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+                        blurRadius: 15,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        backgroundColor: Colors.transparent,
+                        builder: (context) => SolutionSheet(question: question.questionText),
+                      );
+                    },
+                    icon: const Icon(Icons.auto_awesome_rounded, color: Colors.white),
+                    label: Text(
+                      'Solve with AI Buddy',
+                      style: GoogleFonts.outfit(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.transparent,
-                      builder: (context) => SolutionSheet(question: question.questionText),
-                    );
-                  },
-                  icon: const Icon(Icons.auto_awesome_rounded, color: Colors.white),
-                  label: Text(
-                    'Solve with AI Buddy',
-                    style: GoogleFonts.outfit(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
+                      shadowColor: Colors.transparent,
+                      padding: const EdgeInsets.symmetric(vertical: 20),
                     ),
                   ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.transparent,
-                    shadowColor: Colors.transparent,
-                    padding: const EdgeInsets.symmetric(vertical: 20),
-                  ),
                 ),
-              ),
-              const SizedBox(height: 40),
-            ],
+                const SizedBox(height: 40),
+              ],
+            ),
           ),
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => Center(child: Text('Error: $e')),
         ),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error: $e')),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildMetaTag(BuildContext context, String text, Color bgColor, Color textColor) {
     return Container(
