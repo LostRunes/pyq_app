@@ -48,24 +48,37 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
     super.dispose();
   }
 
-  String _getAppBarTitle() {
-    switch (_currentIndex) {
-      case 0:
-        return 'Subjects';
-      case 1:
-        return 'Dashboard';
-      case 2:
-        return 'Settings';
-      default:
-        return 'Subjects';
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
+    final brandTitle = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: Image.asset(
+            'assets/images/reva_logo.png',
+            height: 28,
+            width: 28,
+            fit: BoxFit.cover,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          'REVA',
+          style: GoogleFonts.outfit(
+            fontWeight: FontWeight.w900,
+            fontSize: 20,
+            letterSpacing: 1.2,
+          ),
+        ),
+      ],
+    );
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(_getAppBarTitle()),
+        title: brandTitle,
+        centerTitle: true,
         automaticallyImplyLeading:
             _currentIndex == 0, // Back button only on Subjects tab
       ),
@@ -255,29 +268,43 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
           if (i == 0) {
             return Container(
               padding: const EdgeInsets.symmetric(vertical: 16),
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Choose your path!',
-                          style: Theme.of(context).textTheme.headlineSmall
-                              ?.copyWith(fontWeight: FontWeight.w900),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Select a subject to begin.',
-                          style: Theme.of(context).textTheme.bodyMedium,
-                        ),
-                      ],
+                  Text(
+                    'Subjects',
+                    style: GoogleFonts.outfit(
+                      fontSize: 32,
+                      fontWeight: FontWeight.w900,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
-                  SizedBox(
-                    height: 140,
-                    width: 140,
-                    child: Image.asset('assets/images/panda.png'),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Choose your path!',
+                              style: Theme.of(context).textTheme.headlineSmall
+                                  ?.copyWith(fontWeight: FontWeight.w900),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Select a subject to begin.',
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                          ],
+                        ),
+                      ),
+                      SizedBox(
+                        height: 140,
+                        width: 140,
+                        child: Image.asset('assets/images/panda.png'),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -393,6 +420,15 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          Text(
+            'Dashboard',
+            style: GoogleFonts.outfit(
+              fontSize: 32,
+              fontWeight: FontWeight.w900,
+              color: theme.colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 24),
           // Upload Notes Panel
           Container(
             padding: const EdgeInsets.all(20),
@@ -674,6 +710,15 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          Text(
+            'Settings',
+            style: GoogleFonts.outfit(
+              fontSize: 32,
+              fontWeight: FontWeight.w900,
+              color: theme.colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 24),
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(

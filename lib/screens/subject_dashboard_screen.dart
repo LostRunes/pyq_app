@@ -75,7 +75,30 @@ class _SubjectDashboardScreenState
         children: [
           Scaffold(
             appBar: AppBar(
-              title: Text(widget.subject.name),
+              title: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.asset(
+                      'assets/images/reva_logo.png',
+                      height: 28,
+                      width: 28,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'REVA',
+                    style: GoogleFonts.outfit(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 20,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                ],
+              ),
+              centerTitle: true,
               actions: [
                 if (hasHandout)
                   IconButton(
@@ -85,20 +108,39 @@ class _SubjectDashboardScreenState
                         _launchUrl(widget.subject.courseOutcomeLink),
                   ),
               ],
-              bottom: TabBar(
-                isScrollable: true,
-                tabAlignment: TabAlignment.start,
-                indicatorSize: TabBarIndicatorSize.label,
-                labelStyle: GoogleFonts.outfit(fontWeight: FontWeight.w900),
-                unselectedLabelStyle: GoogleFonts.outfit(
-                  fontWeight: FontWeight.w600,
+              bottom: PreferredSize(
+                preferredSize: const Size.fromHeight(100),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                      child: Text(
+                        widget.subject.name,
+                        style: GoogleFonts.outfit(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w900,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                      ),
+                    ),
+                    TabBar(
+                      isScrollable: true,
+                      tabAlignment: TabAlignment.start,
+                      indicatorSize: TabBarIndicatorSize.label,
+                      labelStyle: GoogleFonts.outfit(fontWeight: FontWeight.w900),
+                      unselectedLabelStyle: GoogleFonts.outfit(
+                        fontWeight: FontWeight.w600,
+                      ),
+                      tabs: const [
+                        Tab(text: "Topics"),
+                        Tab(text: "PYQs"),
+                        Tab(text: "Notes"),
+                        Tab(text: "Progress"),
+                      ],
+                    ),
+                  ],
                 ),
-                tabs: const [
-                  Tab(text: "Topics"),
-                  Tab(text: "PYQs"),
-                  Tab(text: "Notes"),
-                  Tab(text: "Progress"),
-                ],
               ),
             ),
             body: Stack(
