@@ -48,7 +48,6 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
     super.dispose();
   }
 
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -70,7 +69,9 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
               icon: const Icon(Icons.search_rounded),
               onPressed: () {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Search feature coming soon! 🔍')),
+                  const SnackBar(
+                    content: Text('Search feature coming soon! 🔍'),
+                  ),
                 );
               },
             ),
@@ -323,7 +324,10 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
                           onTap: () => Navigator.pop(context),
                           behavior: HitTestBehavior.opaque,
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 4,
+                              horizontal: 8,
+                            ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
@@ -338,7 +342,9 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
                                   style: GoogleFonts.outfit(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 14,
-                                    color: Theme.of(context).colorScheme.primary,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.primary,
                                   ),
                                 ),
                               ],
@@ -380,6 +386,43 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
             }
 
             final subject = subjects[i - 1];
+            final isIconLeft = (i - 1) % 2 == 0;
+
+            final iconWidget = Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: Theme.of(
+                  context,
+                ).colorScheme.secondary.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Icon(
+                Icons.book_rounded,
+                color: Theme.of(context).colorScheme.primary,
+                size: 32,
+              ),
+            );
+
+            final textWidget = Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  subject.name,
+                  style: Theme.of(context).textTheme.titleMedium
+                      ?.copyWith(fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Code: ${subject.code}',
+                  style: Theme.of(context).textTheme.bodyMedium
+                      ?.copyWith(fontWeight: FontWeight.w600),
+                ),
+              ],
+            );
+
+            /*
+            // Old Version: Standard layout (Icon then Text, with trailing arrow)
             return Padding(
               padding: const EdgeInsets.only(bottom: 16),
               child: InkWell(
@@ -449,6 +492,53 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
                         ).colorScheme.primary.withOpacity(0.4),
                         size: 20,
                       ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+            */
+
+            // New Version: Alternating layout (Odd: Icon -> Text; Even: Text -> Icon) without trailing arrow
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: InkWell(
+                onTap: () {
+                  Navigator.pushNamed(
+                    context,
+                    '/subject_dashboard',
+                    arguments: {'subject': subject},
+                  );
+                },
+                borderRadius: BorderRadius.circular(32),
+                child: Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surface,
+                    borderRadius: BorderRadius.circular(32),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.primary.withOpacity(0.08),
+                        blurRadius: 20,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      if (isIconLeft) ...[
+                        iconWidget,
+                        const SizedBox(width: 20),
+                      ],
+                      Expanded(
+                        child: textWidget,
+                      ),
+                      if (!isIconLeft) ...[
+                        const SizedBox(width: 20),
+                        iconWidget,
+                      ],
                     ],
                   ),
                 ),
@@ -1008,10 +1098,7 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
                 ),
               ),
             ),
-            _SemesterSubjectsList(
-              branchId: widget.branchId,
-              semester: sem,
-            ),
+            _SemesterSubjectsList(branchId: widget.branchId, semester: sem),
             const SizedBox(height: 8),
           ],
         );
@@ -1024,10 +1111,7 @@ class _SemesterSubjectsList extends ConsumerWidget {
   final String branchId;
   final int semester;
 
-  const _SemesterSubjectsList({
-    required this.branchId,
-    required this.semester,
-  });
+  const _SemesterSubjectsList({required this.branchId, required this.semester});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -1042,7 +1126,11 @@ class _SemesterSubjectsList extends ConsumerWidget {
             padding: EdgeInsets.symmetric(vertical: 8, horizontal: 24),
             child: Text(
               'No subjects found for this semester.',
-              style: TextStyle(fontStyle: FontStyle.italic, fontSize: 13, color: Colors.grey),
+              style: TextStyle(
+                fontStyle: FontStyle.italic,
+                fontSize: 13,
+                color: Colors.grey,
+              ),
             ),
           );
         }
@@ -1060,12 +1148,17 @@ class _SemesterSubjectsList extends ConsumerWidget {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
                 side: BorderSide(
-                  color: Theme.of(context).colorScheme.primary.withOpacity(0.15),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.primary.withOpacity(0.15),
                 ),
               ),
               child: ListTile(
                 dense: true,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 4,
+                ),
                 leading: Icon(
                   Icons.book_rounded,
                   color: Theme.of(context).colorScheme.primary,
@@ -1080,16 +1173,17 @@ class _SemesterSubjectsList extends ConsumerWidget {
                 ),
                 subtitle: Text(
                   'Code: ${subject.code}',
-                  style: GoogleFonts.outfit(
-                    fontSize: 12,
-                    color: Colors.grey,
-                  ),
+                  style: GoogleFonts.outfit(fontSize: 12, color: Colors.grey),
                 ),
+                /*
+                // Old Version: Had a trailing arrow
                 trailing: const Icon(
                   Icons.arrow_forward_ios_rounded,
                   size: 14,
                   color: Colors.grey,
                 ),
+                */
+
                 onTap: () {
                   Navigator.pushNamed(
                     context,
@@ -1114,7 +1208,10 @@ class _SemesterSubjectsList extends ConsumerWidget {
       ),
       error: (e, _) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 24),
-        child: Text('Error: $e', style: const TextStyle(color: Colors.red, fontSize: 12)),
+        child: Text(
+          'Error: $e',
+          style: const TextStyle(color: Colors.red, fontSize: 12),
+        ),
       ),
     );
   }
