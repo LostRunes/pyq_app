@@ -1,4 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter/foundation.dart';
 import '../models/branch.dart';
 import '../models/year.dart';
 import '../models/subject.dart';
@@ -140,41 +141,132 @@ class SupabaseService {
     return (res as List).map((e) => ImageItem.fromJson(e)).toList();
   }
 
-  // Optimized Fetch for PDF
+  // Optimized Fetch for PDF using RPC functions
   Future<List<QuestionFull>> getQuestionsWithDetails(String topicId) async {
-    // 1. Get all questions for the topic
-    final questions = await getQuestionsByTopic(topicId);
-    
-    List<QuestionFull> fullQuestions = [];
-    
-    // 2. Fetch details for each question (In parallel for speed)
-    await Future.wait(questions.map((q) async {
-      final pyqs = await getPyqSourcesForQuestion(q.id);
-      final images = await getImagesForQuestion(q.id);
-      
-      fullQuestions.add(QuestionFull(
-        text: q.questionText,
-        difficulty: q.difficulty,
-        imageUrls: images.map((i) => i.imageUrl).toList(),
-        pyqMeta: pyqs,
-      ));
-    }));
-    
-    return fullQuestions;
+    try {
+      final response = await supabase.rpc(
+        'get_topic_pdf_data',
+        params: {
+          'topic_uuid': topicId,
+        },
+      );
+
+      if (response == null) return [];
+
+      final data = Map<String, dynamic>.from(response as Map);
+      final questionsList = data['questions'] as List? ?? [];
+
+      return questionsList.map((qJson) {
+        final qMap = Map<String, dynamic>.from(qJson as Map);
+
+        final images = qMap['images'] as List? ?? [];
+        final imageUrls = images.map((i) {
+          final iMap = Map<String, dynamic>.from(i as Map);
+          return iMap['image_url']?.toString() ?? '';
+        }).where((url) => url.isNotEmpty).toList();
+
+        final pyqs = qMap['pyq_meta'] as List? ?? [];
+        final pyqMeta = pyqs.map((p) {
+          final pMap = Map<String, dynamic>.from(p as Map);
+          return PyqSource(
+            id: '',
+            year: pMap['year']?.toString() ?? '',
+            examType: pMap['exam_type']?.toString() ?? '',
+            season: pMap['season']?.toString() ?? '',
+            questionNumber: pMap['question_number']?.toString() ?? '',
+          );
+        }).toList();
+
+        return QuestionFull(
+          text: qMap['text']?.toString() ?? '',
+          difficulty: qMap['difficulty']?.toString() ?? '',
+          imageUrls: imageUrls,
+          pyqMeta: pyqMeta,
+        );
+      }).toList();
+    } catch (e) {
+      debugPrint('RPC get_topic_pdf_data failed, falling back to legacy query: $e');
+      // Fallback in case RPC is not deployed yet or has error
+      final questions = await getQuestionsByTopic(topicId);
+      List<QuestionFull> fullQuestions = [];
+      await Future.wait(questions.map((q) async {
+        final pyqs = await getPyqSourcesForQuestion(q.id);
+        final images = await getImagesForQuestion(q.id);
+        fullQuestions.add(QuestionFull(
+          text: q.questionText,
+          difficulty: q.difficulty,
+          imageUrls: images.map((i) => i.imageUrl).toList(),
+          pyqMeta: pyqs,
+        ));
+      }));
+      return fullQuestions;
+    }
   }
 
   Future<List<TopicWithQuestions>> getFullSubjectData(String subjectId) async {
-    final topics = await getTopics(subjectId);
-    
-    // Parallelize API calls for all topics
-    final futures = topics.map((topic) async {
-      final questions = await getQuestionsWithDetails(topic.id);
-      return TopicWithQuestions(
-        topicName: topic.name,
-        questions: questions,
+    try {
+      final response = await supabase.rpc(
+        'get_subject_pdf_data',
+        params: {
+          'subject_uuid': subjectId,
+        },
       );
-    }).toList();
 
-    return await Future.wait(futures);
+      if (response == null) return [];
+
+      final List topicsList = response as List;
+
+      return topicsList.map((tJson) {
+        final tMap = Map<String, dynamic>.from(tJson as Map);
+        final topicName = tMap['topic_name']?.toString() ?? '';
+
+        final questionsList = tMap['questions'] as List? ?? [];
+        final questions = questionsList.map((qJson) {
+          final qMap = Map<String, dynamic>.from(qJson as Map);
+
+          final images = qMap['images'] as List? ?? [];
+          final imageUrls = images.map((i) {
+            final iMap = Map<String, dynamic>.from(i as Map);
+            return iMap['image_url']?.toString() ?? '';
+          }).where((url) => url.isNotEmpty).toList();
+
+          final pyqs = qMap['pyq_meta'] as List? ?? [];
+          final pyqMeta = pyqs.map((p) {
+            final pMap = Map<String, dynamic>.from(p as Map);
+            return PyqSource(
+              id: '',
+              year: pMap['year']?.toString() ?? '',
+              examType: pMap['exam_type']?.toString() ?? '',
+              season: pMap['season']?.toString() ?? '',
+              questionNumber: pMap['question_number']?.toString() ?? '',
+            );
+          }).toList();
+
+          return QuestionFull(
+            text: qMap['text']?.toString() ?? '',
+            difficulty: qMap['difficulty']?.toString() ?? '',
+            imageUrls: imageUrls,
+            pyqMeta: pyqMeta,
+          );
+        }).toList();
+
+        return TopicWithQuestions(
+          topicName: topicName,
+          questions: questions,
+        );
+      }).toList();
+    } catch (e) {
+      debugPrint('RPC get_subject_pdf_data failed, falling back to legacy query: $e');
+      // Fallback to legacy behavior
+      final topics = await getTopics(subjectId);
+      final futures = topics.map((topic) async {
+        final questions = await getQuestionsWithDetails(topic.id);
+        return TopicWithQuestions(
+          topicName: topic.name,
+          questions: questions,
+        );
+      }).toList();
+      return await Future.wait(futures);
+    }
   }
 }
