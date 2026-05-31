@@ -32,6 +32,7 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
 
   // Animation controller for fluid water bubble wobble
   late AnimationController _wobbleController;
+  late PageController _pageController;
 
   @override
   void initState() {
@@ -44,11 +45,14 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
       vsync: this,
       duration: const Duration(milliseconds: 900),
     )..repeat(reverse: true);
+
+    _pageController = PageController(initialPage: _currentIndex);
   }
 
   @override
   void dispose() {
     _wobbleController.dispose();
+    _pageController.dispose();
     super.dispose();
   }
 
@@ -125,8 +129,13 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
               )
             : null,
         child: SafeArea(
-          child: IndexedStack(
-            index: _currentIndex,
+          child: PageView(
+            controller: _pageController,
+            onPageChanged: (index) {
+              setState(() {
+                _currentIndex = index;
+              });
+            },
             children: [
               _buildSubjectsPage(context),
               _buildSemestersPage(context),
@@ -275,6 +284,11 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
         setState(() {
           _currentIndex = index;
         });
+        _pageController.animateToPage(
+          index,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
       },
       behavior: HitTestBehavior.opaque,
       child: SizedBox(
