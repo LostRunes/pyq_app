@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../data/models/doubt.dart';
 import '../providers/skulk_providers.dart';
+import 'report_bottom_sheet.dart';
 
 class DoubtCard extends ConsumerWidget {
   final Doubt doubt;
@@ -20,14 +21,13 @@ class DoubtCard extends ConsumerWidget {
     final voteState = ref.watch(userVotesProvider);
     final isUpvoted = voteState.value?[doubt.id] ?? false;
 
-    final accentBg = isDark ? Colors.grey[900]! : Colors.grey[50]!;
     final cardBorder = isDark ? Colors.grey[800]! : Colors.grey[200]!;
 
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
       child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+        margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
@@ -51,7 +51,7 @@ class DoubtCard extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Row 1: Author, reputation and resolved subject tag
+            // Row 1: Author + solved badge + report menu
             Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
@@ -136,29 +136,63 @@ class DoubtCard extends ConsumerWidget {
                       ],
                     ),
                   ),
+                // ⋮ Report menu
+                PopupMenuButton<String>(
+                  icon: Icon(Icons.more_vert_rounded, size: 18,
+                      color: isDark ? Colors.grey[600] : Colors.grey[400]),
+                  onSelected: (value) {
+                    if (value == 'report') {
+                      ReportBottomSheet.show(
+                        context,
+                        target: ReportTarget.doubt,
+                        targetId: doubt.id,
+                      );
+                    }
+                  },
+                  itemBuilder: (_) => [
+                    PopupMenuItem(
+                      value: 'report',
+                      child: Row(
+                        children: [
+                          const Icon(Icons.flag_outlined, size: 16, color: Colors.redAccent),
+                          const SizedBox(width: 8),
+                          Text('Report', style: GoogleFonts.outfit(fontSize: 13, color: Colors.redAccent)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
 
-            // Row 2: Subject Badge
+            // Row 2: Cozy subject chip
             if (doubt.subjectName.isNotEmpty)
               Container(
                 margin: const EdgeInsets.only(bottom: 8),
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: isDark ? Colors.purple.withOpacity(0.15) : Colors.purple.withOpacity(0.08),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.purple.withOpacity(0.2)),
+                  color: _subjectColor(doubt.subjectName).withOpacity(isDark ? 0.18 : 0.1),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: _subjectColor(doubt.subjectName).withOpacity(0.3)),
                 ),
-                child: Text(
-                  doubt.subjectName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.outfit(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: isDark ? Colors.purple[200] : Colors.purple[700],
-                  ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('📘 ', style: const TextStyle(fontSize: 10)),
+                    Flexible(
+                      child: Text(
+                        doubt.subjectName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.outfit(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: _subjectColor(doubt.subjectName),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
 
@@ -188,9 +222,9 @@ class DoubtCard extends ConsumerWidget {
                 color: isDark ? Colors.grey[400] : Colors.grey[700],
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
 
-            // Row 3: Tags List
+            // Row 3: Tags
             if (doubt.tags.isNotEmpty)
               SizedBox(
                 height: 24,
@@ -203,8 +237,8 @@ class DoubtCard extends ConsumerWidget {
                     return Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
-                        color: accentBg,
-                        borderRadius: BorderRadius.circular(6),
+                        color: isDark ? const Color(0xFF252525) : Colors.grey[100],
+                        borderRadius: BorderRadius.circular(20),
                         border: Border.all(color: cardBorder),
                       ),
                       child: Text(
@@ -220,19 +254,19 @@ class DoubtCard extends ConsumerWidget {
                 ),
               ),
 
-            const Divider(height: 24),
+            const Divider(height: 22),
 
-            // Row 4: Actions (Upvotes Count, Solutions Count, Comments Count)
+            // Row 4: Actions
             Row(
               children: [
-                // Upvote Button
+                // Upvote
                 InkWell(
                   onTap: () {
                     ref.read(userVotesProvider.notifier).toggleDoubtVote(doubt.id);
                   },
                   borderRadius: BorderRadius.circular(10),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
                       color: isUpvoted
                           ? (isDark ? Colors.amber.withOpacity(0.15) : Colors.amber.withOpacity(0.1))
@@ -243,14 +277,14 @@ class DoubtCard extends ConsumerWidget {
                       children: [
                         Icon(
                           isUpvoted ? Icons.arrow_upward_rounded : Icons.arrow_upward_outlined,
-                          size: 18,
+                          size: 16,
                           color: isUpvoted ? Colors.amber[600] : Colors.grey,
                         ),
-                        const SizedBox(width: 6),
+                        const SizedBox(width: 4),
                         Text(
                           '${doubt.upvotesCount}',
                           style: GoogleFonts.outfit(
-                            fontSize: 13,
+                            fontSize: 12,
                             fontWeight: FontWeight.w600,
                             color: isUpvoted ? Colors.amber[600] : Colors.grey,
                           ),
@@ -259,42 +293,42 @@ class DoubtCard extends ConsumerWidget {
                     ),
                   ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 12),
 
-                // Answers/Solutions Count
+                // Answers count
                 Row(
                   children: [
-                    const Icon(
-                      Icons.check_circle_outline_rounded,
-                      size: 18,
-                      color: Colors.grey,
+                    Icon(
+                      doubt.answersCount > 0
+                          ? Icons.check_circle_rounded
+                          : Icons.check_circle_outline_rounded,
+                      size: 16,
+                      color: doubt.answersCount > 0 ? Colors.green : Colors.grey,
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: 4),
                     Text(
-                      '${doubt.answersCount} solutions',
+                      doubt.answersCount == 1
+                          ? '1 solution'
+                          : '${doubt.answersCount} solutions',
                       style: GoogleFonts.outfit(
-                        fontSize: 13,
+                        fontSize: 12,
                         fontWeight: FontWeight.w500,
-                        color: Colors.grey,
+                        color: doubt.answersCount > 0 ? Colors.green : Colors.grey,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 12),
 
-                // Comments Count
+                // Comments count
                 Row(
                   children: [
-                    const Icon(
-                      Icons.chat_bubble_outline_rounded,
-                      size: 16,
-                      color: Colors.grey,
-                    ),
-                    const SizedBox(width: 6),
+                    const Icon(Icons.chat_bubble_outline_rounded, size: 14, color: Colors.grey),
+                    const SizedBox(width: 4),
                     Text(
                       '${doubt.commentsCount}',
                       style: GoogleFonts.outfit(
-                        fontSize: 13,
+                        fontSize: 12,
                         fontWeight: FontWeight.w500,
                         color: Colors.grey,
                       ),
@@ -309,6 +343,22 @@ class DoubtCard extends ConsumerWidget {
     );
   }
 
+  /// Consistent color per subject name, using hash for determinism.
+  static Color _subjectColor(String subjectName) {
+    final colors = [
+      const Color(0xFF8B5CF6), // violet
+      const Color(0xFF3B82F6), // blue
+      const Color(0xFF10B981), // emerald
+      const Color(0xFFF59E0B), // amber
+      const Color(0xFFEF4444), // red
+      const Color(0xFFEC4899), // pink
+      const Color(0xFF06B6D4), // cyan
+      const Color(0xFF84CC16), // lime
+    ];
+    final idx = subjectName.codeUnits.fold(0, (a, b) => a + b) % colors.length;
+    return colors[idx];
+  }
+
   String _formatRelativeTime(DateTime dateTime) {
     final now = DateTime.now();
     final difference = now.difference(dateTime);
@@ -319,8 +369,10 @@ class DoubtCard extends ConsumerWidget {
       return '${(difference.inDays / 30).floor()}mo ago';
     } else if (difference.inDays >= 7) {
       return '${(difference.inDays / 7).floor()}w ago';
-    } else if (difference.inDays >= 1) {
+    } else if (difference.inDays >= 2) {
       return '${difference.inDays}d ago';
+    } else if (difference.inDays == 1) {
+      return 'Yesterday';
     } else if (difference.inHours >= 1) {
       return '${difference.inHours}h ago';
     } else if (difference.inMinutes >= 1) {

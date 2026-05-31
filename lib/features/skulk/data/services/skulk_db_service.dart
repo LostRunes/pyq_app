@@ -10,9 +10,10 @@ class SkulkDbService {
   /// Fetches doubt posts from Supabase 2 with joined user profiles
   Future<List<Map<String, dynamic>>> fetchDoubts({
     String? subjectId,
-    int? semester, // If semester is provided, we can filter by subjects in repository
+    int? semester,
     String? searchQuery,
     String? filterType, // 'all', 'mine', 'unanswered', 'solved', 'hot'
+    String? tagFilter,  // single tag to filter by
     int limit = 20,
     int offset = 0,
   }) async {
@@ -31,7 +32,12 @@ class SkulkDbService {
       query = query.eq('subject_id', subjectId);
     }
 
-    // 3. Status Filters
+    // 3. Tag Filter (PostgreSQL array contains)
+    if (tagFilter != null && tagFilter.isNotEmpty) {
+      query = query.contains('tags', [tagFilter]);
+    }
+
+    // 4. Status Filters
     if (filterType == 'unanswered') {
       query = query.eq('answers_count', 0);
     } else if (filterType == 'solved') {
@@ -43,7 +49,7 @@ class SkulkDbService {
       }
     }
 
-    // 4. Sorting & Pagination
+    // 5. Sorting & Pagination
     if (filterType == 'hot') {
       query = query.order('upvotes_count', ascending: false);
     } else {
@@ -54,6 +60,74 @@ class SkulkDbService {
     return List<Map<String, dynamic>>.from(res);
   }
 
+  // ----------------------------------------------------
+  // NOTIFICATIONS Helpers
+  // ----------------------------------------------------
+
+  /// Inserts a notification for a target user.
+  Future<void> createNotification({
+    required String userId,
+    required String type,
+    required String message,
+    String? postId,
+    String? answerId,
+    String? actorUsername,
+    String? actorDisplayName,
+  }) async {
+    final actorId = _client.auth.currentUser?.id;
+    try {
+      await _client.from('notifications').insert({
+        'user_id': userId,
+        'type': type,
+        'message': message,
+        if (postId != null) 'post_id': postId,
+        if (answerId != null) 'answer_id': answerId,
+        if (actorId != null) 'actor_id': actorId,
+        if (actorUsername != null) 'actor_username': actorUsername,
+        if (actorDisplayName != null) 'actor_display_name': actorDisplayName,
+      });
+    } catch (_) {
+      // Notifications are non-critical — fail silently
+    }
+  }
+
+  /// Fetches notifications for the current user, latest first.
+  Future<List<Map<String, dynamic>>> fetchNotifications({int limit = 50}) async {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null) return [];
+
+    final res = await _client
+        .from('notifications')
+        .select()
+        .eq('user_id', userId)
+        .order('created_at', ascending: false)
+        .limit(limit);
+    return List<Map<String, dynamic>>.from(res);
+  }
+
+  /// Returns unread notification count for badge.
+  Future<int> fetchUnreadCount() async {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null) return 0;
+    final res = await _client
+        .from('notifications')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('read', false);
+    return (res as List).length;
+  }
+
+  /// Marks all notifications as read for current user.
+  Future<void> markAllNotificationsRead() async {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null) return;
+    await _client
+        .from('notifications')
+        .update({'read': true})
+        .eq('user_id', userId)
+        .eq('read', false);
+  }
+
   /// Fetches a single doubt post by ID
   Future<Map<String, dynamic>?> fetchDoubtDetail(String doubtId) async {
     final res = await _client
@@ -62,6 +136,16 @@ class SkulkDbService {
         .eq('id', doubtId)
         .maybeSingle();
     return res;
+  }
+
+  /// Fetches a user_profiles row by user ID (for Skulk stats).
+  Future<Map<String, dynamic>> fetchUserProfile(String userId) async {
+    final res = await _client
+        .from('user_profiles')
+        .select()
+        .eq('id', userId)
+        .single();
+    return Map<String, dynamic>.from(res);
   }
 
   /// Inserts a new doubt

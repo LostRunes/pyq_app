@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../data/models/solution.dart';
 import '../providers/skulk_providers.dart';
+import 'report_bottom_sheet.dart';
 
 class SolutionTile extends ConsumerWidget {
   final Solution solution;
@@ -143,40 +144,51 @@ class SolutionTile extends ConsumerWidget {
                 ),
               ),
               
-              // Edit/Delete Context Menu for Author
-              if (isOwnSolution)
-                PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_vert_rounded, size: 20, color: Colors.grey),
-                  onSelected: (value) {
-                    if (value == 'edit') {
-                      onEdit();
-                    } else if (value == 'delete') {
-                      onDelete();
-                    }
-                  },
-                  itemBuilder: (context) => [
+              // Edit/Delete for Owner | Report for others
+              PopupMenuButton<String>(
+                icon: const Icon(Icons.more_vert_rounded, size: 20, color: Colors.grey),
+                onSelected: (value) {
+                  if (value == 'edit') {
+                    onEdit();
+                  } else if (value == 'delete') {
+                    onDelete();
+                  } else if (value == 'report') {
+                    ReportBottomSheet.show(
+                      context,
+                      target: ReportTarget.solution,
+                      targetId: solution.id,
+                    );
+                  }
+                },
+                itemBuilder: (context) => [
+                  if (isOwnSolution) ...[
                     PopupMenuItem(
                       value: 'edit',
-                      child: Row(
-                        children: [
-                          const Icon(Icons.edit_outlined, size: 16, color: Colors.grey),
-                          const SizedBox(width: 8),
-                          Text('Edit Solution', style: GoogleFonts.outfit(fontSize: 13)),
-                        ],
-                      ),
+                      child: Row(children: [
+                        const Icon(Icons.edit_outlined, size: 16, color: Colors.grey),
+                        const SizedBox(width: 8),
+                        Text('Edit Solution', style: GoogleFonts.outfit(fontSize: 13)),
+                      ]),
                     ),
                     PopupMenuItem(
                       value: 'delete',
-                      child: Row(
-                        children: [
-                          const Icon(Icons.delete_outline_rounded, size: 16, color: Colors.redAccent),
-                          const SizedBox(width: 8),
-                          Text('Delete', style: GoogleFonts.outfit(fontSize: 13, color: Colors.redAccent)),
-                        ],
-                      ),
+                      child: Row(children: [
+                        const Icon(Icons.delete_outline_rounded, size: 16, color: Colors.redAccent),
+                        const SizedBox(width: 8),
+                        Text('Delete', style: GoogleFonts.outfit(fontSize: 13, color: Colors.redAccent)),
+                      ]),
                     ),
-                  ],
-                ),
+                  ] else
+                    PopupMenuItem(
+                      value: 'report',
+                      child: Row(children: [
+                        const Icon(Icons.flag_outlined, size: 16, color: Colors.redAccent),
+                        const SizedBox(width: 8),
+                        Text('Report', style: GoogleFonts.outfit(fontSize: 13, color: Colors.redAccent)),
+                      ]),
+                    ),
+                ],
+              ),
             ],
           ),
           const SizedBox(height: 10),
