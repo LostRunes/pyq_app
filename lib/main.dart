@@ -9,6 +9,8 @@ import 'screens/question_list_screen.dart';
 import 'screens/question_detail_screen.dart';
 import 'screens/subject_dashboard_screen.dart';
 import 'screens/splash_screen.dart';
+import 'screens/profile_screen.dart';
+import 'screens/settings_screen.dart';
 import 'models/subject.dart';
 import 'core/providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -89,7 +91,10 @@ class PyqApp extends ConsumerWidget {
                   as Map<String, dynamic>;
           return QuestionDetailScreen(questionId: args['questionId']);
         },
+        '/profile': (context) => const ProfileScreen(),
+        '/settings': (context) => const SettingsScreen(),
       },
     );
   }
 }
+
