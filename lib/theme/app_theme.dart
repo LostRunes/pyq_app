@@ -3,10 +3,12 @@ import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
   // Richer Earthy Palette (Light Mode)
-  static const Color primaryColor = Color(0xFFD37D3E); // Deep Toffee / Burnt Sienna
+  static const Color primaryColor = Color(
+    0xFFD37D3E,
+  ); // Deep Toffee / Burnt Sienna
   static const Color secondaryColor = Color(0xFF8BA682); // Muted Sage
   static const Color accentColor = Color(0xFFE08E9D); // Deeper Rose
-  
+
   static const Color lightBg = Color(0xFFFBEAD0); // Warm Sand / Parchment
   static const Color lightSurface = Color(0xFFFFF8EE); // Warm Cream
   static const Color lightText = Color(0xFF3D2F27); // Dark Coffee
@@ -16,7 +18,9 @@ class AppTheme {
   static const Color darkPrimary = Color(0xFFC0A6FF); // Soft glowing lavender
   static const Color darkSecondary = Color(0xFF8A7CB5); // Muted lavender
   static const Color darkAccent = Color(0xFFFFBCE8); // Pastel pink/rose
-  static const Color darkBg = Color(0xFF171330); // Deep magical night sky purple
+  static const Color darkBg = Color(
+    0xFF171330,
+  ); // Deep magical night sky purple
   static const Color darkSurface = Color(0xFF251E4E); // Deep violet surface
   static const Color darkText = Color(0xFFFFFFFF); // Pure white
   static const Color darkSubText = Color(0xFFB8AEDB); // Lavender muted subtext
@@ -26,7 +30,7 @@ class AppTheme {
 
   static ThemeData _buildTheme(Brightness brightness) {
     final bool isDark = brightness == Brightness.dark;
-    
+
     final primary = isDark ? darkPrimary : primaryColor;
     final secondary = isDark ? darkSecondary : secondaryColor;
     final tertiary = isDark ? darkAccent : accentColor;
@@ -54,23 +58,28 @@ class AppTheme {
       ),
       textTheme: GoogleFonts.outfitTextTheme().copyWith(
         displayMedium: GoogleFonts.outfit(
-          fontWeight: FontWeight.bold, 
-          color: isDark ? darkText : lightText
+          fontWeight: FontWeight.bold,
+          color: isDark ? darkText : lightText,
         ),
         displaySmall: GoogleFonts.outfit(
-          fontWeight: FontWeight.bold, 
-          color: isDark ? darkText : lightText
+          fontWeight: FontWeight.bold,
+          color: isDark ? darkText : lightText,
         ),
         titleLarge: GoogleFonts.outfit(
-          fontWeight: FontWeight.w800, 
-          color: isDark ? darkText : lightText
+          fontWeight: FontWeight.w800,
+          color: isDark ? darkText : lightText,
         ),
         titleMedium: GoogleFonts.outfit(
-          fontWeight: FontWeight.w700, 
-          color: isDark ? darkText : lightText
+          fontWeight: FontWeight.w700,
+          color: isDark ? darkText : lightText,
         ),
-        bodyLarge: GoogleFonts.outfit(color: isDark ? darkText : lightText, fontSize: 16),
-        bodyMedium: GoogleFonts.outfit(color: isDark ? darkSubText : lightSubText),
+        bodyLarge: GoogleFonts.outfit(
+          color: isDark ? darkText : lightText,
+          fontSize: 16,
+        ),
+        bodyMedium: GoogleFonts.outfit(
+          color: isDark ? darkSubText : lightSubText,
+        ),
       ),
       appBarTheme: AppBarTheme(
         backgroundColor: Colors.transparent,
@@ -88,10 +97,15 @@ class AppTheme {
           backgroundColor: primary,
           foregroundColor: isDark ? const Color(0xFF171330) : Colors.white,
           minimumSize: const Size.fromHeight(64),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
           elevation: 2,
           shadowColor: primary.withOpacity(0.3),
-          textStyle: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w800),
+          textStyle: GoogleFonts.outfit(
+            fontSize: 18,
+            fontWeight: FontWeight.w800,
+          ),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
@@ -104,15 +118,18 @@ class AppTheme {
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(24),
           borderSide: BorderSide(
-            color: isDark ? Colors.white10 : primary.withOpacity(0.2), 
-            width: 1.5
+            color: isDark ? Colors.white10 : primary.withOpacity(0.2),
+            width: 1.5,
           ),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(24),
           borderSide: BorderSide(color: primary, width: 2.5),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 24,
+          vertical: 20,
+        ),
       ),
     );
   }
