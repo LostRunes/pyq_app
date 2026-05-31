@@ -23,14 +23,22 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
     with SingleTickerProviderStateMixin {
   late int _currentSemester;
   late String _currentBranchId;
-  int _currentIndex = 0; // 0: Subjects, 1: Syllabus, 2: Dashboard, 3: Settings
+  int _currentIndex = 0; // 0: Subjects, 1: Syllabus, 2: Dashboard, 3: Skulk
   int? _selectedSyllabusSemester; // null means 'All Semesters'
 
   // For dummy upload notes form
   int? _uploadSemester;
   Subject? _uploadSubject;
 
-  // Animation controller for fluid water bubble wobble
+  // Interactive Skulk Feed state
+  final Set<int> _likedPosts = {};
+  final Map<int, int> _postLikes = {
+    1: 24,
+    2: 48,
+    3: 15,
+  };
+
+  // Animation controller for fluid water wobble
   late AnimationController _wobbleController;
   late PageController _pageController;
 
@@ -89,28 +97,95 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
           ],
         ),
         actions: [
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'REVA',
-                style: GoogleFonts.outfit(
-                  fontWeight: FontWeight.w900,
-                  fontSize: 22,
-                  letterSpacing: 1.2,
-                  color: Theme.of(context).colorScheme.onSurface,
+          PopupMenuButton<String>(
+            offset: const Offset(0, 48),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(24),
+            ),
+            icon: Container(
+              padding: const EdgeInsets.all(2),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.4),
+                  width: 2,
                 ),
               ),
-              const SizedBox(width: 10),
-              Image.asset(
-                'assets/images/reva_logo.png',
-                height: 38,
-                width: 38,
-                fit: BoxFit.contain,
+              child: const CircleAvatar(
+                radius: 16,
+                backgroundImage: AssetImage('assets/images/pikachu.png'),
+                backgroundColor: Colors.transparent,
               ),
-              const SizedBox(width: 16),
+            ),
+            onSelected: (value) {
+              if (value == 'profile') {
+                Navigator.pushNamed(context, '/profile');
+              } else if (value == 'settings') {
+                Navigator.pushNamed(context, '/settings');
+              } else if (value == 'logout') {
+                _showLogoutDialog(context);
+              }
+            },
+            itemBuilder: (BuildContext context) => [
+              PopupMenuItem(
+                value: 'profile',
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.person_outline_rounded,
+                      color: Theme.of(context).colorScheme.primary,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Profile',
+                      style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'settings',
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.settings_rounded,
+                      color: Theme.of(context).colorScheme.primary,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Settings',
+                      style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
+              const PopupMenuDivider(),
+              PopupMenuItem(
+                value: 'logout',
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.logout_rounded,
+                      color: Colors.redAccent,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Logout',
+                      style: GoogleFonts.outfit(
+                        color: Colors.redAccent,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
+          const SizedBox(width: 16),
         ],
       ),
       body: Container(
@@ -140,7 +215,7 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
               _buildSubjectsPage(context),
               _buildSemestersPage(context),
               _buildDashboardPage(context),
-              _buildSettingsPage(context),
+              _buildSkulkPage(context),
             ],
           ),
         ),
@@ -257,8 +332,8 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
                 ),
                 _buildNavBarItem(
                   3,
-                  Icons.settings_rounded,
-                  'Settings',
+                  Icons.diversity_3_rounded,
+                  'Skulk',
                   orangeActive,
                   orangeInactive,
                 ),
@@ -936,251 +1011,554 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
     );
   }
 
-  Widget _buildSettingsPage(BuildContext context) {
+  Widget _buildSkulkPage(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final cardColor = isDark ? const Color(0xFF251E4E).withOpacity(0.85) : Colors.white;
+
+    final liveLobbies = [
+      {'title': 'DBMS Solved PYQs Prep', 'active': 8, 'subject': 'Data Structures & Algorithms', 'tag': 'CSE S4'},
+      {'title': 'Maths IV Prep Room', 'active': 12, 'subject': 'Discrete Mathematics', 'tag': 'MTE S4'},
+      {'title': 'Compiler Design Jam', 'active': 5, 'subject': 'Theory of Computation', 'tag': 'CSE S6'},
+    ];
+
+    final feedPosts = [
+      {
+        'id': 1,
+        'author': '22CS30045',
+        'avatar': 'assets/images/raccoon.png',
+        'content': 'Does anyone have the solution sheet for 2024 Computer Networks exam? Section B is absolutely brutal. 😭',
+        'comments': 12,
+      },
+      {
+        'id': 2,
+        'author': '22CS10012',
+        'avatar': 'assets/images/toothless.png',
+        'content': 'Just shared full syllabus micro-notes for Automata Theory on the dashboard. Go get it guys! Under subjects -> notes. 🚀',
+        'comments': 4,
+      },
+      {
+        'id': 3,
+        'author': '22CS30090',
+        'avatar': 'assets/images/owl.png',
+        'content': 'Study session tonight at 8:00 PM in Lobby 2. We are reviewing DBMS normalization. Bring coffee! ☕',
+        'comments': 9,
+      },
+    ];
 
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            'Settings',
-            style: GoogleFonts.outfit(
-              fontSize: 32,
-              fontWeight: FontWeight.w900,
-              color: theme.colorScheme.onSurface,
-            ),
-          ),
-          const SizedBox(height: 24),
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surface,
-              borderRadius: BorderRadius.circular(28),
-              border: Border.all(
-                color: theme.colorScheme.primary.withOpacity(0.1),
+          Row(
+            children: [
+              Text(
+                'Skulk Hub',
+                style: GoogleFonts.outfit(
+                  fontSize: 32,
+                  fontWeight: FontWeight.w900,
+                  color: theme.colorScheme.onSurface,
+                ),
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: theme.colorScheme.primary.withOpacity(0.04),
-                  blurRadius: 15,
-                  offset: const Offset(0, 8),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(16),
                 ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+                child: Row(
                   children: [
-                    Icon(Icons.tune_rounded, color: theme.colorScheme.primary),
-                    const SizedBox(width: 8),
+                    const Icon(Icons.lens, color: Colors.green, size: 8),
+                    const SizedBox(width: 6),
                     Text(
-                      'Preferences ⚙️',
+                      '412 Online',
                       style: GoogleFonts.outfit(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  'Change Selected Semester',
-                  style: GoogleFonts.outfit(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: theme.colorScheme.onSurface.withOpacity(0.6),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                DropdownButtonFormField<int>(
-                  value: _currentSemester,
-                  decoration: const InputDecoration(
-                    contentPadding: EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 16,
-                    ),
-                  ),
-                  items: List.generate(8, (i) => i + 1)
-                      .map(
-                        (sem) => DropdownMenuItem(
-                          value: sem,
-                          child: Text(
-                            'Semester $sem',
-                            style: TextStyle(
-                              color: isDark ? Colors.white : Colors.black87,
-                            ),
-                          ),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (sem) {
-                    if (sem != null) {
-                      setState(() {
-                        _currentSemester = sem;
-                      });
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Switched to Semester $sem! ⚡'),
-                          duration: const Duration(seconds: 1),
-                        ),
-                      );
-                    }
-                  },
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  'Change Selected Branch',
-                  style: GoogleFonts.outfit(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: theme.colorScheme.onSurface.withOpacity(0.6),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                ref
-                    .watch(branchesProvider)
-                    .when(
-                      data: (branches) {
-                        final currentBranch = branches.firstWhere(
-                          (b) => b.id == _currentBranchId,
-                          orElse: () => branches.first,
-                        );
-                        return DropdownButtonFormField<Branch>(
-                          value: currentBranch,
-                          isExpanded: true,
-                          decoration: const InputDecoration(
-                            contentPadding: EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 16,
-                            ),
-                          ),
-                          items: branches
-                              .map(
-                                (b) => DropdownMenuItem(
-                                  value: b,
-                                  child: Text(
-                                    b.name,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      color: isDark
-                                          ? Colors.white
-                                          : Colors.black87,
-                                    ),
-                                  ),
-                                ),
-                              )
-                              .toList(),
-                          onChanged: (branch) {
-                            if (branch != null) {
-                              setState(() {
-                                _currentBranchId = branch.id;
-                              });
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    'Switched to ${branch.name}! ⚡',
-                                  ),
-                                  duration: const Duration(seconds: 1),
-                                ),
-                              );
-                            }
-                          },
-                        );
-                      },
-                      loading: () => const Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(8.0),
-                          child: CircularProgressIndicator(),
-                        ),
-                      ),
-                      error: (err, _) => Text(
-                        'Error loading branches: $err',
-                        style: const TextStyle(color: Colors.red),
-                      ),
-                    ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surface,
-              borderRadius: BorderRadius.circular(28),
-              border: Border.all(
-                color: theme.colorScheme.primary.withOpacity(0.1),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: theme.colorScheme.primary.withOpacity(0.04),
-                  blurRadius: 15,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: Column(
-              children: [
-                Center(
-                  child: Container(
-                    height: 100,
-                    width: 100,
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.primary.withOpacity(0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Image.asset(
-                      'assets/images/panda.png',
-                      fit: BoxFit.contain,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'PYQ App',
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                Text(
-                  'Version 1.0.0 (Royace Build)',
-                  style: theme.textTheme.bodyMedium?.copyWith(fontSize: 12),
-                ),
-                const SizedBox(height: 16),
-                const Divider(),
-                const SizedBox(height: 16),
-                Text(
-                  'Your companion for previous year questions (PYQs), notes, importance-score tracking, and AI-powered solutions. Designed to make university exams a breeze. ✨',
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    height: 1.6,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.favorite_rounded,
-                      color: theme.colorScheme.tertiary,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Made with Love for Students',
-                      style: GoogleFonts.outfit(
+                        fontSize: 12,
                         fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                        color: theme.colorScheme.onSurface.withOpacity(0.7),
+                        color: theme.colorScheme.primary,
                       ),
                     ),
                   ],
                 ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // Community Mascot Card
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: cardColor,
+              borderRadius: BorderRadius.circular(28),
+              border: Border.all(
+                color: isDark ? const Color(0xFF382F7E) : const Color(0xFFF6DDB7),
+                width: 1.5,
+              ),
+            ),
+            child: Row(
+              children: [
+                SizedBox(
+                  height: 80,
+                  width: 80,
+                  child: Image.asset(
+                    'assets/images/lil_fox.png',
+                    fit: BoxFit.contain,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Join your study herd! 🦊',
+                        style: GoogleFonts.outfit(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                          color: isDark ? Colors.white : const Color(0xFF3D2F27),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Skulk is REVA\'s exclusive student community. Share solved sheets, team up in study rooms, and ace exams together!',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontSize: 12,
+                          height: 1.4,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // Live Study Lobbies Header
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Live Study Lobbies 🎙️',
+                style: GoogleFonts.outfit(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w900,
+                  color: theme.colorScheme.onSurface,
+                ),
+              ),
+              Text(
+                'View All',
+                style: GoogleFonts.outfit(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // Live Lobbies Scroll
+          SizedBox(
+            height: 136,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: liveLobbies.length,
+              itemBuilder: (context, i) {
+                final lobby = liveLobbies[i];
+                return Container(
+                  width: 240,
+                  margin: const EdgeInsets.only(right: 14, bottom: 4),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: cardColor,
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                      color: isDark ? const Color(0xFF382F7E) : const Color(0xFFF6DDB7).withOpacity(0.5),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.02),
+                        blurRadius: 6,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.primary.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              lobby['tag'] as String,
+                              style: GoogleFonts.outfit(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: theme.colorScheme.primary,
+                              ),
+                            ),
+                          ),
+                          const Spacer(),
+                          const Icon(Icons.people_alt_rounded, size: 14, color: Colors.grey),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${lobby['active']} active',
+                            style: GoogleFonts.outfit(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.w600),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        lobby['title'] as String,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.outfit(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                      Text(
+                        lobby['subject'] as String,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.outfit(
+                          fontSize: 11,
+                          color: Colors.grey,
+                        ),
+                      ),
+                      const Spacer(),
+                      Align(
+                        alignment: Alignment.bottomRight,
+                        child: Text(
+                          'Join Lobby →',
+                          style: GoogleFonts.outfit(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                            color: theme.colorScheme.primary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // Community Feed
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Herd Feed 💬',
+                style: GoogleFonts.outfit(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w900,
+                  color: theme.colorScheme.onSurface,
+                ),
+              ),
+              ElevatedButton.icon(
+                onPressed: () {
+                  _showCreatePostSheet(context);
+                },
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  minimumSize: Size.zero,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                icon: const Icon(Icons.add_rounded, size: 16),
+                label: Text(
+                  'Post',
+                  style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: feedPosts.length,
+            itemBuilder: (context, i) {
+              final post = feedPosts[i];
+              final postId = post['id'] as int;
+              final isLiked = _likedPosts.contains(postId);
+              final likesCount = (_postLikes[postId] ?? 0) + (isLiked ? 1 : 0);
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: cardColor,
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(
+                    color: isDark ? const Color(0xFF382F7E) : const Color(0xFFF6DDB7).withOpacity(0.5),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 16,
+                          backgroundImage: AssetImage(post['avatar'] as String),
+                          backgroundColor: Colors.transparent,
+                        ),
+                        const SizedBox(width: 10),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              post['author'] as String,
+                              style: GoogleFonts.outfit(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
+                            Text(
+                              'Student • 2 hrs ago',
+                              style: GoogleFonts.outfit(
+                                fontSize: 10,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const Spacer(),
+                        const Icon(Icons.more_vert_rounded, size: 18, color: Colors.grey),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      post['content'] as String,
+                      style: GoogleFonts.outfit(
+                        fontSize: 13,
+                        height: 1.4,
+                        fontWeight: FontWeight.w500,
+                        color: isDark ? const Color(0xFFE2E2E2) : Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Divider(height: 1),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              if (_likedPosts.contains(postId)) {
+                                _likedPosts.remove(postId);
+                              } else {
+                                _likedPosts.add(postId);
+                              }
+                            });
+                          },
+                          child: AnimatedScale(
+                            scale: isLiked ? 1.2 : 1.0,
+                            duration: const Duration(milliseconds: 150),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  isLiked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                                  color: isLiked ? Colors.redAccent : Colors.grey,
+                                  size: 18,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  '$likesCount',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: isLiked ? Colors.redAccent : Colors.grey,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 24),
+                        Row(
+                          children: [
+                            const Icon(Icons.mode_comment_outlined, color: Colors.grey, size: 18),
+                            const SizedBox(width: 6),
+                            Text(
+                              '${post['comments']}',
+                              style: GoogleFonts.outfit(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const Spacer(),
+                        const Icon(Icons.share_outlined, color: Colors.grey, size: 18),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showCreatePostSheet(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final controller = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: isDark ? const Color(0xFF1E1644) : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(28),
+          topRight: Radius.circular(28),
+        ),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.only(
+            left: 24,
+            right: 24,
+            top: 24,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Text(
+                    'Create Feed Post 🦊',
+                    style: GoogleFonts.outfit(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: controller,
+                maxLines: 4,
+                decoration: InputDecoration(
+                  hintText: 'Share a query, study resource details, or exam strategy with the herd...',
+                  hintStyle: GoogleFonts.outfit(fontSize: 13, color: Colors.grey),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: () {
+                  final text = controller.text.trim();
+                  if (text.isNotEmpty) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'Post shared to the Skulk Feed! +10 Points ✨',
+                          style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+                        ),
+                        behavior: SnackBarBehavior.floating,
+                        backgroundColor: theme.colorScheme.primary,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                    );
+                  }
+                },
+                child: const Text('Post to Feed'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showLogoutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(28),
+        ),
+        title: Text(
+          'Confirm Logout 😢',
+          style: GoogleFonts.outfit(fontWeight: FontWeight.w900),
+        ),
+        content: Text(
+          'Are you sure you want to log out? This will reset your current branch & semester selection preferences.',
+          style: GoogleFonts.outfit(fontWeight: FontWeight.w500),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+            ),
+            onPressed: () {
+              Navigator.pop(context); // Close dialog
+              // Clear selections and pop back to onboarding selection page
+              Navigator.pushNamedAndRemoveUntil(
+                context,
+                '/selection',
+                (route) => false,
+              );
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    'Logged out successfully! See you soon. 👋',
+                    style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+                  ),
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+              );
+            },
+            child: Text(
+              'Log Out',
+              style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
             ),
           ),
         ],
