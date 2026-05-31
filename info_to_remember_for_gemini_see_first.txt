@@ -1,0 +1,3 @@
+for any pyqs, questions, study material related stuff -> supabase 1
+for any skulk or social media or login related stuff -> supabase 2
+although checking from roll no. after log in happen from students table in supabase 1

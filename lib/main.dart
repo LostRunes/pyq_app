@@ -11,18 +11,21 @@ import 'screens/subject_dashboard_screen.dart';
 import 'screens/splash_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/settings_screen.dart';
+import 'screens/login_screen.dart';
 import 'models/subject.dart';
 import 'core/providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'features/skulk/presentation/screens/create_doubt_screen.dart';
+import 'features/skulk/presentation/screens/doubt_detail_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: ".env");
 
   await Supabase.initialize(
-    url: dotenv.env['SUPABASE_URL']!,
-    anonKey: dotenv.env['SUPABASE_KEY']!,
+    url: dotenv.env['SUPABASE_2_URL']!,
+    anonKey: dotenv.env['SUPABASE_2_KEY']!,
   );
 
   final prefs = await SharedPreferences.getInstance();
@@ -51,6 +54,10 @@ class PyqApp extends ConsumerWidget {
       initialRoute: '/',
       routes: {
         '/': (context) => const SplashScreen(),
+        '/login': (context) {
+          final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+          return LoginScreen(showUsernameDialog: args?['showUsernameDialog'] ?? false);
+        },
         '/selection': (context) => const BranchYearSelectionScreen(),
         '/subjects': (context) {
           final args =
@@ -93,8 +100,11 @@ class PyqApp extends ConsumerWidget {
         },
         '/profile': (context) => const ProfileScreen(),
         '/settings': (context) => const SettingsScreen(),
+        '/skulk_create': (context) => const CreateDoubtScreen(),
+        '/skulk_detail': (context) => const DoubtDetailScreen(),
       },
     );
   }
 }
+
 
