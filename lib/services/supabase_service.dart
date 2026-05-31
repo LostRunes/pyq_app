@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../models/branch.dart';
 import '../models/year.dart';
 import '../models/subject.dart';
@@ -12,9 +13,60 @@ import '../models/topic_with_questions.dart';
 import '../models/topic_resource.dart';
 
 class SupabaseService {
-  final supabase = Supabase.instance.client;
+  final supabase = SupabaseClient(
+    dotenv.env['SUPABASE_URL']!,
+    dotenv.env['SUPABASE_KEY']!,
+  );
+
+  Future<Map<String, dynamic>?> getStudentByRollNo(String rollNo) async {
+    try {
+      final res = await supabase
+          .from('students')
+          .select()
+          .eq('roll_no', rollNo)
+          .maybeSingle();
+      return res;
+    } catch (e) {
+      debugPrint('Error searching students by roll_no: $e');
+      return null;
+    }
+  }
+
+  Future<String> getBranchIdFromSection(String section) async {
+    try {
+      final branches = await getBranches();
+      if (branches.isEmpty) return '';
+
+      final secUpper = section.toUpperCase();
+
+      // Check direct matches (e.g., if section contains branch name like "CSE", "ECSC", "ME", etc.)
+      for (var branch in branches) {
+        final nameUpper = branch.name.toUpperCase();
+        if (secUpper.contains(nameUpper) || nameUpper.contains(secUpper)) {
+          return branch.id;
+        }
+      }
+
+      // Handle special KIIT CSE section pattern "B[number]" (e.g. B10, B2)
+      if (secUpper.startsWith('B') && RegExp(r'^B\d+$').hasMatch(secUpper)) {
+        final cseBranch = branches.firstWhere(
+          (b) => b.name.toUpperCase().contains('CS'),
+          orElse: () => branches.first,
+        );
+        return cseBranch.id;
+      }
+
+      // Default fallback: first branch in list
+      return branches.first.id;
+    } catch (e) {
+      debugPrint('Error mapping branch dynamically: $e');
+      return '';
+    }
+  }
+
 
   Future<List<Branch>> getBranches() async {
+
     final res = await supabase.from('branches').select();
     return (res as List).map((e) => Branch.fromJson(e)).toList();
   }
@@ -33,6 +85,16 @@ class SupabaseService {
     return (res as List)
         .map((e) => Subject.fromJson(e['subjects']))
         .toList();
+  }
+
+  Future<List<Subject>> getAllSubjects() async {
+    try {
+      final res = await supabase.from('subjects').select('id, name, code, pyq_drive_link, notes_drive_link, course_outcome_link');
+      return (res as List).map((e) => Subject.fromJson(e)).toList();
+    } catch (e) {
+      debugPrint('Error getting all subjects: $e');
+      return [];
+    }
   }
 
   Future<List<Topic>> getTopics(String subjectId) async {
