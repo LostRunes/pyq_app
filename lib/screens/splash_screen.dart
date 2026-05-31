@@ -1,15 +1,18 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/providers.dart';
 
-class SplashScreen extends StatefulWidget {
+class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
 
   @override
-  State<SplashScreen> createState() => _SplashScreenState();
+  ConsumerState<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
+class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
@@ -33,13 +36,99 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
     _controller.forward();
 
-    // Navigate to selection screen after 2 seconds
-    Timer(const Duration(seconds: 2), () {
+    // Perform startup authentication & smart routing checks after 2 seconds
+    Timer(const Duration(seconds: 2), () async {
+      if (!mounted) return;
+
+      final session = Supabase.instance.client.auth.currentSession;
+      if (session == null) {
+        // Not logged in -> Go to Login Screen
+        Navigator.pushReplacementNamed(context, '/login');
+        return;
+      }
+
+      try {
+        final userId = session.user.id;
+        // Check if user profile exists on Supabase 2
+        final profile = await Supabase.instance.client
+            .from('user_profiles')
+            .select('username')
+            .eq('id', userId)
+            .maybeSingle();
+
+        if (!mounted) return;
+
+        if (profile == null) {
+          // Logged in but has no profile -> Go to login screen and prompt username
+          Navigator.pushReplacementNamed(
+            context,
+            '/login',
+            arguments: {'showUsernameDialog': true},
+          );
+          return;
+        }
+
+        // Profile exists, perform email mapping
+        final email = session.user.email ?? '';
+        final kiitRegex = RegExp(r'^(\d+)@kiit\.ac\.in$', caseSensitive: false);
+        final match = kiitRegex.firstMatch(email);
+
+        if (match != null) {
+          final rollNo = match.group(1)!;
+          // Search student on Supabase 1 via SupabaseService
+          final studentService = ref.read(supabaseServiceProvider);
+          final student = await studentService.getStudentByRollNo(rollNo);
+
+          if (student != null && mounted) {
+            final batch = student['batch']?.toString() ?? '';
+            final section = student['section']?.toString() ?? '';
+
+            final branchId = await studentService.getBranchIdFromSection(section);
+            final semester = _getSemesterFromBatch(batch);
+
+            if (mounted) {
+              Navigator.pushReplacementNamed(
+                context,
+                '/subjects',
+                arguments: {
+                  'branchId': branchId,
+                  'semester': semester,
+                },
+              );
+            }
+            return;
+          }
+        }
+      } catch (e) {
+        debugPrint('Splash routing failed, falling back: $e');
+      }
+
+      // Default fallback -> selection screen
       if (mounted) {
         Navigator.pushReplacementNamed(context, '/selection');
       }
     });
   }
+
+
+
+  int _getSemesterFromBatch(String batch) {
+    final match = RegExp(r'\d+').firstMatch(batch);
+    if (match == null) return 1;
+    final batchNum = int.parse(match.group(0)!);
+
+    final month = DateTime.now().month;
+    final isEvenSemester = month >= 1 && month <= 6;
+
+    if (isEvenSemester) {
+      // In even semester (Jan-June), upcoming batch N is finishing semester (2 * N - 2)
+      return (2 * batchNum - 2).clamp(1, 8);
+    } else {
+      // In odd semester (July-Dec), batch N starts semester (2 * N - 1)
+      return (2 * batchNum - 1).clamp(1, 8);
+    }
+  }
+
 
   @override
   void dispose() {
