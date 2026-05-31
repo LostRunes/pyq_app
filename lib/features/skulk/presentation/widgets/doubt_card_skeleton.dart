@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
 
 /// Animated shimmer skeleton that mirrors the real DoubtCard shape.
@@ -129,16 +128,20 @@ class _DoubtCardSkeletonState extends State<DoubtCardSkeleton>
     );
   }
 
-  Widget _shimmerBox(bool isDark, double height, double width,
-      {double radius = 6, bool isCircle = false}) {
+  Widget _shimmerBox(
+    bool isDark,
+    double height,
+    double width, {
+    double radius = 6,
+    bool isCircle = false,
+  }) {
     return Container(
       width: width == double.infinity ? null : width,
       height: height,
       decoration: BoxDecoration(
         color: isDark ? Colors.grey[800] : Colors.grey[200],
-        borderRadius:
-            isCircle ? BorderRadius.circular(height / 2) : BorderRadius.circular(radius),
         shape: isCircle ? BoxShape.circle : BoxShape.rectangle,
+        borderRadius: isCircle ? null : BorderRadius.circular(radius),
       ),
     );
   }

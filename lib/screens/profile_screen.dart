@@ -22,6 +22,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   String _username = 'reva_user';
   String _avatarPath = 'assets/images/pikachu.png';
   String _email = '';
+
+  // Skulk identity stats
+  int _reputation = 0;
+  int _doubtsAsked = 0;
+  int _solutionsGiven = 0;
+  int _acceptedSolutions = 0;
   
   // Dynamic student record states (Supabase 1)
   String _rollNo = 'External';
@@ -77,6 +83,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           _username = profile['username']?.toString() ?? 'reva_user';
           _displayName = profile['display_name']?.toString() ?? user.userMetadata?['full_name']?.toString() ?? 'REVA Student';
           _avatarPath = profile['avatar_url']?.toString() ?? 'assets/images/pikachu.png';
+          _reputation = profile['reputation'] as int? ?? 0;
+          _doubtsAsked = profile['doubts_asked'] as int? ?? 0;
+          _solutionsGiven = profile['solutions_given'] as int? ?? 0;
+          _acceptedSolutions = profile['accepted_solutions'] as int? ?? 0;
         });
       }
 
@@ -243,7 +253,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       const SizedBox(height: 10),
                       // Dynamic Hero Avatar Card
                       _buildHeroCard(context, isDark),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 20),
+                      // Skulk Identity Card
+                      _buildSkulkCard(context, isDark),
+                      const SizedBox(height: 20),
                       // Quick Statistics Grid
                       _buildStatsGrid(context, isDark),
                       const SizedBox(height: 24),
@@ -257,6 +270,100 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   ),
                 ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildSkulkCard(BuildContext context, bool isDark) {
+    final cardColor = isDark ? const Color(0xFF1A1A2E).withOpacity(0.9) : Colors.white;
+
+    final stats = [
+      {'icon': '🔥', 'label': 'Reputation', 'value': '$_reputation pts'},
+      {'icon': '🤔', 'label': 'Doubts Asked', 'value': '$_doubtsAsked'},
+      {'icon': '💡', 'label': 'Solutions', 'value': '$_solutionsGiven'},
+      {'icon': '✅', 'label': 'Accepted', 'value': '$_acceptedSolutions'},
+    ];
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(
+          color: isDark ? Colors.purple.withOpacity(0.3) : Colors.purple.withOpacity(0.15),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.purple.withOpacity(isDark ? 0.12 : 0.05),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text('🦊', style: const TextStyle(fontSize: 18)),
+              const SizedBox(width: 8),
+              Text(
+                'Skulk Identity',
+                style: GoogleFonts.outfit(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: isDark ? Colors.white : Colors.black87,
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.purple.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.purple.withOpacity(0.2)),
+                ),
+                child: Text(
+                  '@$_username',
+                  style: GoogleFonts.outfit(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.purple[400],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: stats.map((s) {
+              return Expanded(
+                child: Column(
+                  children: [
+                    Text(s['icon']!, style: const TextStyle(fontSize: 20)),
+                    const SizedBox(height: 4),
+                    Text(
+                      s['value']!,
+                      style: GoogleFonts.outfit(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w900,
+                        color: isDark ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                    Text(
+                      s['label']!,
+                      style: GoogleFonts.outfit(
+                        fontSize: 10,
+                        color: isDark ? Colors.grey[500] : Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
+        ],
       ),
     );
   }

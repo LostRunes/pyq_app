@@ -19,7 +19,7 @@ final skulkRepositoryProvider = Provider<SkulkRepository>((ref) {
   );
 });
 
-/// Current filter type for Skulk feeds: 'all', 'mine', 'unanswered', 'solved', 'hot'
+/// Current filter type for Skulk feeds: 'all', 'subjects', 'unanswered', 'solved', 'hot'
 class SkulkFeedFilterNotifier extends Notifier<String> {
   @override
   String build() => 'all';
@@ -61,19 +61,106 @@ final skulkFeedSubjectProvider = NotifierProvider<SkulkFeedSubjectNotifier, Stri
   isAutoDispose: true,
 );
 
-/// Dynamic Doubts Feed Provider
-final skulkFeedProvider = FutureProvider<List<Doubt>>((ref) async {
-  final repo = ref.watch(skulkRepositoryProvider);
-  final filter = ref.watch(skulkFeedFilterProvider);
-  final search = ref.watch(skulkFeedSearchProvider);
-  final subjectId = ref.watch(skulkFeedSubjectProvider);
+/// Selected tag filter
+class SkulkFeedTagNotifier extends Notifier<String?> {
+  @override
+  String? build() => null;
 
-  return repo.getDoubts(
-    filterType: filter,
-    searchQuery: search,
-    subjectId: subjectId,
-  );
-}, isAutoDispose: true);
+  @override
+  set state(String? value) => super.state = value;
+}
+
+final skulkFeedTagProvider = NotifierProvider<SkulkFeedTagNotifier, String?>(
+  SkulkFeedTagNotifier.new,
+  isAutoDispose: true,
+);
+
+// ---------------------------------------------------------------------------
+// Paginated feed notifier — replaces the old simple FutureProvider
+// ---------------------------------------------------------------------------
+
+class SkulkFeedNotifier extends AsyncNotifier<List<Doubt>> {
+  static const _pageSize = 20;
+  int _offset = 0;
+  bool _hasMore = true;
+  bool _loadingMore = false;
+
+  bool get hasMore => _hasMore;
+  bool get isLoadingMore => _loadingMore;
+
+  @override
+  Future<List<Doubt>> build() async {
+    // Re-run when any filter changes
+    ref.watch(skulkFeedFilterProvider);
+    ref.watch(skulkFeedSearchProvider);
+    ref.watch(skulkFeedSubjectProvider);
+    ref.watch(skulkFeedTagProvider);
+
+    // Reset pagination on filter change
+    _offset = 0;
+    _hasMore = true;
+    _loadingMore = false;
+
+    return _fetchPage(reset: true);
+  }
+
+  Future<List<Doubt>> _fetchPage({bool reset = false}) async {
+    final repo = ref.read(skulkRepositoryProvider);
+    final filter = ref.read(skulkFeedFilterProvider);
+    final search = ref.read(skulkFeedSearchProvider);
+    final subjectId = ref.read(skulkFeedSubjectProvider);
+    final tag = ref.read(skulkFeedTagProvider);
+
+    final page = await repo.getDoubts(
+      filterType: filter,
+      searchQuery: search,
+      subjectId: subjectId,
+      tagFilter: tag,
+      limit: _pageSize,
+      offset: _offset,
+    );
+
+    if (page.length < _pageSize) _hasMore = false;
+    return page;
+  }
+
+  /// Load next page and append
+  Future<void> loadMore() async {
+    if (!_hasMore || _loadingMore) return;
+    final current = state.value ?? [];
+    _loadingMore = true;
+    _offset += _pageSize;
+
+    try {
+      final next = await _fetchPage();
+      state = AsyncData([...current, ...next]);
+    } catch (e, st) {
+      _offset -= _pageSize; // revert
+      state = AsyncError(e, st);
+    } finally {
+      _loadingMore = false;
+    }
+  }
+
+  Future<void> refresh() async {
+    _offset = 0;
+    _hasMore = true;
+    _loadingMore = false;
+    state = const AsyncLoading();
+    try {
+      final page = await _fetchPage(reset: true);
+      state = AsyncData(page);
+    } catch (e, st) {
+      state = AsyncError(e, st);
+    }
+  }
+}
+
+final skulkFeedProvider =
+    AsyncNotifierProvider<SkulkFeedNotifier, List<Doubt>>(
+  SkulkFeedNotifier.new,
+  isAutoDispose: true,
+);
 
 /// Active Upvotes Tracker Provider (Maps postId/answerId -> boolean upvoted)
 class UserVotesNotifier extends AsyncNotifier<Map<String, bool>> {

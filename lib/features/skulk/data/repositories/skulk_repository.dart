@@ -44,6 +44,7 @@ class SkulkRepository {
     int? semester,
     String? searchQuery,
     String? filterType,
+    String? tagFilter,
     int limit = 20,
     int offset = 0,
   }) async {
@@ -54,6 +55,7 @@ class SkulkRepository {
       semester: semester,
       searchQuery: searchQuery,
       filterType: filterType,
+      tagFilter: tagFilter,
       limit: limit,
       offset: offset,
     );
@@ -119,7 +121,33 @@ class SkulkRepository {
     
     // Fetch newly inserted answer with author profiles
     final solutions = await getSolutions(postId);
-    return solutions.firstWhere((element) => element.id == raw['id'], orElse: () => Solution.fromJson(raw));
+    final solution = solutions.firstWhere((element) => element.id == raw['id'], orElse: () => Solution.fromJson(raw));
+
+    // Fire notification to doubt owner (non-blocking)
+    _fireAnswerNotification(postId, solution);
+
+    return solution;
+  }
+
+  /// Fires a notification to the doubt owner that their post got an answer.
+  Future<void> _fireAnswerNotification(String postId, Solution solution) async {
+    try {
+      final doubtRaw = await _dbService.fetchDoubtDetail(postId);
+      if (doubtRaw == null) return;
+      final ownerId = doubtRaw['user_id']?.toString();
+      final actorId = solution.userId;
+      if (ownerId == null || ownerId == actorId) return; // Don't notify self
+
+      await _dbService.createNotification(
+        userId: ownerId,
+        type: 'answer',
+        message: '${solution.authorDisplayName} answered your doubt',
+        postId: postId,
+        answerId: solution.id,
+        actorUsername: solution.authorUsername,
+        actorDisplayName: solution.authorDisplayName,
+      );
+    } catch (_) {}
   }
 
   /// Deletes a solution.
@@ -154,7 +182,69 @@ class SkulkRepository {
     
     // Fetch comments to ensure full profile join gets loaded
     final comments = await getComments(postId);
-    return comments.firstWhere((element) => element.id == raw['id'], orElse: () => Comment.fromJson(raw));
+    final comment = comments.firstWhere((element) => element.id == raw['id'], orElse: () => Comment.fromJson(raw));
+
+    // Fire notification to doubt owner (non-blocking)
+    _fireCommentNotification(postId, comment);
+
+    return comment;
+  }
+
+  /// Fires a notification to the doubt owner that a comment was posted.
+  Future<void> _fireCommentNotification(String postId, Comment comment) async {
+    try {
+      final doubtRaw = await _dbService.fetchDoubtDetail(postId);
+      if (doubtRaw == null) return;
+      final ownerId = doubtRaw['user_id']?.toString();
+      final actorId = comment.userId;
+      if (ownerId == null || ownerId == actorId) return;
+
+      await _dbService.createNotification(
+        userId: ownerId,
+        type: 'comment',
+        message: '${comment.authorDisplayName} commented on your doubt',
+        postId: postId,
+        actorUsername: comment.authorUsername,
+        actorDisplayName: comment.authorDisplayName,
+      );
+    } catch (_) {}
+  }
+
+  // ---------------------------------------------------------------------------
+  // NOTIFICATIONS
+  // ---------------------------------------------------------------------------
+
+  Future<List<Map<String, dynamic>>> getNotifications() =>
+      _dbService.fetchNotifications();
+
+  Future<int> getUnreadNotificationCount() =>
+      _dbService.fetchUnreadCount();
+
+  Future<void> markAllNotificationsRead() =>
+      _dbService.markAllNotificationsRead();
+
+  // ---------------------------------------------------------------------------
+  // SKULK PROFILE STATS
+  // ---------------------------------------------------------------------------
+
+  /// Returns live Skulk stats for a given user ID.
+  Future<Map<String, int>> getSkulkStats(String userId) async {
+    try {
+      final profile = await _dbService.fetchUserProfile(userId);
+      return {
+        'reputation': profile['reputation'] as int? ?? 0,
+        'doubts_asked': profile['doubts_asked'] as int? ?? 0,
+        'solutions_given': profile['solutions_given'] as int? ?? 0,
+        'accepted_solutions': profile['accepted_solutions'] as int? ?? 0,
+      };
+    } catch (_) {
+      return {
+        'reputation': 0,
+        'doubts_asked': 0,
+        'solutions_given': 0,
+        'accepted_solutions': 0,
+      };
+    }
   }
 
   /// Toggles an upvote on a doubt.
