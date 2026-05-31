@@ -24,6 +24,7 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
   late int _currentSemester;
   late String _currentBranchId;
   int _currentIndex = 0; // 0: Subjects, 1: Syllabus, 2: Dashboard, 3: Settings
+  int? _selectedSyllabusSemester; // null means 'All Semesters'
 
   // For dummy upload notes form
   int? _uploadSemester;
@@ -53,7 +54,10 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
         automaticallyImplyLeading: false,
         leadingWidth: 110,
@@ -105,14 +109,32 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
           ),
         ],
       ),
-      body: IndexedStack(
-        index: _currentIndex,
-        children: [
-          _buildSubjectsPage(context),
-          _buildSemestersPage(context),
-          _buildDashboardPage(context),
-          _buildSettingsPage(context),
-        ],
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: isDark
+            ? BoxDecoration(
+                image: DecorationImage(
+                  image: const AssetImage('assets/images/darktheme_bg.png'),
+                  fit: BoxFit.cover,
+                  colorFilter: ColorFilter.mode(
+                    const Color(0xFF171330).withOpacity(0.55),
+                    BlendMode.srcOver,
+                  ),
+                ),
+              )
+            : null,
+        child: SafeArea(
+          child: IndexedStack(
+            index: _currentIndex,
+            children: [
+              _buildSubjectsPage(context),
+              _buildSemestersPage(context),
+              _buildDashboardPage(context),
+              _buildSettingsPage(context),
+            ],
+          ),
+        ),
       ),
       bottomNavigationBar: _buildCuteBottomNavBar(context),
     );
@@ -124,21 +146,21 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
     final bottomPadding = MediaQuery.of(context).padding.bottom;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Lighter theme-matching palette in light mode, original warm deep palette in dark mode
+    // Violet starry night palette in dark mode, light theme cream-orange palette in light mode
     final Color orangeBgStart = isDark
-        ? const Color(0xFF421E0B)
+        ? const Color(0xFF251E4E)
         : const Color.fromARGB(255, 251, 203, 158);
     final Color orangeBgEnd = isDark
-        ? const Color(0xFF240E04)
+        ? const Color(0xFF15112E)
         : const Color.fromARGB(255, 238, 206, 154);
     final Color orangeActive = isDark
-        ? const Color(0xFFFFB74D)
+        ? const Color(0xFFC0A6FF)
         : const Color.fromARGB(255, 90, 41, 0);
     final Color orangeActiveBg = isDark
-        ? const Color(0x22FFB74D)
+        ? const Color(0x2BC0A6FF)
         : const Color(0x1AD37D3E);
     final Color orangeInactive = isDark
-        ? const Color.fromARGB(255, 231, 171, 133)
+        ? const Color(0xFF8A7CB5)
         : const Color(0x997A6456);
     final Color shadowColor = isDark
         ? Colors.black38
@@ -287,8 +309,12 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
   }
 
   Widget _buildSubjectsPage(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final subjectsAsync = ref.watch(
-      subjectsProvider((branchId: _currentBranchId, semester: _currentSemester)),
+      subjectsProvider((
+        branchId: _currentBranchId,
+        semester: _currentSemester,
+      )),
     );
 
     return RefreshIndicator(
@@ -366,7 +392,12 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
                               Text(
                                 'Choose your path!',
                                 style: Theme.of(context).textTheme.headlineSmall
-                                    ?.copyWith(fontWeight: FontWeight.w900),
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.w900,
+                                      color: isDark
+                                          ? Color(0xFFFFFFFF)
+                                          : Colors.black,
+                                    ),
                               ),
                               const SizedBox(height: 4),
                               Text(
@@ -395,9 +426,7 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
               width: 64,
               height: 64,
               decoration: BoxDecoration(
-                color: Theme.of(
-                  context,
-                ).colorScheme.secondary.withOpacity(0.2),
+                color: Theme.of(context).colorScheme.secondary.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Icon(
@@ -412,14 +441,16 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
               children: [
                 Text(
                   subject.name,
-                  style: Theme.of(context).textTheme.titleMedium
-                      ?.copyWith(fontWeight: FontWeight.w800),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
                 const SizedBox(height: 6),
                 Text(
                   'Code: ${subject.code}',
-                  style: Theme.of(context).textTheme.bodyMedium
-                      ?.copyWith(fontWeight: FontWeight.w600),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
                 ),
               ],
             );
@@ -535,9 +566,7 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
                         iconWidget,
                         const SizedBox(width: 20),
                       ],
-                      Expanded(
-                        child: textWidget,
-                      ),
+                      Expanded(child: textWidget),
                       if (!isIconLeft) ...[
                         const SizedBox(width: 20),
                         iconWidget,
@@ -573,6 +602,7 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
 
   Widget _buildDashboardPage(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final subjectsAsync = ref.watch(
       subjectsProvider((
         branchId: _currentBranchId,
@@ -666,7 +696,14 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
                             .map(
                               (sem) => DropdownMenuItem(
                                 value: sem,
-                                child: Text('S$sem'),
+                                child: Text(
+                                  'S$sem',
+                                  style: TextStyle(
+                                    color: isDark
+                                        ? Colors.white
+                                        : Colors.black87,
+                                  ),
+                                ),
                               ),
                             )
                             .toList(),
@@ -712,6 +749,11 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
                                     child: Text(
                                       s.name,
                                       overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        color: isDark
+                                            ? Colors.white
+                                            : Colors.black87,
+                                      ),
                                     ),
                                   ),
                                 )
@@ -882,6 +924,7 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
 
   Widget _buildSettingsPage(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -951,7 +994,12 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
                       .map(
                         (sem) => DropdownMenuItem(
                           value: sem,
-                          child: Text('Semester $sem'),
+                          child: Text(
+                            'Semester $sem',
+                            style: TextStyle(
+                              color: isDark ? Colors.white : Colors.black87,
+                            ),
+                          ),
                         ),
                       )
                       .toList(),
@@ -979,58 +1027,67 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
                   ),
                 ),
                 const SizedBox(height: 8),
-                ref.watch(branchesProvider).when(
-                  data: (branches) {
-                    final currentBranch = branches.firstWhere(
-                      (b) => b.id == _currentBranchId,
-                      orElse: () => branches.first,
-                    );
-                    return DropdownButtonFormField<Branch>(
-                      value: currentBranch,
-                      isExpanded: true,
-                      decoration: const InputDecoration(
-                        contentPadding: EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 16,
+                ref
+                    .watch(branchesProvider)
+                    .when(
+                      data: (branches) {
+                        final currentBranch = branches.firstWhere(
+                          (b) => b.id == _currentBranchId,
+                          orElse: () => branches.first,
+                        );
+                        return DropdownButtonFormField<Branch>(
+                          value: currentBranch,
+                          isExpanded: true,
+                          decoration: const InputDecoration(
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 16,
+                            ),
+                          ),
+                          items: branches
+                              .map(
+                                (b) => DropdownMenuItem(
+                                  value: b,
+                                  child: Text(
+                                    b.name,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      color: isDark
+                                          ? Colors.white
+                                          : Colors.black87,
+                                    ),
+                                  ),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (branch) {
+                            if (branch != null) {
+                              setState(() {
+                                _currentBranchId = branch.id;
+                              });
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Switched to ${branch.name}! ⚡',
+                                  ),
+                                  duration: const Duration(seconds: 1),
+                                ),
+                              );
+                            }
+                          },
+                        );
+                      },
+                      loading: () => const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(8.0),
+                          child: CircularProgressIndicator(),
                         ),
                       ),
-                      items: branches
-                          .map(
-                            (b) => DropdownMenuItem(
-                              value: b,
-                              child: Text(
-                                b.name,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (branch) {
-                        if (branch != null) {
-                          setState(() {
-                            _currentBranchId = branch.id;
-                          });
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Switched to ${branch.name}! ⚡'),
-                              duration: const Duration(seconds: 1),
-                            ),
-                          );
-                        }
-                      },
-                    );
-                  },
-                  loading: () => const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(8.0),
-                      child: CircularProgressIndicator(),
+                      error: (err, _) => Text(
+                        'Error loading branches: $err',
+                        style: const TextStyle(color: Colors.red),
+                      ),
                     ),
-                  ),
-                  error: (err, _) => Text(
-                    'Error loading branches: $err',
-                    style: const TextStyle(color: Colors.red),
-                  ),
-                ),
               ],
             ),
           ),
@@ -1119,36 +1176,125 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
 
   Widget _buildSemestersPage(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    final filterSemesters = [null, 1, 2, 3, 4, 5, 6, 7, 8];
+
+    // Determine what to display: single semester or all semesters
+    final List<int> displayedSemesters = _selectedSyllabusSemester == null
+        ? List.generate(8, (i) => i + 1)
+        : [_selectedSyllabusSemester!];
 
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 16),
-      itemCount: 9, // index 0 is header, 1-8 are semesters
+      itemCount: 1 + displayedSemesters.length, // index 0 is header, rest are semesters
       itemBuilder: (context, index) {
         if (index == 0) {
           return Padding(
-            padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+            padding: const EdgeInsets.symmetric(vertical: 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Syllabus',
-                  style: GoogleFonts.outfit(
-                    fontSize: 32,
-                    fontWeight: FontWeight.w900,
-                    color: theme.colorScheme.onSurface,
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Syllabus',
+                        style: GoogleFonts.outfit(
+                          fontSize: 32,
+                          fontWeight: FontWeight.w900,
+                          color: theme.colorScheme.onSurface,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Explore subjects across semesters.',
+                        style: theme.textTheme.bodyMedium,
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  'Explore subjects across all semesters.',
-                  style: theme.textTheme.bodyMedium,
+                const SizedBox(height: 16),
+                // Horizontal scrollable semester filter pills
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                  child: Row(
+                    children: filterSemesters.map((sem) {
+                      final isSelected = _selectedSyllabusSemester == sem;
+                      final label = sem == null ? 'All Semesters' : 'Semester $sem';
+
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 10),
+                        child: GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _selectedSyllabusSemester = sem;
+                            });
+                          },
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 18,
+                              vertical: 10,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? (isDark
+                                      ? theme.colorScheme.primary
+                                      : const Color(0xFF7D4B26))
+                                  : (isDark
+                                      ? theme.colorScheme.surface.withOpacity(0.4)
+                                      : const Color(0xFFFFF7ED)),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: isSelected
+                                    ? Colors.transparent
+                                    : (isDark
+                                        ? theme.colorScheme.primary.withOpacity(0.15)
+                                        : const Color(0xFFF6DDB7)),
+                                width: 1.2,
+                              ),
+                              boxShadow: isSelected
+                                  ? [
+                                      BoxShadow(
+                                        color: isDark
+                                            ? theme.colorScheme.primary.withOpacity(0.25)
+                                            : const Color(0xFF7D4B26).withOpacity(0.2),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ]
+                                  : [],
+                            ),
+                            child: Text(
+                              label,
+                              style: GoogleFonts.outfit(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: isSelected
+                                    ? (isDark
+                                        ? theme.colorScheme.onPrimary
+                                        : Colors.white)
+                                    : (isDark
+                                        ? Colors.white70
+                                        : const Color(0xFF7D4B26)),
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
                 ),
               ],
             ),
           );
         }
 
-        final sem = index;
+        final sem = displayedSemesters[index - 1];
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1240,6 +1386,7 @@ class _SemesterSubjectsList extends ConsumerWidget {
                   'Code: ${subject.code}',
                   style: GoogleFonts.outfit(fontSize: 12, color: Colors.grey),
                 ),
+
                 /*
                 // Old Version: Had a trailing arrow
                 trailing: const Icon(
@@ -1248,7 +1395,6 @@ class _SemesterSubjectsList extends ConsumerWidget {
                   color: Colors.grey,
                 ),
                 */
-
                 onTap: () {
                   Navigator.pushNamed(
                     context,

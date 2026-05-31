@@ -63,59 +63,84 @@ class _SubjectDashboardScreenState
           buttonLabel: 'Open Course Handout',
           icon: Icons.description_outlined,
           link: widget.subject.courseOutcomeLink,
-          imagePath: 'assets/images/cat.png',
+          imagePath: 'assets/images/lil_fox.png',
         ),
       _ProgressTab(subjectId: widget.subject.id),
     ];
 
+    final isDark = theme.brightness == Brightness.dark;
+
     return DefaultTabController(
       length: tabs.length,
       child: Scaffold(
+        extendBodyBehindAppBar: true,
         appBar: AppBar(automaticallyImplyLeading: true),
-        body: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
-              child: Text(
-                widget.subject.name,
-                style: GoogleFonts.outfit(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w900,
-                  color: theme.colorScheme.onSurface,
-                ),
-              ),
-            ),
-            TabBar(
-              isScrollable: true,
-              tabAlignment: TabAlignment.start,
-              indicatorSize: TabBarIndicatorSize.label,
-              labelStyle: GoogleFonts.outfit(fontWeight: FontWeight.w900),
-              unselectedLabelStyle: GoogleFonts.outfit(
-                fontWeight: FontWeight.w600,
-              ),
-              tabs: tabs,
-            ),
-            const SizedBox(height: 8),
-            Expanded(
-              child: Stack(
-                children: [
-                  TabBarView(children: tabViews),
-                  Consumer(
-                    builder: (context, ref, child) {
-                      final isLoading = ref.watch(pdfLoadingProvider);
-                      if (isLoading) {
-                        return const LoadingOverlay(
-                          message: 'Generating your subject PDF... ✨',
-                        );
-                      }
-                      return const SizedBox.shrink();
-                    },
+        body: Container(
+          width: double.infinity,
+          height: double.infinity,
+          decoration: isDark
+              ? BoxDecoration(
+                  image: DecorationImage(
+                    image: const AssetImage('assets/images/darktheme_bg.png'),
+                    fit: BoxFit.cover,
+                    colorFilter: ColorFilter.mode(
+                      const Color(0xFF171330).withOpacity(0.55),
+                      BlendMode.srcOver,
+                    ),
                   ),
-                ],
-              ),
+                )
+              : null,
+          child: SafeArea(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+                  child: Text(
+                    widget.subject.name,
+                    style: GoogleFonts.outfit(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w900,
+                      color: theme.colorScheme.onSurface,
+                    ),
+                  ),
+                ),
+                TabBar(
+                  isScrollable: true,
+                  tabAlignment: TabAlignment.start,
+                  indicatorSize: TabBarIndicatorSize.label,
+                  labelStyle: GoogleFonts.outfit(fontWeight: FontWeight.w900),
+                  unselectedLabelStyle: GoogleFonts.outfit(
+                    fontWeight: FontWeight.w600,
+                  ),
+                  labelColor: theme.colorScheme.primary,
+                  unselectedLabelColor: isDark
+                      ? Colors.white60
+                      : Colors.black54,
+                  tabs: tabs,
+                ),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: Stack(
+                    children: [
+                      TabBarView(children: tabViews),
+                      Consumer(
+                        builder: (context, ref, child) {
+                          final isLoading = ref.watch(pdfLoadingProvider);
+                          if (isLoading) {
+                            return const LoadingOverlay(
+                              message: 'Generating your subject PDF... ✨',
+                            );
+                          }
+                          return const SizedBox.shrink();
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -201,10 +226,7 @@ class _DriveExplorerTab extends StatefulWidget {
   final String title;
   final String? driveLink;
 
-  const _DriveExplorerTab({
-    required this.title,
-    required this.driveLink,
-  });
+  const _DriveExplorerTab({required this.title, required this.driveLink});
 
   @override
   State<_DriveExplorerTab> createState() => _DriveExplorerTabState();
@@ -276,15 +298,19 @@ class _DriveExplorerTabState extends State<_DriveExplorerTab> {
         context,
         MaterialPageRoute(
           builder: (_) => Scaffold(
+            extendBodyBehindAppBar: true,
             appBar: AppBar(
               title: Text(
                 item["name"],
                 style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
               ),
             ),
-            body: _DriveExplorerTab(
-              title: item["name"],
-              driveLink: "https://drive.google.com/drive/folders/${item["id"]}",
+            body: SafeArea(
+              child: _DriveExplorerTab(
+                title: item["name"],
+                driveLink:
+                    "https://drive.google.com/drive/folders/${item["id"]}",
+              ),
             ),
           ),
         ),
@@ -292,10 +318,7 @@ class _DriveExplorerTabState extends State<_DriveExplorerTab> {
     } else {
       final url = item["webViewLink"];
       if (url != null && url.isNotEmpty) {
-        await launchUrl(
-          Uri.parse(url),
-          mode: LaunchMode.externalApplication,
-        );
+        await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
       }
     }
   }
@@ -303,15 +326,18 @@ class _DriveExplorerTabState extends State<_DriveExplorerTab> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    Widget content;
 
     if (widget.driveLink == null || widget.driveLink!.isEmpty) {
-      return Center(
+      content = Center(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.link_off_rounded, size: 64, color: theme.colorScheme.onSurface.withOpacity(0.3)),
+              Image.asset('assets/images/owl.png', height: 130),
               const SizedBox(height: 16),
               Text(
                 "No Drive folder linked.",
@@ -325,10 +351,8 @@ class _DriveExplorerTabState extends State<_DriveExplorerTab> {
           ),
         ),
       );
-    }
-
-    if (isLoading) {
-      return Center(
+    } else if (isLoading) {
+      content = Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -344,16 +368,14 @@ class _DriveExplorerTabState extends State<_DriveExplorerTab> {
           ],
         ),
       );
-    }
-
-    if (errorMessage != null) {
-      return Center(
+    } else if (errorMessage != null) {
+      content = Center(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.error_outline_rounded, size: 64, color: theme.colorScheme.error),
+              Image.asset('assets/images/sad_raccoon.png', height: 130),
               const SizedBox(height: 16),
               Text(
                 "Something went wrong",
@@ -377,7 +399,10 @@ class _DriveExplorerTabState extends State<_DriveExplorerTab> {
                 icon: const Icon(Icons.refresh_rounded),
                 label: const Text("Retry"),
                 style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
@@ -387,14 +412,12 @@ class _DriveExplorerTabState extends State<_DriveExplorerTab> {
           ),
         ),
       );
-    }
-
-    if (files.isEmpty) {
-      return Center(
+    } else if (files.isEmpty) {
+      content = Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.folder_open_rounded, size: 64, color: theme.colorScheme.onSurface.withOpacity(0.3)),
+            Image.asset('assets/images/sleepy-shark.png', height: 130),
             const SizedBox(height: 16),
             Text(
               "This folder is empty.",
@@ -407,55 +430,73 @@ class _DriveExplorerTabState extends State<_DriveExplorerTab> {
           ],
         ),
       );
+    } else {
+      content = ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: files.length,
+        itemBuilder: (context, index) {
+          final item = files[index];
+          final isFolder =
+              item["mimeType"] == "application/vnd.google-apps.folder";
+
+          return Card(
+            elevation: 0,
+            margin: const EdgeInsets.only(bottom: 12),
+            color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+              side: BorderSide(
+                color: theme.colorScheme.outlineVariant.withOpacity(0.3),
+              ),
+            ),
+            child: ListTile(
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: 8,
+              ),
+              leading: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: (isFolder ? Colors.amber : Colors.blue).withOpacity(
+                    0.1,
+                  ),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  isFolder ? Icons.folder_rounded : Icons.description_rounded,
+                  color: isFolder ? Colors.amber[700] : Colors.blue[700],
+                  size: 24,
+                ),
+              ),
+              title: Text(
+                item["name"] ?? "Unnamed Item",
+                style: GoogleFonts.outfit(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: theme.colorScheme.onSurface,
+                ),
+              ),
+              trailing: Icon(
+                Icons.chevron_right_rounded,
+                color: theme.colorScheme.onSurface.withOpacity(0.3),
+              ),
+              onTap: () => openItem(item),
+            ),
+          );
+        },
+      );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: files.length,
-      itemBuilder: (context, index) {
-        final item = files[index];
-        final isFolder = item["mimeType"] == "application/vnd.google-apps.folder";
-
-        return Card(
-          elevation: 0,
-          margin: const EdgeInsets.only(bottom: 12),
-          color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-            side: BorderSide(
-              color: theme.colorScheme.outlineVariant.withOpacity(0.3),
-            ),
-          ),
-          child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-            leading: Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: (isFolder ? Colors.amber : Colors.blue).withOpacity(0.1),
-                shape: BoxShape.circle,
+    return Container(
+      decoration: isDark
+          ? const BoxDecoration(
+              image: DecorationImage(
+                image: AssetImage('assets/images/darktheme_bg.png'),
+                fit: BoxFit.cover,
               ),
-              child: Icon(
-                isFolder ? Icons.folder_rounded : Icons.description_rounded,
-                color: isFolder ? Colors.amber[700] : Colors.blue[700],
-                size: 24,
-              ),
-            ),
-            title: Text(
-              item["name"] ?? "Unnamed Item",
-              style: GoogleFonts.outfit(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: theme.colorScheme.onSurface,
-              ),
-            ),
-            trailing: Icon(
-              Icons.chevron_right_rounded,
-              color: theme.colorScheme.onSurface.withOpacity(0.3),
-            ),
-            onTap: () => openItem(item),
-          ),
-        );
-      },
+            )
+          : null,
+      child: content,
     );
   }
 }
