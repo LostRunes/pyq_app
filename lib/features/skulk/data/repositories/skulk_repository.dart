@@ -35,7 +35,7 @@ class SkulkRepository {
   /// Resolves the subject name for a given subject ID.
   Future<String> getSubjectName(String subjectId) async {
     await _ensureSubjectCache();
-    return _subjectCache[subjectId] ?? 'Unknown Subject';
+    return _subjectCache[subjectId] ?? subjectId;
   }
 
   /// Fetches a list of doubts, mapping their subject IDs to human-readable curriculum names.
@@ -63,7 +63,7 @@ class SkulkRepository {
     final List<Doubt> doubts = [];
     for (var raw in rawDoubts) {
       final subId = raw['subject_id']?.toString() ?? '';
-      final subjectName = _subjectCache[subId] ?? 'Unknown Subject';
+      final subjectName = _subjectCache[subId] ?? subId;
       doubts.add(Doubt.fromJson(raw, subjectName: subjectName));
     }
     return doubts;
@@ -77,7 +77,7 @@ class SkulkRepository {
     if (raw == null) return null;
 
     final subId = raw['subject_id']?.toString() ?? '';
-    final subjectName = _subjectCache[subId] ?? 'Unknown Subject';
+    final subjectName = _subjectCache[subId] ?? subId;
     return Doubt.fromJson(raw, subjectName: subjectName);
   }
 
@@ -99,7 +99,7 @@ class SkulkRepository {
       imageUrls: imageUrls,
     );
 
-    final subjectName = _subjectCache[subjectId] ?? 'Unknown Subject';
+    final subjectName = _subjectCache[subjectId] ?? subjectId;
     return Doubt.fromJson(raw, subjectName: subjectName);
   }
 
