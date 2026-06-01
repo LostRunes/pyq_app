@@ -167,15 +167,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   int _getSemesterFromBatch(String batch) {
+    final match = RegExp(r'\d+').firstMatch(batch);
+    if (match == null) return 1;
+    final batchNum = int.parse(match.group(0)!);
+
     final month = DateTime.now().month;
     final isEvenSemester = month >= 1 && month <= 6;
 
-    if (batch == 'batch_2') {
-      return isEvenSemester ? 4 : 3;
-    } else if (batch == 'batch_3') {
-      return isEvenSemester ? 6 : 5;
+    if (isEvenSemester) {
+      // In even semester (Jan-June), upcoming batch N is finishing semester (2 * N - 2)
+      return (2 * batchNum - 2).clamp(1, 8);
     } else {
-      return isEvenSemester ? 2 : 1;
+      // In odd semester (July-Dec), batch N starts semester (2 * N - 1)
+      return (2 * batchNum - 1).clamp(1, 8);
     }
   }
 
