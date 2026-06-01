@@ -6,7 +6,8 @@
         android:label="REVA"
         android:name="${applicationName}"
         android:icon="@mipmap/launcher_icon"
-        android:enableOnBackInvokedCallback="true">
+        android:enableOnBackInvokedCallback="true"
+        android:largeHeap="true">
         <activity
             android:name=".MainActivity"
             android:exported="true"

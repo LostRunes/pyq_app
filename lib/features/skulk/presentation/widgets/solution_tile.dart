@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../data/models/solution.dart';
 import '../providers/skulk_providers.dart';
 import 'report_bottom_sheet.dart';
+import '../../../../widgets/common/cloudinary_image_gallery.dart';
 
 class SolutionTile extends ConsumerWidget {
   final Solution solution;
@@ -204,6 +205,11 @@ class SolutionTile extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 12),
+
+          if (solution.imageUrls.isNotEmpty) ...[
+            CloudinaryImageGallery(imageUrls: solution.imageUrls, height: 140),
+            const SizedBox(height: 12),
+          ],
 
           // Divider
           Divider(height: 1, color: isDark ? Colors.grey[850] : Colors.grey[100]),

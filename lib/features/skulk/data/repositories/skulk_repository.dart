@@ -118,8 +118,13 @@ class SkulkRepository {
   Future<Solution> createSolution({
     required String postId,
     required String body,
+    List<String> imageUrls = const [],
   }) async {
-    final raw = await _dbService.createSolution(postId: postId, body: body);
+    final raw = await _dbService.createSolution(
+      postId: postId,
+      body: body,
+      imageUrls: imageUrls,
+    );
     
     // Fetch newly inserted answer with author profiles
     final solutions = await getSolutions(postId);
