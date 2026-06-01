@@ -183,6 +183,65 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
+  Future<void> _confirmSignOut() async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: isDark ? const Color(0xFF1E1A3C) : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        title: Text(
+          'Sign Out?',
+          style: GoogleFonts.outfit(
+            fontWeight: FontWeight.w900,
+            color: isDark ? Colors.white : Colors.black87,
+          ),
+        ),
+        content: Text(
+          'You will be signed out of your Google account. You can sign back in anytime.',
+          style: GoogleFonts.outfit(
+            fontSize: 14,
+            color: isDark ? Colors.white70 : Colors.black54,
+            height: 1.5,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.outfit(
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white54 : Colors.black54,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(
+              'Sign Out',
+              style: GoogleFonts.outfit(fontWeight: FontWeight.w800),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      // Capture navigator BEFORE await — context is not safe across async gaps
+      final navigator = Navigator.of(context);
+      await signOutCompletely();
+      navigator.pushNamedAndRemoveUntil('/login', (route) => false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -215,7 +274,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               icon: Icon(Icons.edit_rounded, color: isDark ? Colors.white : Colors.black87),
               onPressed: () => _showEditProfileBottomSheet(context),
             ),
-          const SizedBox(width: 8),
+          if (!_isLoading)
+            IconButton(
+              tooltip: 'Sign Out',
+              icon: const Icon(Icons.logout_rounded, color: Colors.redAccent),
+              onPressed: _confirmSignOut,
+            ),
+          const SizedBox(width: 4),
         ],
       ),
       body: Container(

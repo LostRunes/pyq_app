@@ -1022,7 +1022,7 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
           style: GoogleFonts.outfit(fontWeight: FontWeight.w900),
         ),
         content: Text(
-          'Are you sure you want to log out? This will reset your current branch & semester selection preferences.',
+          'Are you sure you want to log out completely?',
           style: GoogleFonts.outfit(fontWeight: FontWeight.w500),
         ),
         actions: [
@@ -1041,26 +1041,30 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
                 borderRadius: BorderRadius.circular(16),
               ),
             ),
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context); // Close dialog
-              // Clear selections and pop back to onboarding selection page
-              Navigator.pushNamedAndRemoveUntil(
-                context,
-                '/selection',
-                (route) => false,
-              );
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    'Logged out successfully! See you soon. 👋',
-                    style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+              if (mounted) {
+                // Capture navigator and messenger BEFORE await - context is not safe across async gaps
+                final navigator = Navigator.of(context);
+                final messenger = ScaffoldMessenger.of(context);
+                await signOutCompletely();
+                navigator.pushNamedAndRemoveUntil(
+                  '/login',
+                  (route) => false,
+                );
+                messenger.showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'Logged out successfully! See you soon. 👋',
+                      style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+                    ),
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                   ),
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                ),
-              );
+                );
+              }
             },
             child: Text(
               'Log Out',
