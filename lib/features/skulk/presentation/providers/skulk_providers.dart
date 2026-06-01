@@ -266,9 +266,9 @@ class SolutionsNotifier extends Notifier<List<Solution>> {
     await _loadSolutions();
   }
 
-  Future<void> addSolution(String body) async {
+  Future<void> addSolution(String body, {List<String> imageUrls = const []}) async {
     final repo = ref.read(skulkRepositoryProvider);
-    final newSol = await repo.createSolution(postId: arg, body: body);
+    final newSol = await repo.createSolution(postId: arg, body: body, imageUrls: imageUrls);
     state = [newSol, ...state];
     ref.invalidate(skulkFeedProvider);
     ref.invalidate(doubtDetailProvider(arg));

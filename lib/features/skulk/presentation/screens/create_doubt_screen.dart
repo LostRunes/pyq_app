@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../../../core/providers.dart';
 import '../providers/skulk_providers.dart';
 import '../../data/services/cloudinary_service.dart';
+import '../../utils/image_utils.dart';
 
 class CreateDoubtScreen extends ConsumerStatefulWidget {
   const CreateDoubtScreen({super.key});
@@ -31,6 +32,31 @@ class _CreateDoubtScreenState extends ConsumerState<CreateDoubtScreen> {
   String? _branchId;
   int? _semester;
   bool _argsParsed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _retrieveLostData();
+  }
+
+  Future<void> _retrieveLostData() async {
+    try {
+      final response = await _picker.retrieveLostData();
+      if (response.isEmpty) return;
+      
+      final file = response.file;
+      if (file != null) {
+        final compressed = await ImageUtils.compressImage(File(file.path));
+        if (compressed != null) {
+          setState(() {
+            selectedImages = List.from(selectedImages)..add(compressed);
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Error retrieving lost data: $e');
+    }
+  }
 
   @override
   void didChangeDependencies() {
@@ -95,8 +121,15 @@ class _CreateDoubtScreenState extends ConsumerState<CreateDoubtScreen> {
     try {
       final images = await _picker.pickMultiImage();
       if (images.isEmpty) return;
+      
+      final compressedFiles = await Future.wait(
+        images.map((img) => ImageUtils.compressImage(File(img.path))),
+      );
+      final validFiles = compressedFiles.whereType<File>().toList();
+      
+      if (!mounted) return;
       setState(() {
-        selectedImages.addAll(images.map((e) => File(e.path)));
+        selectedImages = List.from(selectedImages)..addAll(validFiles);
       });
     } catch (e) {
       if (mounted) {
@@ -105,6 +138,76 @@ class _CreateDoubtScreenState extends ConsumerState<CreateDoubtScreen> {
         );
       }
     }
+  }
+
+  void _showImageSourceBottomSheet() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Add Images',
+                  style: GoogleFonts.outfit(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 20),
+                ListTile(
+                  leading: Icon(Icons.camera_alt_outlined, color: theme.colorScheme.primary),
+                  title: Text('Take Photo', style: GoogleFonts.outfit(fontWeight: FontWeight.w600)),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    try {
+                      final image = await _picker.pickImage(
+                        source: ImageSource.camera,
+                      );
+                      if (image == null) return;
+                      
+                      final compressed = await ImageUtils.compressImage(File(image.path));
+                      if (compressed == null) return;
+                      
+                      if (!mounted) return;
+                      setState(() {
+                        selectedImages = List.from(selectedImages)..add(compressed);
+                      });
+                    } catch (e) {
+                      ScaffoldMessenger.of(this.context).showSnackBar(
+                        SnackBar(content: Text('Failed to capture photo: $e')),
+                      );
+                    }
+                  },
+                ),
+                Divider(color: isDark ? Colors.grey[850] : Colors.grey[200]),
+                ListTile(
+                  leading: Icon(Icons.photo_library_outlined, color: theme.colorScheme.primary),
+                  title: Text('Choose from Gallery', style: GoogleFonts.outfit(fontWeight: FontWeight.w600)),
+                  onTap: () {
+                    Navigator.pop(context);
+                    pickImages();
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   Future<void> _publishDoubt() async {
@@ -131,16 +234,12 @@ class _CreateDoubtScreenState extends ConsumerState<CreateDoubtScreen> {
     bool hasFailedUploads = false;
 
     try {
-      // Step 7 — Upload Before Publishing
-      for (final image in selectedImages) {
-        final url = await CloudinaryService.uploadImage(image);
-        if (url != null) {
-          uploadedUrls.add(url);
-        } else {
-          hasFailedUploads = true;
-        }
-      }
-
+      final uploadedResults = await Future.wait(
+        selectedImages.map((img) => CloudinaryService.uploadImage(img)),
+      );
+      final uploadedUrls = uploadedResults.whereType<String>().toList();
+      final hasFailedUploads = uploadedUrls.length < selectedImages.length;
+      
       await ref.read(skulkRepositoryProvider).createDoubt(
             title: _titleController.text.trim(),
             body: _bodyController.text.trim(),
@@ -335,15 +434,21 @@ class _CreateDoubtScreenState extends ConsumerState<CreateDoubtScreen> {
                         itemBuilder: (context, index) {
                           return Stack(
                             children: [
-                              Container(
-                                width: 100,
-                                height: 100,
-                                margin: const EdgeInsets.only(right: 12),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(12),
-                                  image: DecorationImage(
-                                    image: FileImage(selectedImages[index]),
-                                    fit: BoxFit.cover,
+                              RepaintBoundary(
+                                child: Container(
+                                  width: 100,
+                                  height: 100,
+                                  margin: const EdgeInsets.only(right: 12),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(12),
+                                    image: DecorationImage(
+                                      image: ResizeImage(
+                                        FileImage(selectedImages[index]),
+                                        width: 120,
+                                        height: 120,
+                                      ),
+                                      fit: BoxFit.cover,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -377,7 +482,7 @@ class _CreateDoubtScreenState extends ConsumerState<CreateDoubtScreen> {
                     ),
                   ],
                   OutlinedButton.icon(
-                    onPressed: pickImages,
+                    onPressed: _showImageSourceBottomSheet,
                     icon: const Icon(Icons.add_a_photo_outlined),
                     label: const Text('Add Images'),
                     style: OutlinedButton.styleFrom(
