@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -29,6 +31,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   String _usernameError = '';
   late StreamSubscription<AuthState> _authSubscription;
 
+  // Native Google Sign-In — shows in-app account picker, no browser redirect
+  late final GoogleSignIn _googleSignIn;
+
   // Cute mascot avatars list
   final List<Map<String, String>> _mascots = [
     {'name': 'Pikachu', 'path': 'assets/images/pikachu.png'},
@@ -46,13 +51,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   void initState() {
     super.initState();
+
+    // Initialize Google Sign-In with the Web OAuth Client ID from .env
+    // This enables the native in-app account picker popup
+    _googleSignIn = GoogleSignIn(
+      serverClientId: dotenv.env['GOOGLE_WEB_CLIENT_ID'],
+      scopes: ['email', 'profile'],
+    );
+
     if (widget.showUsernameDialog) {
       setState(() {
         _showUsernamePopup = true;
       });
     }
 
-    // Listen for deep link/auth redirect state changes
+    // Listen for Supabase auth state changes
     _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((
       data,
     ) async {
@@ -325,10 +338,42 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     });
 
     try {
-      await Supabase.instance.client.auth.signInWithOAuth(
-        OAuthProvider.google,
-        redirectTo: 'io.supabase.flutter://login-callback',
+      // Sign out any existing Google session first to always show account picker
+      await _googleSignIn.signOut();
+
+      // This opens the NATIVE in-app Google account picker (no browser redirect)
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+
+      if (googleUser == null) {
+        // User dismissed the picker
+        setState(() {
+          _isLoading = false;
+        });
+        return;
+      }
+
+      // Get the auth tokens from the selected Google account
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+
+      if (googleAuth.idToken == null) {
+        setState(() {
+          _isLoading = false;
+        });
+        _showErrorSnackBar(
+          'Google Sign In failed: could not retrieve ID token. '
+          'Check that GOOGLE_WEB_CLIENT_ID in .env matches your Supabase Google provider.',
+        );
+        return;
+      }
+
+      // Pass the Google ID token to Supabase — no browser involved
+      await Supabase.instance.client.auth.signInWithIdToken(
+        provider: OAuthProvider.google,
+        idToken: googleAuth.idToken!,
+        accessToken: googleAuth.accessToken,
       );
+      // Auth state listener above handles routing after successful sign-in
     } catch (e) {
       setState(() {
         _isLoading = false;
