@@ -224,6 +224,25 @@ class DoubtCard extends ConsumerWidget {
             ),
             const SizedBox(height: 10),
 
+            if (doubt.imageUrls.isNotEmpty) ...[
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.network(
+                  getThumbnailUrl(doubt.imageUrls.first),
+                  height: 160,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    height: 160,
+                    width: double.infinity,
+                    color: isDark ? Colors.grey[800] : Colors.grey[200],
+                    child: const Icon(Icons.broken_image_outlined, color: Colors.grey),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+            ],
+
             // Row 3: Tags
             if (doubt.tags.isNotEmpty)
               SizedBox(
@@ -381,4 +400,11 @@ class DoubtCard extends ConsumerWidget {
       return 'just now';
     }
   }
+}
+
+String getThumbnailUrl(String url) {
+  return url.replaceFirst(
+    '/upload/',
+    '/upload/w_500,q_70,f_webp/',
+  );
 }
