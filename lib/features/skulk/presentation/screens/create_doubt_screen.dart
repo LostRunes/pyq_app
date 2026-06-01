@@ -236,9 +236,6 @@ class _CreateDoubtScreenState extends ConsumerState<CreateDoubtScreen> {
         ? _otherSubjectController.text.trim()
         : _selectedSubjectId!;
 
-    List<String> uploadedUrls = [];
-    bool hasFailedUploads = false;
-
     try {
       final uploadedResults = await Future.wait(
         selectedImages.map((img) => CloudinaryService.uploadImage(img)),
