@@ -20,6 +20,7 @@ class _CreateDoubtScreenState extends ConsumerState<CreateDoubtScreen> {
   final _titleController = TextEditingController();
   final _bodyController = TextEditingController();
   final _tagsController = TextEditingController();
+  final _otherSubjectController = TextEditingController();
 
   final ImagePicker _picker = ImagePicker();
   List<File> selectedImages = [];
@@ -75,6 +76,7 @@ class _CreateDoubtScreenState extends ConsumerState<CreateDoubtScreen> {
     _titleController.dispose();
     _bodyController.dispose();
     _tagsController.dispose();
+    _otherSubjectController.dispose();
     super.dispose();
   }
 
@@ -230,6 +232,10 @@ class _CreateDoubtScreenState extends ConsumerState<CreateDoubtScreen> {
             .where((e) => e.isNotEmpty)
             .toList();
 
+    final String subjectToSend = _selectedSubjectId == 'other'
+        ? _otherSubjectController.text.trim()
+        : _selectedSubjectId!;
+
     List<String> uploadedUrls = [];
     bool hasFailedUploads = false;
 
@@ -243,7 +249,7 @@ class _CreateDoubtScreenState extends ConsumerState<CreateDoubtScreen> {
       await ref.read(skulkRepositoryProvider).createDoubt(
             title: _titleController.text.trim(),
             body: _bodyController.text.trim(),
-            subjectId: _selectedSubjectId!,
+            subjectId: subjectToSend,
             tags: parsedTags,
             imageUrls: uploadedUrls,
           );
@@ -356,21 +362,50 @@ class _CreateDoubtScreenState extends ConsumerState<CreateDoubtScreen> {
                           contentPadding: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 4),
                         ),
-                        items: subjects.map((sub) {
-                          return DropdownMenuItem<String>(
-                            value: sub.id,
+                        items: [
+                          ...subjects.map((sub) {
+                            return DropdownMenuItem<String>(
+                              value: sub.id,
+                              child: Text(
+                                '${sub.name} (${sub.code})',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            );
+                          }),
+                          DropdownMenuItem<String>(
+                            value: 'other',
                             child: Text(
-                              '${sub.name} (${sub.code})',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                              'Other (Specify below)',
+                              style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
                             ),
-                          );
-                        }).toList(),
+                          ),
+                        ],
                         onChanged: (val) =>
                             setState(() => _selectedSubjectId = val),
                       ),
                     ),
                   ),
+                  if (_selectedSubjectId == 'other') ...[
+                    const SizedBox(height: 12),
+                    _sectionLabel('SPECIFY SUBJECT NAME'),
+                    Container(
+                      decoration: _cardDecoration(context),
+                      child: TextFormField(
+                        controller: _otherSubjectController,
+                        maxLines: 1,
+                        textInputAction: TextInputAction.next,
+                        style: GoogleFonts.outfit(fontSize: 15),
+                        decoration: _fieldDecoration('Enter subject name here…'),
+                        validator: (v) {
+                          if (_selectedSubjectId == 'other' && (v == null || v.trim().isEmpty)) {
+                            return 'Please specify the subject name.';
+                          }
+                          return null;
+                        },
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 20),
 
                   // ── Title ────────────────────────────────────────────────
