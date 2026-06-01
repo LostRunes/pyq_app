@@ -87,6 +87,7 @@ class SkulkRepository {
     required String body,
     required String subjectId,
     required List<String> tags,
+    List<String> imageUrls = const [],
   }) async {
     await _ensureSubjectCache();
 
@@ -95,6 +96,7 @@ class SkulkRepository {
       body: body,
       subjectId: subjectId,
       tags: tags,
+      imageUrls: imageUrls,
     );
 
     final subjectName = _subjectCache[subjectId] ?? 'Unknown Subject';

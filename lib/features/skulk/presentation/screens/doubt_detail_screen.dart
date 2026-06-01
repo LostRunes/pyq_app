@@ -307,6 +307,68 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
                             ),
                             const SizedBox(height: 16),
 
+                            if (doubt.imageUrls.isNotEmpty) ...[
+                              SizedBox(
+                                height: 200,
+                                child: ListView.builder(
+                                  scrollDirection: Axis.horizontal,
+                                  itemCount: doubt.imageUrls.length,
+                                  itemBuilder: (context, index) {
+                                    return GestureDetector(
+                                      onTap: () {
+                                        showDialog(
+                                          context: context,
+                                          builder: (_) => Dialog(
+                                            backgroundColor: Colors.transparent,
+                                            insetPadding: EdgeInsets.zero,
+                                            child: Stack(
+                                              alignment: Alignment.center,
+                                              children: [
+                                                InteractiveViewer(
+                                                  child: Image.network(
+                                                    doubt.imageUrls[index],
+                                                    fit: BoxFit.contain,
+                                                  ),
+                                                ),
+                                                Positioned(
+                                                  top: 40,
+                                                  right: 20,
+                                                  child: IconButton(
+                                                    icon: const Icon(Icons.close, color: Colors.white, size: 30),
+                                                    onPressed: () => Navigator.pop(context),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                      child: Container(
+                                        width: MediaQuery.of(context).size.width * 0.75,
+                                        margin: const EdgeInsets.only(right: 12),
+                                        decoration: BoxDecoration(
+                                          borderRadius: BorderRadius.circular(16),
+                                          border: Border.all(color: cardBorder),
+                                        ),
+                                        child: ClipRRect(
+                                          borderRadius: BorderRadius.circular(16),
+                                          child: Image.network(
+                                            doubt.imageUrls[index],
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (context, error, stackTrace) => Container(
+                                              color: isDark ? Colors.grey[800] : Colors.grey[200],
+                                              child: const Icon(Icons.broken_image_outlined, color: Colors.grey),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                            ],
+
                             // Tags Scrollable
                             if (doubt.tags.isNotEmpty)
                               SizedBox(

@@ -1,8 +1,11 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../../../core/providers.dart';
 import '../providers/skulk_providers.dart';
+import '../../data/services/cloudinary_service.dart';
 
 class CreateDoubtScreen extends ConsumerStatefulWidget {
   const CreateDoubtScreen({super.key});
@@ -16,6 +19,9 @@ class _CreateDoubtScreenState extends ConsumerState<CreateDoubtScreen> {
   final _titleController = TextEditingController();
   final _bodyController = TextEditingController();
   final _tagsController = TextEditingController();
+
+  final ImagePicker _picker = ImagePicker();
+  List<File> selectedImages = [];
 
   String? _selectedSubjectId;
   bool _isPublishing = false;
@@ -85,6 +91,22 @@ class _CreateDoubtScreenState extends ConsumerState<CreateDoubtScreen> {
 
   // ── publish ────────────────────────────────────────────────────────────────
 
+  Future<void> pickImages() async {
+    try {
+      final images = await _picker.pickMultiImage();
+      if (images.isEmpty) return;
+      setState(() {
+        selectedImages.addAll(images.map((e) => File(e.path)));
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to pick images: $e')),
+        );
+      }
+    }
+  }
+
   Future<void> _publishDoubt() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedSubjectId == null) {
@@ -105,12 +127,26 @@ class _CreateDoubtScreenState extends ConsumerState<CreateDoubtScreen> {
             .where((e) => e.isNotEmpty)
             .toList();
 
+    List<String> uploadedUrls = [];
+    bool hasFailedUploads = false;
+
     try {
+      // Step 7 — Upload Before Publishing
+      for (final image in selectedImages) {
+        final url = await CloudinaryService.uploadImage(image);
+        if (url != null) {
+          uploadedUrls.add(url);
+        } else {
+          hasFailedUploads = true;
+        }
+      }
+
       await ref.read(skulkRepositoryProvider).createDoubt(
             title: _titleController.text.trim(),
             body: _bodyController.text.trim(),
             subjectId: _selectedSubjectId!,
             tags: parsedTags,
+            imageUrls: uploadedUrls,
           );
 
       ref.invalidate(skulkFeedProvider);
@@ -118,9 +154,11 @@ class _CreateDoubtScreenState extends ConsumerState<CreateDoubtScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            backgroundColor: Colors.green[700],
+            backgroundColor: hasFailedUploads ? Colors.orange[800] : Colors.green[700],
             content: Text(
-              'Doubt posted! ✨',
+              hasFailedUploads
+                  ? 'Post published without some images ⚠️'
+                  : 'Doubt posted! ✨',
               style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
             ),
           ),
@@ -281,6 +319,72 @@ class _CreateDoubtScreenState extends ConsumerState<CreateDoubtScreen> {
                         }
                         return null;
                       },
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // ── Images ───────────────────────────────────────────────
+                  _sectionLabel('IMAGES  (OPTIONAL)'),
+                  if (selectedImages.isNotEmpty) ...[
+                    Container(
+                      height: 100,
+                      margin: const EdgeInsets.only(bottom: 12),
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: selectedImages.length,
+                        itemBuilder: (context, index) {
+                          return Stack(
+                            children: [
+                              Container(
+                                width: 100,
+                                height: 100,
+                                margin: const EdgeInsets.only(right: 12),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(12),
+                                  image: DecorationImage(
+                                    image: FileImage(selectedImages[index]),
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                              ),
+                              Positioned(
+                                top: 4,
+                                right: 16,
+                                child: GestureDetector(
+                                  onTap: () {
+                                    setState(() {
+                                      selectedImages.removeAt(index);
+                                    });
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: const BoxDecoration(
+                                      color: Colors.black54,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.close,
+                                      size: 14,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                  OutlinedButton.icon(
+                    onPressed: pickImages,
+                    icon: const Icon(Icons.add_a_photo_outlined),
+                    label: const Text('Add Images'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 20),
