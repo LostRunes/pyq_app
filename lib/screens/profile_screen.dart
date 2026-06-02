@@ -18,8 +18,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   bool _isLoading = true;
   
   // Dynamic profile states (Supabase 2)
-  String _displayName = 'REVA Student';
-  String _username = 'reva_user';
+  String _displayName = 'Focus Fox Student';
+  String _username = 'focus_fox_user';
   String _avatarPath = 'assets/images/pikachu.png';
   String _email = '';
 
@@ -80,8 +80,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
       if (profile != null) {
         setState(() {
-          _username = profile['username']?.toString() ?? 'reva_user';
-          _displayName = profile['display_name']?.toString() ?? user.userMetadata?['full_name']?.toString() ?? 'REVA Student';
+          _username = profile['username']?.toString() ?? 'focus_fox_user';
+          _displayName = profile['display_name']?.toString() ?? user.userMetadata?['full_name']?.toString() ?? 'Focus Fox Student';
           _avatarPath = profile['avatar_url']?.toString() ?? 'assets/images/pikachu.png';
           _reputation = profile['reputation'] as int? ?? 0;
           _doubtsAsked = profile['doubts_asked'] as int? ?? 0;
@@ -993,7 +993,7 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
   String _generateCoolUsername() {
     final adjectives = [
       'smart', 'study', 'focus', 'epic', 'cyber', 'nerdy', 'sleepy', 'shadow', 
-      'swift', 'clever', 'cosmic', 'pixel', 'bright', 'super', 'reva', 'bold',
+      'swift', 'clever', 'cosmic', 'pixel', 'bright', 'super', 'quick', 'bold',
       'alpha', 'omega', 'zen', 'active', 'prime', 'stellar', 'happy', 'coding'
     ];
     final nouns = [
@@ -1118,7 +1118,7 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
         'avatar_url': _avatarPath,
       }).eq('id', user.id);
 
-      widget.onSave(username, displayName.isEmpty ? 'REVA Student' : displayName, _avatarPath);
+      widget.onSave(username, displayName.isEmpty ? 'Focus Fox Student' : displayName, _avatarPath);
       
       if (mounted) {
         Navigator.pop(context); // Close bottom sheet

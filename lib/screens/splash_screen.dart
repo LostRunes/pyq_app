@@ -178,7 +178,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPr
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(40),
                   child: Image.asset(
-                    'assets/images/reva_logo.png',
+                    'assets/images/FocusFox_icon.png',
                     fit: BoxFit.cover,
                   ),
                 ),
@@ -186,7 +186,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPr
               const SizedBox(height: 32),
               // App Name
               Text(
-                'REVA',
+                'Focus Fox',
                 style: GoogleFonts.outfit(
                   fontSize: 36,
                   fontWeight: FontWeight.w900,
