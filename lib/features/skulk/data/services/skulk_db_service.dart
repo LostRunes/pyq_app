@@ -154,6 +154,7 @@ class SkulkDbService {
     required String body,
     required String subjectId,
     required List<String> tags,
+    List<String> imageUrls = const [],
   }) async {
     final userId = _client.auth.currentUser?.id;
     if (userId == null) throw Exception('User must be logged in to post doubts.');
@@ -164,6 +165,7 @@ class SkulkDbService {
       'body': body,
       'subject_id': subjectId,
       'tags': tags,
+      'image_urls': imageUrls,
       'is_solved': false,
       'answers_count': 0,
       'comments_count': 0,
@@ -200,6 +202,7 @@ class SkulkDbService {
   Future<Map<String, dynamic>> createSolution({
     required String postId,
     required String body,
+    List<String> imageUrls = const [],
   }) async {
     final userId = _client.auth.currentUser?.id;
     if (userId == null) throw Exception('User must be logged in to solve doubts.');
@@ -209,6 +212,7 @@ class SkulkDbService {
       'post_id': postId,
       'user_id': userId,
       'body': body,
+      'image_urls': imageUrls,
       'upvotes_count': 0,
       'is_best': false,
       'is_accepted': false,

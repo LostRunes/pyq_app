@@ -1,11 +1,16 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../data/models/solution.dart';
 import '../providers/skulk_providers.dart';
 import '../widgets/comment_section.dart';
 import '../widgets/solution_tile.dart';
+import '../../../../widgets/common/cloudinary_image_gallery.dart';
+import '../../data/services/cloudinary_service.dart';
+import '../../utils/image_utils.dart';
 
 class DoubtDetailScreen extends ConsumerStatefulWidget {
   const DoubtDetailScreen({super.key});
@@ -17,6 +22,146 @@ class DoubtDetailScreen extends ConsumerStatefulWidget {
 class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
   final TextEditingController _solutionController = TextEditingController();
   bool _isSubmittingSolution = false;
+
+  final ImagePicker _picker = ImagePicker();
+  List<File> selectedSolutionImages = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _retrieveLostData();
+  }
+
+  Future<void> _retrieveLostData() async {
+    try {
+      final response = await _picker.retrieveLostData();
+      if (response.isEmpty) return;
+      
+      if (response.files != null && response.files!.isNotEmpty) {
+        final compressedFiles = await Future.wait(
+          response.files!.map((img) => ImageUtils.compressImage(File(img.path))),
+        );
+        final validFiles = compressedFiles.whereType<File>().toList();
+        if (validFiles.isNotEmpty) {
+          setState(() {
+            selectedSolutionImages = List.from(selectedSolutionImages)..addAll(validFiles);
+          });
+        }
+      } else {
+        final file = response.file;
+        if (file != null) {
+          final compressed = await ImageUtils.compressImage(File(file.path));
+          if (compressed != null) {
+            setState(() {
+              selectedSolutionImages = List.from(selectedSolutionImages)..add(compressed);
+            });
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error retrieving lost data: $e');
+    }
+  }
+
+  Future<void> pickSolutionImages() async {
+    try {
+      final images = await _picker.pickMultiImage(
+        maxWidth: 1800,
+        maxHeight: 1800,
+        imageQuality: 85,
+      );
+      if (images.isEmpty) return;
+      
+      final compressedFiles = await Future.wait(
+        images.map((img) => ImageUtils.compressImage(File(img.path))),
+      );
+      final validFiles = compressedFiles.whereType<File>().toList();
+      
+      if (!mounted) return;
+      setState(() {
+        selectedSolutionImages = List.from(selectedSolutionImages)..addAll(validFiles);
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to pick images: $e')),
+        );
+      }
+    }
+  }
+
+  void _showSolutionImageSourceBottomSheet() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Add Images to Solution',
+                  style: GoogleFonts.outfit(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 20),
+                ListTile(
+                  leading: Icon(Icons.camera_alt_outlined, color: theme.colorScheme.primary),
+                  title: Text('Take Photo', style: GoogleFonts.outfit(fontWeight: FontWeight.w600)),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    try {
+                      final image = await _picker.pickImage(
+                        source: ImageSource.camera,
+                        maxWidth: 1800,
+                        maxHeight: 1800,
+                        imageQuality: 85,
+                      );
+                      if (image == null) return;
+                      
+                      final compressed = await ImageUtils.compressImage(File(image.path));
+                      if (compressed == null) return;
+                      
+                      if (!mounted) return;
+                      setState(() {
+                        selectedSolutionImages = List.from(selectedSolutionImages)..add(compressed);
+                      });
+                    } catch (e) {
+                      ScaffoldMessenger.of(this.context).showSnackBar(
+                        SnackBar(content: Text('Failed to capture photo: $e')),
+                      );
+                    }
+                  },
+                ),
+                Divider(color: isDark ? Colors.grey[850] : Colors.grey[200]),
+                ListTile(
+                  leading: Icon(Icons.photo_library_outlined, color: theme.colorScheme.primary),
+                  title: Text('Choose from Gallery', style: GoogleFonts.outfit(fontWeight: FontWeight.w600)),
+                  onTap: () {
+                    Navigator.pop(context);
+                    pickSolutionImages();
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
 
   @override
   void dispose() {
@@ -32,24 +177,44 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
       _isSubmittingSolution = true;
     });
 
+    List<String> uploadedUrls = [];
+    bool hasFailedUploads = false;
+
     try {
-      await ref.read(solutionsNotifierProvider(doubtId).notifier).addSolution(body);
+      final uploadedResults = await Future.wait(
+        selectedSolutionImages.map((img) => CloudinaryService.uploadImage(img)),
+      );
+      final uploadedUrls = uploadedResults.whereType<String>().toList();
+      final hasFailedUploads = uploadedUrls.length < selectedSolutionImages.length;
+
+      await ref.read(solutionsNotifierProvider(doubtId).notifier).addSolution(
+            body,
+            imageUrls: uploadedUrls,
+          );
+
       _solutionController.clear();
+      setState(() {
+        selectedSolutionImages.clear();
+      });
       FocusScope.of(context).unfocus();
       
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          backgroundColor: Colors.green,
+          backgroundColor: hasFailedUploads ? Colors.orange[850] : Colors.green,
           content: Text(
-            'Solution posted successfully! ✨',
+            hasFailedUploads
+                ? 'Solution posted without some images ⚠️'
+                : 'Solution posted successfully! ✨',
             style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
           ),
         ),
       );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to publish solution: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to publish solution: $e')),
+        );
+      }
     } finally {
       if (mounted) {
         setState(() {
@@ -307,6 +472,11 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
                             ),
                             const SizedBox(height: 16),
 
+                            if (doubt.imageUrls.isNotEmpty) ...[
+                              CloudinaryImageGallery(imageUrls: doubt.imageUrls, height: 200),
+                              const SizedBox(height: 16),
+                            ],
+
                             // Tags Scrollable
                             if (doubt.tags.isNotEmpty)
                               SizedBox(
@@ -525,50 +695,117 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
                 ),
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 child: SafeArea(
-                  child: Row(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: isDark ? const Color(0xFF2A2A2A) : Colors.grey[100],
-                            borderRadius: BorderRadius.circular(20),
+                      if (selectedSolutionImages.isNotEmpty) ...[
+                        Container(
+                          height: 60,
+                          margin: const EdgeInsets.only(bottom: 12),
+                          child: ListView.builder(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: selectedSolutionImages.length,
+                            itemBuilder: (context, index) {
+                              return Stack(
+                                children: [
+                                  RepaintBoundary(
+                                    child: Container(
+                                      width: 60,
+                                      height: 60,
+                                      margin: const EdgeInsets.only(right: 12),
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(8),
+                                        image: DecorationImage(
+                                          image: ResizeImage(
+                                            FileImage(selectedSolutionImages[index]),
+                                            width: 120,
+                                            height: 120,
+                                          ),
+                                          fit: BoxFit.cover,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  Positioned(
+                                    top: 2,
+                                    right: 14,
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        setState(() {
+                                          selectedSolutionImages.removeAt(index);
+                                        });
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.all(2),
+                                        decoration: const BoxDecoration(
+                                          color: Colors.black54,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: const Icon(
+                                          Icons.close,
+                                          size: 10,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
                           ),
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: TextField(
-                            controller: _solutionController,
-                            maxLines: null,
-                            keyboardType: TextInputType.multiline,
-                            style: GoogleFonts.outfit(fontSize: 13),
-                            decoration: InputDecoration(
-                              hintText: 'Share a helpful solution...',
-                              hintStyle: GoogleFonts.outfit(fontSize: 13, color: Colors.grey),
-                              border: InputBorder.none,
-                              contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                        ),
+                      ],
+                      Row(
+                        children: [
+                          IconButton(
+                            icon: Icon(Icons.add_a_photo_outlined, color: Theme.of(context).colorScheme.primary),
+                            onPressed: _showSolutionImageSourceBottomSheet,
+                          ),
+                          Expanded(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: isDark ? const Color(0xFF2A2A2A) : Colors.grey[100],
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              child: TextField(
+                                controller: _solutionController,
+                                maxLines: null,
+                                keyboardType: TextInputType.multiline,
+                                style: GoogleFonts.outfit(fontSize: 13),
+                                decoration: InputDecoration(
+                                  hintText: 'Share a helpful solution...',
+                                  hintStyle: GoogleFonts.outfit(fontSize: 13, color: Colors.grey),
+                                  border: InputBorder.none,
+                                  contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                                ),
+                              ),
                             ),
                           ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      GestureDetector(
-                        onTap: _isSubmittingSolution ? null : () => _submitSolution(doubtId),
-                        child: CircleAvatar(
-                          radius: 20,
-                          backgroundColor: Theme.of(context).colorScheme.primary,
-                          child: _isSubmittingSolution
-                              ? const SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation(Colors.white),
-                                  ),
-                                )
-                              : const Icon(
-                                  Icons.send_rounded,
-                                  size: 16,
-                                  color: Colors.white,
-                                ),
-                        ),
+                          const SizedBox(width: 8),
+                          GestureDetector(
+                            onTap: _isSubmittingSolution ? null : () => _submitSolution(doubtId),
+                            child: CircleAvatar(
+                              radius: 20,
+                              backgroundColor: Theme.of(context).colorScheme.primary,
+                              child: _isSubmittingSolution
+                                  ? const SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor: AlwaysStoppedAnimation(Colors.white),
+                                      ),
+                                    )
+                                  : const Icon(
+                                      Icons.send_rounded,
+                                      size: 16,
+                                      color: Colors.white,
+                                    ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),

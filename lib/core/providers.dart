@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/supabase_service.dart';
 import '../services/ai_service.dart';
 import '../models/branch.dart';
@@ -14,6 +16,26 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 final supabaseServiceProvider = Provider((ref) => SupabaseService());
 final aiServiceProvider = Provider((ref) => AiService());
+
+/// Fully signs the user out of both Google and Supabase.
+/// Call this from any logout button. After this, the next Google sign-in
+/// will always show the account picker (no silent re-auth).
+Future<void> signOutCompletely() async {
+  try {
+    // 1. Revoke Google token so account picker shows next time
+    final googleSignIn = GoogleSignIn();
+    await googleSignIn.signOut();
+  } catch (_) {
+    // Ignore Google sign-out errors (user may not have used Google sign-in)
+  }
+  try {
+    // 2. Sign out from Supabase (invalidates session server-side)
+    await Supabase.instance.client.auth.signOut();
+  } catch (_) {
+    // Ignore Supabase sign-out errors
+  }
+}
+
 
 // Theme Mode Provider using the modern Notifier
 class ThemeModeNotifier extends Notifier<ThemeMode> {

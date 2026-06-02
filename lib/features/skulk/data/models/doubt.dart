@@ -12,6 +12,7 @@ class Doubt {
   final bool isSolved;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final List<String> imageUrls;
 
   // Joined author metadata from user_profiles
   final String authorUsername;
@@ -36,6 +37,7 @@ class Doubt {
     required this.isSolved,
     required this.createdAt,
     required this.updatedAt,
+    required this.imageUrls,
     required this.authorUsername,
     required this.authorDisplayName,
     this.authorAvatarUrl,
@@ -57,6 +59,13 @@ class Doubt {
       parsedTags = rawTags.isEmpty ? [] : rawTags.split(',').map((e) => e.trim()).toList();
     }
 
+    // Parse image URLs list
+    final rawImageUrls = json['image_urls'];
+    List<String> parsedImageUrls = [];
+    if (rawImageUrls is List) {
+      parsedImageUrls = List<String>.from(rawImageUrls.map((e) => e.toString()));
+    }
+
     return Doubt(
       id: json['id']?.toString() ?? '',
       userId: json['user_id']?.toString() ?? '',
@@ -71,6 +80,7 @@ class Doubt {
       isSolved: json['is_solved'] as bool? ?? false,
       createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : DateTime.now(),
       updatedAt: json['updated_at'] != null ? DateTime.parse(json['updated_at']) : DateTime.now(),
+      imageUrls: parsedImageUrls,
       authorUsername: authorMap['username']?.toString() ?? 'anonymous',
       authorDisplayName: authorMap['display_name']?.toString() ?? 'Anonymous Student',
       authorAvatarUrl: authorMap['avatar_url']?.toString(),
@@ -93,6 +103,7 @@ class Doubt {
     bool? isSolved,
     DateTime? createdAt,
     DateTime? updatedAt,
+    List<String>? imageUrls,
     String? authorUsername,
     String? authorDisplayName,
     String? authorAvatarUrl,
@@ -113,6 +124,7 @@ class Doubt {
       isSolved: isSolved ?? this.isSolved,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      imageUrls: imageUrls ?? this.imageUrls,
       authorUsername: authorUsername ?? this.authorUsername,
       authorDisplayName: authorDisplayName ?? this.authorDisplayName,
       authorAvatarUrl: authorAvatarUrl ?? this.authorAvatarUrl,

@@ -7,6 +7,7 @@ class Solution {
   final bool isBest;
   final bool isAccepted;
   final DateTime createdAt;
+  final List<String> imageUrls;
 
   // Joined author metadata from user_profiles
   final String authorUsername;
@@ -23,6 +24,7 @@ class Solution {
     required this.isBest,
     required this.isAccepted,
     required this.createdAt,
+    required this.imageUrls,
     required this.authorUsername,
     required this.authorDisplayName,
     this.authorAvatarUrl,
@@ -33,6 +35,13 @@ class Solution {
     // Parse author nested map
     final authorMap = json['user_profiles'] as Map<String, dynamic>? ?? {};
 
+    // Parse image URLs list
+    final rawImageUrls = json['image_urls'];
+    List<String> parsedImageUrls = [];
+    if (rawImageUrls is List) {
+      parsedImageUrls = List<String>.from(rawImageUrls.map((e) => e.toString()));
+    }
+
     return Solution(
       id: json['id']?.toString() ?? '',
       postId: json['post_id']?.toString() ?? '',
@@ -42,6 +51,7 @@ class Solution {
       isBest: json['is_best'] as bool? ?? false,
       isAccepted: json['is_accepted'] as bool? ?? false,
       createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : DateTime.now(),
+      imageUrls: parsedImageUrls,
       authorUsername: authorMap['username']?.toString() ?? 'anonymous',
       authorDisplayName: authorMap['display_name']?.toString() ?? 'Anonymous Student',
       authorAvatarUrl: authorMap['avatar_url']?.toString(),
@@ -58,6 +68,7 @@ class Solution {
     bool? isBest,
     bool? isAccepted,
     DateTime? createdAt,
+    List<String>? imageUrls,
     String? authorUsername,
     String? authorDisplayName,
     String? authorAvatarUrl,
@@ -72,6 +83,7 @@ class Solution {
       isBest: isBest ?? this.isBest,
       isAccepted: isAccepted ?? this.isAccepted,
       createdAt: createdAt ?? this.createdAt,
+      imageUrls: imageUrls ?? this.imageUrls,
       authorUsername: authorUsername ?? this.authorUsername,
       authorDisplayName: authorDisplayName ?? this.authorDisplayName,
       authorAvatarUrl: authorAvatarUrl ?? this.authorAvatarUrl,

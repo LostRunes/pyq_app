@@ -1,8 +1,12 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../../../core/providers.dart';
 import '../providers/skulk_providers.dart';
+import '../../data/services/cloudinary_service.dart';
+import '../../utils/image_utils.dart';
 
 class CreateDoubtScreen extends ConsumerStatefulWidget {
   const CreateDoubtScreen({super.key});
@@ -16,6 +20,10 @@ class _CreateDoubtScreenState extends ConsumerState<CreateDoubtScreen> {
   final _titleController = TextEditingController();
   final _bodyController = TextEditingController();
   final _tagsController = TextEditingController();
+  final _otherSubjectController = TextEditingController();
+
+  final ImagePicker _picker = ImagePicker();
+  List<File> selectedImages = [];
 
   String? _selectedSubjectId;
   bool _isPublishing = false;
@@ -25,6 +33,43 @@ class _CreateDoubtScreenState extends ConsumerState<CreateDoubtScreen> {
   String? _branchId;
   int? _semester;
   bool _argsParsed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _retrieveLostData();
+  }
+
+  Future<void> _retrieveLostData() async {
+    try {
+      final response = await _picker.retrieveLostData();
+      if (response.isEmpty) return;
+      
+      if (response.files != null && response.files!.isNotEmpty) {
+        final compressedFiles = await Future.wait(
+          response.files!.map((img) => ImageUtils.compressImage(File(img.path))),
+        );
+        final validFiles = compressedFiles.whereType<File>().toList();
+        if (validFiles.isNotEmpty) {
+          setState(() {
+            selectedImages = List.from(selectedImages)..addAll(validFiles);
+          });
+        }
+      } else {
+        final file = response.file;
+        if (file != null) {
+          final compressed = await ImageUtils.compressImage(File(file.path));
+          if (compressed != null) {
+            setState(() {
+              selectedImages = List.from(selectedImages)..add(compressed);
+            });
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error retrieving lost data: $e');
+    }
+  }
 
   @override
   void didChangeDependencies() {
@@ -43,6 +88,7 @@ class _CreateDoubtScreenState extends ConsumerState<CreateDoubtScreen> {
     _titleController.dispose();
     _bodyController.dispose();
     _tagsController.dispose();
+    _otherSubjectController.dispose();
     super.dispose();
   }
 
@@ -85,6 +131,106 @@ class _CreateDoubtScreenState extends ConsumerState<CreateDoubtScreen> {
 
   // ── publish ────────────────────────────────────────────────────────────────
 
+  Future<void> pickImages() async {
+    try {
+      final images = await _picker.pickMultiImage(
+        maxWidth: 1800,
+        maxHeight: 1800,
+        imageQuality: 85,
+      );
+      if (images.isEmpty) return;
+      
+      final compressedFiles = await Future.wait(
+        images.map((img) => ImageUtils.compressImage(File(img.path))),
+      );
+      final validFiles = compressedFiles.whereType<File>().toList();
+      
+      if (!mounted) return;
+      setState(() {
+        selectedImages = List.from(selectedImages)..addAll(validFiles);
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to pick images: $e')),
+        );
+      }
+    }
+  }
+
+  void _showImageSourceBottomSheet() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Add Images',
+                  style: GoogleFonts.outfit(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 20),
+                ListTile(
+                  leading: Icon(Icons.camera_alt_outlined, color: theme.colorScheme.primary),
+                  title: Text('Take Photo', style: GoogleFonts.outfit(fontWeight: FontWeight.w600)),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    try {
+                      final image = await _picker.pickImage(
+                        source: ImageSource.camera,
+                        maxWidth: 1800,
+                        maxHeight: 1800,
+                        imageQuality: 85,
+                      );
+                      if (image == null) return;
+                      
+                      final compressed = await ImageUtils.compressImage(File(image.path));
+                      if (compressed == null) return;
+                      
+                      if (!mounted) return;
+                      setState(() {
+                        selectedImages = List.from(selectedImages)..add(compressed);
+                      });
+                    } catch (e) {
+                      ScaffoldMessenger.of(this.context).showSnackBar(
+                        SnackBar(content: Text('Failed to capture photo: $e')),
+                      );
+                    }
+                  },
+                ),
+                Divider(color: isDark ? Colors.grey[850] : Colors.grey[200]),
+                ListTile(
+                  leading: Icon(Icons.photo_library_outlined, color: theme.colorScheme.primary),
+                  title: Text('Choose from Gallery', style: GoogleFonts.outfit(fontWeight: FontWeight.w600)),
+                  onTap: () {
+                    Navigator.pop(context);
+                    pickImages();
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> _publishDoubt() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedSubjectId == null) {
@@ -105,12 +251,23 @@ class _CreateDoubtScreenState extends ConsumerState<CreateDoubtScreen> {
             .where((e) => e.isNotEmpty)
             .toList();
 
+    final String subjectToSend = _selectedSubjectId == 'other'
+        ? _otherSubjectController.text.trim()
+        : _selectedSubjectId!;
+
     try {
+      final uploadedResults = await Future.wait(
+        selectedImages.map((img) => CloudinaryService.uploadImage(img)),
+      );
+      final uploadedUrls = uploadedResults.whereType<String>().toList();
+      final hasFailedUploads = uploadedUrls.length < selectedImages.length;
+      
       await ref.read(skulkRepositoryProvider).createDoubt(
             title: _titleController.text.trim(),
             body: _bodyController.text.trim(),
-            subjectId: _selectedSubjectId!,
+            subjectId: subjectToSend,
             tags: parsedTags,
+            imageUrls: uploadedUrls,
           );
 
       ref.invalidate(skulkFeedProvider);
@@ -118,9 +275,11 @@ class _CreateDoubtScreenState extends ConsumerState<CreateDoubtScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            backgroundColor: Colors.green[700],
+            backgroundColor: hasFailedUploads ? Colors.orange[800] : Colors.green[700],
             content: Text(
-              'Doubt posted! ✨',
+              hasFailedUploads
+                  ? 'Post published without some images ⚠️'
+                  : 'Doubt posted! ✨',
               style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
             ),
           ),
@@ -219,21 +378,50 @@ class _CreateDoubtScreenState extends ConsumerState<CreateDoubtScreen> {
                           contentPadding: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 4),
                         ),
-                        items: subjects.map((sub) {
-                          return DropdownMenuItem<String>(
-                            value: sub.id,
+                        items: [
+                          ...subjects.map((sub) {
+                            return DropdownMenuItem<String>(
+                              value: sub.id,
+                              child: Text(
+                                '${sub.name} (${sub.code})',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            );
+                          }),
+                          DropdownMenuItem<String>(
+                            value: 'other',
                             child: Text(
-                              '${sub.name} (${sub.code})',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                              'Other (Specify below)',
+                              style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
                             ),
-                          );
-                        }).toList(),
+                          ),
+                        ],
                         onChanged: (val) =>
                             setState(() => _selectedSubjectId = val),
                       ),
                     ),
                   ),
+                  if (_selectedSubjectId == 'other') ...[
+                    const SizedBox(height: 12),
+                    _sectionLabel('SPECIFY SUBJECT NAME'),
+                    Container(
+                      decoration: _cardDecoration(context),
+                      child: TextFormField(
+                        controller: _otherSubjectController,
+                        maxLines: 1,
+                        textInputAction: TextInputAction.next,
+                        style: GoogleFonts.outfit(fontSize: 15),
+                        decoration: _fieldDecoration('Enter subject name here…'),
+                        validator: (v) {
+                          if (_selectedSubjectId == 'other' && (v == null || v.trim().isEmpty)) {
+                            return 'Please specify the subject name.';
+                          }
+                          return null;
+                        },
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 20),
 
                   // ── Title ────────────────────────────────────────────────
@@ -281,6 +469,78 @@ class _CreateDoubtScreenState extends ConsumerState<CreateDoubtScreen> {
                         }
                         return null;
                       },
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // ── Images ───────────────────────────────────────────────
+                  _sectionLabel('IMAGES  (OPTIONAL)'),
+                  if (selectedImages.isNotEmpty) ...[
+                    Container(
+                      height: 100,
+                      margin: const EdgeInsets.only(bottom: 12),
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: selectedImages.length,
+                        itemBuilder: (context, index) {
+                          return Stack(
+                            children: [
+                              RepaintBoundary(
+                                child: Container(
+                                  width: 100,
+                                  height: 100,
+                                  margin: const EdgeInsets.only(right: 12),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(12),
+                                    image: DecorationImage(
+                                      image: ResizeImage(
+                                        FileImage(selectedImages[index]),
+                                        width: 120,
+                                        height: 120,
+                                      ),
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              Positioned(
+                                top: 4,
+                                right: 16,
+                                child: GestureDetector(
+                                  onTap: () {
+                                    setState(() {
+                                      selectedImages.removeAt(index);
+                                    });
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: const BoxDecoration(
+                                      color: Colors.black54,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.close,
+                                      size: 14,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                  OutlinedButton.icon(
+                    onPressed: _showImageSourceBottomSheet,
+                    icon: const Icon(Icons.add_a_photo_outlined),
+                    label: const Text('Add Images'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 20),
