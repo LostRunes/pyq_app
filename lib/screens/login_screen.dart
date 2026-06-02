@@ -257,7 +257,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       'pixel',
       'bright',
       'super',
-      'reva',
+      'quick',
       'bold',
       'alpha',
       'omega',
@@ -889,7 +889,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   ),
                                 )
                               : Text(
-                                  'Confirm & Enter REVA',
+                                  'Confirm & Enter Focus Fox',
                                   style: GoogleFonts.outfit(
                                     fontWeight: FontWeight.w800,
                                   ),
