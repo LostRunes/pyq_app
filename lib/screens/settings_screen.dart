@@ -96,6 +96,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 
                 // Information & Version Card
                 _buildInfoCard(context, isDark),
+                const SizedBox(height: 24),
+
+                // Danger Zone — Logout
+                _buildSectionHeader(context, isDark, 'Account', Icons.manage_accounts_rounded),
+                const SizedBox(height: 12),
+                _buildLogoutCard(context, isDark),
                 const SizedBox(height: 32),
               ],
             ),
@@ -484,6 +490,124 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  Future<void> _confirmSignOut() async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: isDark ? const Color(0xFF1E1A3C) : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        title: Text(
+          'Sign Out?',
+          style: GoogleFonts.outfit(
+            fontWeight: FontWeight.w900,
+            color: isDark ? Colors.white : Colors.black87,
+          ),
+        ),
+        content: Text(
+          'You will be signed out of your Google account. You can sign back in anytime.',
+          style: GoogleFonts.outfit(
+            fontSize: 14,
+            color: isDark ? Colors.white70 : Colors.black54,
+            height: 1.5,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.outfit(
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white54 : Colors.black54,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(
+              'Sign Out',
+              style: GoogleFonts.outfit(fontWeight: FontWeight.w800),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      // Capture navigator BEFORE await — context is not safe across async gaps
+      final navigator = Navigator.of(context);
+      await signOutCompletely();
+      // Navigate to login, clearing the entire stack so user can't press Back
+      navigator.pushNamedAndRemoveUntil('/login', (route) => false);
+    }
+  }
+
+  Widget _buildLogoutCard(BuildContext context, bool isDark) {
+    final cardColor = isDark ? const Color(0xFF251E4E).withOpacity(0.85) : Colors.white;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(
+          color: isDark ? Colors.red.withOpacity(0.3) : Colors.red.withOpacity(0.15),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: isDark ? Colors.black38 : Colors.black.withOpacity(0.04),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+        leading: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: Colors.redAccent.withOpacity(0.12),
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(
+            Icons.logout_rounded,
+            color: Colors.redAccent,
+            size: 22,
+          ),
+        ),
+        title: Text(
+          'Sign Out',
+          style: GoogleFonts.outfit(
+            fontWeight: FontWeight.w800,
+            fontSize: 16,
+            color: Colors.redAccent,
+          ),
+        ),
+        subtitle: Text(
+          'Sign out from your Google account',
+          style: GoogleFonts.outfit(
+            fontSize: 12,
+            color: isDark ? Colors.white54 : Colors.black54,
+          ),
+        ),
+        trailing: Icon(
+          Icons.chevron_right_rounded,
+          color: Colors.redAccent.withOpacity(0.7),
+        ),
+        onTap: _confirmSignOut,
       ),
     );
   }

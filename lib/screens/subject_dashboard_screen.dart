@@ -167,56 +167,67 @@ class _LinkTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.all(32.0),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Image.asset(imagePath, height: 180),
-          const SizedBox(height: 32),
-          Text(
-            title,
-            style: theme.textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            subtitle,
-            textAlign: TextAlign.center,
-            style: theme.textTheme.bodyLarge?.copyWith(height: 1.5),
-          ),
-          const SizedBox(height: 48),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: (link != null && link!.isNotEmpty)
-                  ? () async {
-                      final messenger = ScaffoldMessenger.of(context);
-                      final Uri url = Uri.parse(link!);
-                      if (!await launchUrl(
-                        url,
-                        mode: LaunchMode.externalApplication,
-                      )) {
-                        messenger.showSnackBar(
-                          const SnackBar(
-                            content: Text('Could not open the link.'),
-                          ),
-                        );
-                      }
-                    }
-                  : null,
-              icon: Icon(icon),
-              label: Text(buttonLabel),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 20),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(24),
+    return RefreshIndicator(
+      onRefresh: () async {
+        // Simulate network delay for premium visual feedback on pull-to-refresh
+        await Future.delayed(const Duration(seconds: 1));
+      },
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: Container(
+          height: MediaQuery.of(context).size.height * 0.7,
+          padding: const EdgeInsets.all(32.0),
+          alignment: Alignment.center,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Image.asset(imagePath, height: 180),
+              const SizedBox(height: 32),
+              Text(
+                title,
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w900,
                 ),
               ),
-            ),
+              const SizedBox(height: 12),
+              Text(
+                subtitle,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodyLarge?.copyWith(height: 1.5),
+              ),
+              const SizedBox(height: 48),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: (link != null && link!.isNotEmpty)
+                      ? () async {
+                          final messenger = ScaffoldMessenger.of(context);
+                          final Uri url = Uri.parse(link!);
+                          if (!await launchUrl(
+                            url,
+                            mode: LaunchMode.externalApplication,
+                          )) {
+                            messenger.showSnackBar(
+                              const SnackBar(
+                                content: Text('Could not open the link.'),
+                              ),
+                            );
+                          }
+                        }
+                      : null,
+                  icon: Icon(icon),
+                  label: Text(buttonLabel),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 20),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -331,23 +342,28 @@ class _DriveExplorerTabState extends State<_DriveExplorerTab> {
     Widget content;
 
     if (widget.driveLink == null || widget.driveLink!.isEmpty) {
-      content = Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Image.asset('assets/images/owl.png', height: 130),
-              const SizedBox(height: 16),
-              Text(
-                "No Drive folder linked.",
-                style: GoogleFonts.outfit(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: theme.colorScheme.onSurface.withOpacity(0.5),
+      content = SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: Container(
+          height: MediaQuery.of(context).size.height * 0.7,
+          alignment: Alignment.center,
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Image.asset('assets/images/owl.png', height: 130),
+                const SizedBox(height: 16),
+                Text(
+                  "No Drive folder linked.",
+                  style: GoogleFonts.outfit(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: theme.colorScheme.onSurface.withOpacity(0.5),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       );
@@ -369,69 +385,80 @@ class _DriveExplorerTabState extends State<_DriveExplorerTab> {
         ),
       );
     } else if (errorMessage != null) {
-      content = Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
+      content = SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: Container(
+          height: MediaQuery.of(context).size.height * 0.7,
+          alignment: Alignment.center,
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Image.asset('assets/images/sad_raccoon.png', height: 130),
+                const SizedBox(height: 16),
+                Text(
+                  "Something went wrong",
+                  style: GoogleFonts.outfit(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  errorMessage!,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.outfit(
+                    color: theme.colorScheme.onSurface.withOpacity(0.6),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton.icon(
+                  onPressed: loadFiles,
+                  icon: const Icon(Icons.refresh_rounded),
+                  label: const Text("Retry"),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 12,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    } else if (files.isEmpty) {
+      content = SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: Container(
+          height: MediaQuery.of(context).size.height * 0.7,
+          alignment: Alignment.center,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Image.asset('assets/images/sad_raccoon.png', height: 130),
+              Image.asset('assets/images/sleepy-shark.png', height: 130),
               const SizedBox(height: 16),
               Text(
-                "Something went wrong",
+                "This folder is empty.",
                 style: GoogleFonts.outfit(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: theme.colorScheme.onSurface,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                errorMessage!,
-                textAlign: TextAlign.center,
-                style: GoogleFonts.outfit(
-                  color: theme.colorScheme.onSurface.withOpacity(0.6),
-                ),
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton.icon(
-                onPressed: loadFiles,
-                icon: const Icon(Icons.refresh_rounded),
-                label: const Text("Retry"),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 12,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: theme.colorScheme.onSurface.withOpacity(0.5),
                 ),
               ),
             ],
           ),
         ),
       );
-    } else if (files.isEmpty) {
-      content = Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Image.asset('assets/images/sleepy-shark.png', height: 130),
-            const SizedBox(height: 16),
-            Text(
-              "This folder is empty.",
-              style: GoogleFonts.outfit(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: theme.colorScheme.onSurface.withOpacity(0.5),
-              ),
-            ),
-          ],
-        ),
-      );
     } else {
       content = ListView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(16),
         itemCount: files.length,
         itemBuilder: (context, index) {
@@ -484,6 +511,13 @@ class _DriveExplorerTabState extends State<_DriveExplorerTab> {
             ),
           );
         },
+      );
+    }
+
+    if (widget.driveLink != null && widget.driveLink!.isNotEmpty) {
+      content = RefreshIndicator(
+        onRefresh: loadFiles,
+        child: content,
       );
     }
 
@@ -728,116 +762,132 @@ class _ProgressTab extends ConsumerWidget {
     final progress = ref.watch(progressProvider);
     final theme = Theme.of(context);
 
-    return topicsAsync.when(
-      data: (topics) {
-        if (topics.isEmpty)
-          return const Center(child: Text('No topics to track.'));
+    return RefreshIndicator(
+      onRefresh: () async {
+        // Refresh topics lists/progress data
+        await ref.refresh(dashboardTopicsProvider(subjectId).future);
+      },
+      child: topicsAsync.when(
+        data: (topics) {
+          if (topics.isEmpty) {
+            return SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: Container(
+                height: MediaQuery.of(context).size.height * 0.7,
+                alignment: Alignment.center,
+                child: const Text('No topics to track.'),
+              ),
+            );
+          }
 
-        final completedCount = topics
-            .where((t) => progress[t.id] ?? false)
-            .length;
-        final totalCount = topics.length;
-        final percent = totalCount == 0 ? 0.0 : completedCount / totalCount;
+          final completedCount = topics
+              .where((t) => progress[t.id] ?? false)
+              .length;
+          final totalCount = topics.length;
+          final percent = totalCount == 0 ? 0.0 : completedCount / totalCount;
 
-        return Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(32),
-              child: Column(
-                children: [
-                  Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      SizedBox(
-                        height: 120,
-                        width: 120,
-                        child: CircularProgressIndicator(
-                          value: percent,
-                          strokeWidth: 12,
-                          backgroundColor: theme.colorScheme.primary
-                              .withOpacity(0.1),
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            theme.colorScheme.primary,
+          return ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: EdgeInsets.zero,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  children: [
+                    Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        SizedBox(
+                          height: 120,
+                          width: 120,
+                          child: CircularProgressIndicator(
+                            value: percent,
+                            strokeWidth: 12,
+                            backgroundColor: theme.colorScheme.primary
+                                .withOpacity(0.1),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              theme.colorScheme.primary,
+                            ),
                           ),
                         ),
-                      ),
-                      Text(
-                        '${(percent * 100).toInt()}%',
-                        style: theme.textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.w900,
+                        Text(
+                          '${(percent * 100).toInt()}%',
+                          style: theme.textTheme.headlineMedium?.copyWith(
+                            fontWeight: FontWeight.w900,
+                          ),
                         ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      'Overall Progress',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  Text(
-                    'Overall Progress',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
                     ),
-                  ),
-                  Text(
-                    '$completedCount of $totalCount topics completed',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurface.withOpacity(0.6),
+                    Text(
+                      '$completedCount of $totalCount topics completed',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurface.withOpacity(0.6),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                itemCount: topics.length,
-                itemBuilder: (context, index) {
-                  final topic = topics[index];
-                  final isDone = progress[topic.id] ?? false;
+              ...topics.map((topic) {
+                final isDone = progress[topic.id] ?? false;
 
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.surface,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12, left: 20, right: 20),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surface,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: isDone
+                          ? theme.colorScheme.primary.withOpacity(0.3)
+                          : Colors.transparent,
+                      width: 2,
+                    ),
+                  ),
+                  child: CheckboxListTile(
+                    title: Text(
+                      topic.name,
+                      style: GoogleFonts.outfit(
+                        fontWeight: FontWeight.w700,
+                        decoration: isDone
+                            ? TextDecoration.lineThrough
+                            : null,
                         color: isDone
-                            ? theme.colorScheme.primary.withOpacity(0.3)
-                            : Colors.transparent,
-                        width: 2,
+                            ? theme.colorScheme.onSurface.withOpacity(0.5)
+                            : null,
                       ),
                     ),
-                    child: CheckboxListTile(
-                      title: Text(
-                        topic.name,
-                        style: GoogleFonts.outfit(
-                          fontWeight: FontWeight.w700,
-                          decoration: isDone
-                              ? TextDecoration.lineThrough
-                              : null,
-                          color: isDone
-                              ? theme.colorScheme.onSurface.withOpacity(0.5)
-                              : null,
-                        ),
-                      ),
-                      value: isDone,
-                      activeColor: theme.colorScheme.primary,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      onChanged: (val) {
-                        ref
-                            .read(progressProvider.notifier)
-                            .toggleProgress(topic.id);
-                      },
+                    value: isDone,
+                    activeColor: theme.colorScheme.primary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
                     ),
-                  );
-                },
-              ),
-            ),
-          ],
-        );
-      },
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Error: $e')),
+                    onChanged: (val) {
+                      ref
+                          .read(progressProvider.notifier)
+                          .toggleProgress(topic.id);
+                    },
+                  ),
+                );
+              }).toList(),
+            ],
+          );
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Container(
+            height: MediaQuery.of(context).size.height * 0.7,
+            alignment: Alignment.center,
+            child: Text('Error: $e'),
+          ),
+        ),
+      ),
     );
   }
 }
