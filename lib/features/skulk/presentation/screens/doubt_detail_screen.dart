@@ -37,13 +37,25 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
       final response = await _picker.retrieveLostData();
       if (response.isEmpty) return;
       
-      final file = response.file;
-      if (file != null) {
-        final compressed = await ImageUtils.compressImage(File(file.path));
-        if (compressed != null) {
+      if (response.files != null && response.files!.isNotEmpty) {
+        final compressedFiles = await Future.wait(
+          response.files!.map((img) => ImageUtils.compressImage(File(img.path))),
+        );
+        final validFiles = compressedFiles.whereType<File>().toList();
+        if (validFiles.isNotEmpty) {
           setState(() {
-            selectedSolutionImages = List.from(selectedSolutionImages)..add(compressed);
+            selectedSolutionImages = List.from(selectedSolutionImages)..addAll(validFiles);
           });
+        }
+      } else {
+        final file = response.file;
+        if (file != null) {
+          final compressed = await ImageUtils.compressImage(File(file.path));
+          if (compressed != null) {
+            setState(() {
+              selectedSolutionImages = List.from(selectedSolutionImages)..add(compressed);
+            });
+          }
         }
       }
     } catch (e) {
@@ -53,7 +65,11 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
 
   Future<void> pickSolutionImages() async {
     try {
-      final images = await _picker.pickMultiImage();
+      final images = await _picker.pickMultiImage(
+        maxWidth: 1800,
+        maxHeight: 1800,
+        imageQuality: 85,
+      );
       if (images.isEmpty) return;
       
       final compressedFiles = await Future.wait(
@@ -110,6 +126,9 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
                     try {
                       final image = await _picker.pickImage(
                         source: ImageSource.camera,
+                        maxWidth: 1800,
+                        maxHeight: 1800,
+                        imageQuality: 85,
                       );
                       if (image == null) return;
                       
