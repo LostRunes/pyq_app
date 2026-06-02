@@ -33,10 +33,10 @@ class SubjectRoomCard extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+        color: isDark ? const Color(0xFF191125) : Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isDark ? Colors.grey[850]! : Colors.grey[200]!,
+          color: isDark ? const Color(0xFF381F4C) : Colors.grey[200]!,
         ),
         boxShadow: [
           BoxShadow(
