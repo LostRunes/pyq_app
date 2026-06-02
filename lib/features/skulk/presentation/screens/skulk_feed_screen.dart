@@ -67,11 +67,15 @@ class _SkulkFeedScreenState extends ConsumerState<SkulkFeedScreen> {
       body: Container(
         decoration: BoxDecoration(
           image: DecorationImage(
-            image: const AssetImage('assets/images/skulk_bg3.jpg'),
+            image: AssetImage(
+              isDark
+                  ? 'assets/images/skulk_bg_dark.jpg'
+                  : 'assets/images/skulk_bg3.jpg',
+            ),
             fit: BoxFit.cover,
             colorFilter: ColorFilter.mode(
               isDark
-                  ? Colors.black.withOpacity(0.88)
+                  ? Colors.black.withOpacity(0.10)
                   : Colors.white.withOpacity(0.45),
               BlendMode.srcOver,
             ),

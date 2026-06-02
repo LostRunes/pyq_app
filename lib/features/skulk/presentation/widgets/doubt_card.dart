@@ -21,7 +21,7 @@ class DoubtCard extends ConsumerWidget {
     final voteState = ref.watch(userVotesProvider);
     final isUpvoted = voteState.value?[doubt.id] ?? false;
 
-    final cardBorder = isDark ? Colors.grey[800]! : Colors.grey[200]!;
+    final cardBorder = isDark ? const Color(0xFF3E2361) : Colors.grey[200]!;
 
     return InkWell(
       onTap: onTap,
@@ -30,7 +30,7 @@ class DoubtCard extends ConsumerWidget {
         margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+          color: isDark ? const Color(0xFF1A1125) : Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: doubt.isSolved
@@ -256,7 +256,7 @@ class DoubtCard extends ConsumerWidget {
                     return Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF252525) : Colors.grey[100],
+                        color: isDark ? const Color(0xFF271B36) : Colors.grey[100],
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(color: cardBorder),
                       ),
