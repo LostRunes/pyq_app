@@ -24,7 +24,7 @@ class ActiveLobbyCard extends ConsumerWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: isDark
-              ? [const Color(0xFF2C1B18), const Color(0xFF1E1E1E)]
+              ? [const Color(0xFF241530), const Color(0xFF160F1F)]
               : [const Color(0xFFFFF4F2), Colors.white],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -32,13 +32,15 @@ class ActiveLobbyCard extends ConsumerWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.orange.withOpacity(isDark ? 0.08 : 0.05),
+            color: isDark
+                ? const Color(0xFF905CFE).withOpacity(0.12)
+                : Colors.orange.withOpacity(0.05),
             blurRadius: 12,
             offset: const Offset(0, 6),
           ),
         ],
         border: Border.all(
-          color: isDark ? const Color(0xFF4A2B25) : const Color(0xFFFFDCD6),
+          color: isDark ? const Color(0xFF4E2C7E) : const Color(0xFFFFDCD6),
           width: 1.5,
         ),
       ),
