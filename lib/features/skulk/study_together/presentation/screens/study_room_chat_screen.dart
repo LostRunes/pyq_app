@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../data/models/study_room.dart';
-import '../../data/models/room_message.dart';
 import '../providers/study_together_providers.dart';
+import '../widgets/room_message_bubble.dart';
 
 class StudyRoomChatScreen extends ConsumerStatefulWidget {
   final StudyRoom room;
@@ -36,10 +36,14 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen> {
   }
 
   void _onScroll() {
-    // If user scrolled near the top of the reversed list (older messages), load more
-    if (_scrollController.position.pixels >=
-        _scrollController.position.maxScrollExtent - 200) {
-      ref.read(roomChatProvider(widget.room.id).notifier).loadMore();
+    final messages = ref.read(roomChatProvider(widget.room.id));
+    final chatNotifier = ref.read(roomChatProvider(widget.room.id).notifier);
+    
+    // In reversed list, older messages are loaded when scrolled near top
+    if (messages.length >= 12 &&
+        _scrollController.position.pixels >=
+            _scrollController.position.maxScrollExtent - 200) {
+      chatNotifier.loadMore();
     }
   }
 
@@ -59,6 +63,20 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen> {
 
     try {
       await ref.read(roomChatProvider(widget.room.id).notifier).sendMessage(text);
+      
+      // Auto scroll to bottom when sending if in top-down layout
+      final messages = ref.read(roomChatProvider(widget.room.id));
+      if (messages.length < 12) {
+        Future.delayed(const Duration(milliseconds: 100), () {
+          if (_scrollController.hasClients) {
+            _scrollController.animateTo(
+              _scrollController.position.maxScrollExtent,
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOut,
+            );
+          }
+        });
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -114,7 +132,7 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen> {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        '$presenceCount online',
+                        '$presenceCount studying now',
                         style: GoogleFonts.outfit(
                           fontSize: 11,
                           color: Colors.grey,
@@ -132,7 +150,7 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // Message List
+            // Message List Area
             Expanded(
               child: messages.isEmpty
                   ? Center(
@@ -167,26 +185,36 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen> {
                         ),
                       ),
                     )
-                  : ListView.builder(
-                      controller: _scrollController,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      reverse: true,
-                      itemCount: messages.length + (chatNotifier.isLoadingMore ? 1 : 0),
-                      itemBuilder: (context, index) {
-                        if (index == messages.length) {
-                          return const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 16),
-                            child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                          );
-                        }
-
-                        final message = messages[index];
-                        return _MessageTile(message: message, isDark: isDark);
-                      },
-                    ),
+                  : (messages.length < 12
+                      ? ListView.builder(
+                          controller: _scrollController,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          reverse: false,
+                          itemCount: messages.length,
+                          itemBuilder: (context, index) {
+                            // Render oldest first from the top
+                            final oldestFirst = messages.reversed.toList();
+                            return RoomMessageBubble(message: oldestFirst[index]);
+                          },
+                        )
+                      : ListView.builder(
+                          controller: _scrollController,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          reverse: true,
+                          itemCount: messages.length + (chatNotifier.isLoadingMore ? 1 : 0),
+                          itemBuilder: (context, index) {
+                            if (index == messages.length) {
+                              return const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 16),
+                                child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                              );
+                            }
+                            return RoomMessageBubble(message: messages[index]);
+                          },
+                        )),
             ),
 
-            // Input field
+            // Input composer
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
@@ -245,106 +273,5 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen> {
         ),
       ),
     );
-  }
-}
-
-class _MessageTile extends StatelessWidget {
-  final RoomMessage message;
-  final bool isDark;
-
-  const _MessageTile({
-    required this.message,
-    required this.isDark,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final timeStr = _formatTimestamp(message.createdAt);
-    final initial = (message.senderDisplayName ?? message.senderUsername ?? '?')
-        .substring(0, 1)
-        .toUpperCase();
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Avatar
-          CircleAvatar(
-            radius: 18,
-            backgroundColor: isDark ? const Color(0xFF383838) : const Color(0xFFE2E6EA),
-            backgroundImage: message.senderAvatarUrl != null
-                ? NetworkImage(message.senderAvatarUrl!)
-                : null,
-            child: message.senderAvatarUrl == null
-                ? Text(
-                    initial,
-                    style: GoogleFonts.outfit(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: isDark ? Colors.white70 : Colors.black87,
-                    ),
-                  )
-                : null,
-          ),
-          const SizedBox(width: 12),
-          // Content
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.baseline,
-                  textBaseline: TextBaseline.alphabetic,
-                  children: [
-                    Text(
-                      message.senderDisplayName ?? 'User',
-                      style: GoogleFonts.outfit(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                        color: isDark ? Colors.white : Colors.black87,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      '@${message.senderUsername ?? "anonymous"}',
-                      style: GoogleFonts.outfit(
-                        fontSize: 11,
-                        color: Colors.grey,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      timeStr,
-                      style: GoogleFonts.outfit(
-                        fontSize: 10,
-                        color: Colors.grey[500],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  message.message,
-                  style: GoogleFonts.outfit(
-                    fontSize: 13.5,
-                    color: isDark ? const Color(0xFFE0E0E0) : const Color(0xFF2C2C2C),
-                    height: 1.35,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _formatTimestamp(DateTime dt) {
-    final localDt = dt.toLocal();
-    final hour = localDt.hour == 0 ? 12 : (localDt.hour > 12 ? localDt.hour - 12 : localDt.hour);
-    final minute = localDt.minute.toString().padLeft(2, '0');
-    final amPm = localDt.hour >= 12 ? 'PM' : 'AM';
-    return '$hour:$minute $amPm';
   }
 }
