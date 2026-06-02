@@ -19,6 +19,9 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'features/skulk/presentation/screens/create_doubt_screen.dart';
 import 'features/skulk/presentation/screens/doubt_detail_screen.dart';
 import 'features/skulk/presentation/screens/notifications_screen.dart';
+import 'features/skulk/study_together/presentation/screens/study_together_screen.dart';
+import 'features/skulk/study_together/presentation/screens/study_room_chat_screen.dart';
+import 'features/skulk/study_together/data/models/study_room.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -104,6 +107,11 @@ class PyqApp extends ConsumerWidget {
         '/skulk_create': (context) => const CreateDoubtScreen(),
         '/skulk_detail': (context) => const DoubtDetailScreen(),
         '/skulk_notifications': (context) => const NotificationsScreen(),
+        '/study-together': (context) => const StudyTogetherScreen(),
+        '/study-together/chat': (context) {
+          final room = ModalRoute.of(context)!.settings.arguments as StudyRoom;
+          return StudyRoomChatScreen(room: room);
+        },
       },
     );
   }
