@@ -8,6 +8,7 @@ class StudyRoom {
   final bool isArchived;
   final DateTime lastMessageAt;
   final String? createdBy;
+  final String? subjectId;
 
   StudyRoom({
     required this.id,
@@ -19,6 +20,7 @@ class StudyRoom {
     required this.isArchived,
     required this.lastMessageAt,
     this.createdBy,
+    this.subjectId,
   });
 
   factory StudyRoom.fromJson(Map<String, dynamic> json) {
@@ -32,6 +34,7 @@ class StudyRoom {
       isArchived: json['is_archived'] as bool? ?? false,
       lastMessageAt: DateTime.parse(json['last_message_at'] ?? json['created_at']),
       createdBy: json['created_by'] as String?,
+      subjectId: json['subject_id'] as String?,
     );
   }
 }

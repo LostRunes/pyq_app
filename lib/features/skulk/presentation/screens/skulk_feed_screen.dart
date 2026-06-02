@@ -52,245 +52,288 @@ class _SkulkFeedScreenState extends ConsumerState<SkulkFeedScreen> {
     final activeFilter = ref.watch(skulkFeedFilterProvider);
 
     // Watch all curriculum subjects for the student's current branch & sem
-    final subjectsAsync = ref.watch(subjectsProvider((
-      branchId: widget.branchId,
-      semester: widget.semester,
-    )));
+    final subjectsAsync = ref.watch(
+      subjectsProvider((branchId: widget.branchId, semester: widget.semester)),
+    );
 
     // Watch the active doubts feed list from state provider
     final doubtsAsync = ref.watch(skulkFeedProvider);
     final feedNotifier = ref.read(skulkFeedProvider.notifier);
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF141414) : const Color(0xFFF9F9F9),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Header row with title + Study Together + notification bell
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 12, 4),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      'Skulk 🦊',
-                      style: GoogleFonts.outfit(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w900,
-                        color: isDark ? Colors.white : Colors.black87,
+      backgroundColor: isDark
+          ? const Color(0xFF141414)
+          : const Color(0xFFF9F9F9),
+      body: Container(
+        decoration: BoxDecoration(
+          image: DecorationImage(
+            image: const AssetImage('assets/images/skulk_bg3.jpg'),
+            fit: BoxFit.cover,
+            colorFilter: ColorFilter.mode(
+              isDark
+                  ? Colors.black.withOpacity(0.88)
+                  : Colors.white.withOpacity(0.45),
+              BlendMode.srcOver,
+            ),
+          ),
+        ),
+        child: SafeArea(
+          child: RefreshIndicator(
+            onRefresh: () async {
+              await feedNotifier.refresh();
+            },
+            color: Theme.of(context).colorScheme.primary,
+            child: ListView(
+              controller: _scrollController,
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: [
+                // Header row with title + Study Together + notification bell
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 12, 4),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Text(
+                              'Skulk ',
+                              style: GoogleFonts.outfit(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w900,
+                                color: isDark ? Colors.white : Colors.black87,
+                              ),
+                            ),
+                            Image.asset(
+                              'assets/images/lil_fox.png',
+                              width: 40,
+                              height: 40,
+                              fit: BoxFit.contain,
+                            ),
+                          ],
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.pushNamed(context, '/study-together');
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.primary,
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.groups_rounded,
+                                size: 16,
+                                color: Colors.white,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Study Together',
+                                style: GoogleFonts.outfit(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      _NotificationBell(),
+                    ],
+                  ),
+                ),
+
+                // Search field
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 6, 16, 8),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF202020) : Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: isDark ? Colors.grey[850]! : Colors.grey[200]!,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(isDark ? 0.2 : 0.03),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: TextField(
+                      controller: _searchController,
+                      focusNode: _searchFocusNode,
+                      style: GoogleFonts.outfit(fontSize: 14),
+                      onChanged: (val) {
+                        ref.read(skulkFeedSearchProvider.notifier).state = val;
+                      },
+                      decoration: InputDecoration(
+                        hintText: 'Search doubts, title or tags...',
+                        hintStyle: GoogleFonts.outfit(
+                          fontSize: 14,
+                          color: Colors.grey,
+                        ),
+                        prefixIcon: const Icon(
+                          Icons.search_rounded,
+                          color: Colors.grey,
+                        ),
+                        suffixIcon: _searchController.text.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(
+                                  Icons.close_rounded,
+                                  color: Colors.grey,
+                                ),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  ref
+                                          .read(
+                                            skulkFeedSearchProvider.notifier,
+                                          )
+                                          .state =
+                                      '';
+                                  FocusScope.of(context).unfocus();
+                                },
+                              )
+                            : null,
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 12,
+                        ),
                       ),
                     ),
                   ),
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.pushNamed(
-                        context,
-                        '/study-together',
-                      );
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primary,
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                      child: Row(
+                ),
+
+                // Horizontal Filter Chips row
+                _buildFilterChips(context),
+
+                // Subject Filter dropdown row (if active)
+                _buildSubjectSelectorRow(context, subjectsAsync),
+
+                // Tag filter chips
+                _buildTagFilterRow(context),
+
+                const SizedBox(height: 8),
+
+                // Main feed content
+                doubtsAsync.when(
+                  loading: () => Column(
+                    children: List.generate(
+                      6,
+                      (_) => const DoubtCardSkeleton(),
+                    ),
+                  ),
+                  error: (err, stack) => Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24.0),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           const Icon(
-                            Icons.groups_rounded,
-                            size: 16,
-                            color: Colors.white,
+                            Icons.error_outline_rounded,
+                            color: Colors.redAccent,
+                            size: 48,
                           ),
-                          const SizedBox(width: 6),
+                          const SizedBox(height: 12),
                           Text(
-                            'Study Together',
+                            'Failed to load doubts.',
                             style: GoogleFonts.outfit(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '$err',
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.outfit(
+                              fontSize: 12,
+                              color: Colors.grey,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: () => feedNotifier.refresh(),
+                            child: Text(
+                              'Try Again',
+                              style: GoogleFonts.outfit(),
                             ),
                           ),
                         ],
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  _NotificationBell(),
-                ],
-              ),
-            ),
+                  data: (doubtsList) {
+                    // Apply user's academic "My Subjects" filter in-memory if selected
+                    var displayDoubts = doubtsList;
+                    if (activeFilter == 'subjects' && subjectsAsync.hasValue) {
+                      final currentSubjectIds = subjectsAsync.value!
+                          .map((e) => e.id)
+                          .toSet();
+                      displayDoubts = doubtsList
+                          .where((d) => currentSubjectIds.contains(d.subjectId))
+                          .toList();
+                    }
 
-            // Search field
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 6, 16, 8),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF202020) : Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: isDark ? Colors.grey[850]! : Colors.grey[200]!,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(isDark ? 0.2 : 0.03),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: TextField(
-                  controller: _searchController,
-                  focusNode: _searchFocusNode,
-                  style: GoogleFonts.outfit(fontSize: 14),
-                  onChanged: (val) {
-                    ref.read(skulkFeedSearchProvider.notifier).state = val;
-                  },
-                  decoration: InputDecoration(
-                    hintText: 'Search doubts, title or tags...',
-                    hintStyle: GoogleFonts.outfit(
-                      fontSize: 14,
-                      color: Colors.grey,
-                    ),
-                    prefixIcon: const Icon(Icons.search_rounded, color: Colors.grey),
-                    suffixIcon: _searchController.text.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.close_rounded, color: Colors.grey),
-                            onPressed: () {
-                              _searchController.clear();
-                              ref.read(skulkFeedSearchProvider.notifier).state = '';
-                              FocusScope.of(context).unfocus();
+                    if (displayDoubts.isEmpty) {
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 80),
+                        child: _buildEmptyState(context, isDark, activeFilter),
+                      );
+                    }
+
+                    return Column(
+                      children: [
+                        ...displayDoubts.map((doubt) {
+                          return DoubtCard(
+                            doubt: doubt,
+                            onTap: () {
+                              Navigator.pushNamed(
+                                context,
+                                '/skulk_detail',
+                                arguments: doubt.id,
+                              );
                             },
+                          );
+                        }),
+                        if (feedNotifier.isLoadingMore)
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 24),
+                            child: Center(
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
                           )
-                        : null,
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                ),
-              ),
-            ),
-
-            // Horizontal Filter Chips row
-            _buildFilterChips(context),
-
-            // Subject Filter dropdown row (if active)
-            _buildSubjectSelectorRow(context, subjectsAsync),
-
-            // Tag filter chips
-            _buildTagFilterRow(context),
-
-            // Main feed content
-            Expanded(
-              child: doubtsAsync.when(
-                loading: () => ListView.builder(
-                  physics: const NeverScrollableScrollPhysics(),
-                  padding: const EdgeInsets.only(top: 4, bottom: 80),
-                  itemCount: 6,
-                  itemBuilder: (_, __) => const DoubtCardSkeleton(),
-                ),
-                error: (err, stack) => Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24.0),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.error_outline_rounded, color: Colors.redAccent, size: 48),
-                        const SizedBox(height: 12),
-                        Text(
-                          'Failed to load doubts.',
-                          style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '$err',
-                          textAlign: TextAlign.center,
-                          style: GoogleFonts.outfit(fontSize: 12, color: Colors.grey),
-                        ),
-                        const SizedBox(height: 16),
-                        ElevatedButton(
-                          onPressed: () => feedNotifier.refresh(),
-                          child: Text('Try Again', style: GoogleFonts.outfit()),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                data: (doubtsList) {
-                  // Apply user's academic "My Subjects" filter in-memory if selected
-                  var displayDoubts = doubtsList;
-                  if (activeFilter == 'subjects' && subjectsAsync.hasValue) {
-                    final currentSubjectIds =
-                        subjectsAsync.value!.map((e) => e.id).toSet();
-                    displayDoubts = doubtsList
-                        .where((d) => currentSubjectIds.contains(d.subjectId))
-                        .toList();
-                  }
-
-                  if (displayDoubts.isEmpty) {
-                    return ListView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      children: [
-                        SizedBox(height: MediaQuery.of(context).size.height * 0.22),
-                        _buildEmptyState(context, isDark, activeFilter),
-                      ],
-                    );
-                  }
-
-                  return RefreshIndicator(
-                    onRefresh: () async {
-                      await feedNotifier.refresh();
-                    },
-                    color: Theme.of(context).colorScheme.primary,
-                    child: ListView.builder(
-                      controller: _scrollController,
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      padding: const EdgeInsets.only(top: 4, bottom: 80),
-                      itemCount: displayDoubts.length + 1,
-                      itemBuilder: (context, index) {
-                        if (index == displayDoubts.length) {
-                          // Footer
-                          if (feedNotifier.isLoadingMore) {
-                            return const Padding(
-                              padding: EdgeInsets.symmetric(vertical: 24),
-                              child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                            );
-                          }
-                          if (!feedNotifier.hasMore) {
-                            return Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 24),
-                              child: Center(
-                                child: Text(
-                                  "You've seen it all! 👀",
-                                  style: GoogleFonts.outfit(
-                                    color: Colors.grey,
-                                    fontSize: 13,
-                                  ),
+                        else if (!feedNotifier.hasMore)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 24),
+                            child: Center(
+                              child: Text(
+                                "You've seen it all! 👀",
+                                style: GoogleFonts.outfit(
+                                  color: Colors.grey,
+                                  fontSize: 13,
                                 ),
                               ),
-                            );
-                          }
-                          return const SizedBox.shrink();
-                        }
-
-                        final doubt = displayDoubts[index];
-                        return DoubtCard(
-                          doubt: doubt,
-                          onTap: () {
-                            Navigator.pushNamed(
-                              context,
-                              '/skulk_detail',
-                              arguments: doubt.id,
-                            );
-                          },
-                        );
-                      },
-                    ),
-                  );
-                },
-              ),
+                            ),
+                          )
+                        else
+                          const SizedBox(
+                            height: 80,
+                          ), // Padding to avoid FAB overlapping feed items
+                      ],
+                    );
+                  },
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
@@ -320,11 +363,31 @@ class _SkulkFeedScreenState extends ConsumerState<SkulkFeedScreen> {
 
   Widget _buildEmptyState(BuildContext context, bool isDark, String filter) {
     final Map<String, (String, String, IconData)> states = {
-      'unanswered': ('No unanswered doubts yet 👀', 'All questions have been answered!', Icons.check_circle_outline_rounded),
-      'solved': ('No solved doubts yet 🏆', 'Be the first solver!', Icons.emoji_events_outlined),
-      'subjects': ('Nothing from your subjects 📚', 'Your classmates haven\'t posted here yet.', Icons.library_books_outlined),
-      'hot': ('Nothing trending right now 🔥', 'Check back soon — the feed is warming up.', Icons.local_fire_department_outlined),
-      'all': ('The feed is empty 🎙️', 'Be the first to break the silence!', Icons.bubble_chart_outlined),
+      'unanswered': (
+        'No unanswered doubts yet 👀',
+        'All questions have been answered!',
+        Icons.check_circle_outline_rounded,
+      ),
+      'solved': (
+        'No solved doubts yet 🏆',
+        'Be the first solver!',
+        Icons.emoji_events_outlined,
+      ),
+      'subjects': (
+        'Nothing from your subjects 📚',
+        'Your classmates haven\'t posted here yet.',
+        Icons.library_books_outlined,
+      ),
+      'hot': (
+        'Nothing trending right now 🔥',
+        'Check back soon — the feed is warming up.',
+        Icons.local_fire_department_outlined,
+      ),
+      'all': (
+        'The feed is empty 🎙️',
+        'Be the first to break the silence!',
+        Icons.bubble_chart_outlined,
+      ),
     };
 
     final (title, subtitle, icon) = states[filter] ?? states['all']!;
@@ -333,7 +396,11 @@ class _SkulkFeedScreenState extends ConsumerState<SkulkFeedScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 60, color: isDark ? Colors.grey[800] : Colors.grey[300]),
+          Icon(
+            icon,
+            size: 60,
+            color: isDark ? Colors.grey[800] : Colors.grey[300],
+          ),
           const SizedBox(height: 12),
           Text(
             title,
@@ -360,10 +427,22 @@ class _SkulkFeedScreenState extends ConsumerState<SkulkFeedScreen> {
 
     final filters = [
       {'id': 'all', 'label': 'All Doubts', 'icon': Icons.public_rounded},
-      {'id': 'subjects', 'label': 'My Subjects', 'icon': Icons.library_books_rounded},
+      {
+        'id': 'subjects',
+        'label': 'My Subjects',
+        'icon': Icons.library_books_rounded,
+      },
       {'id': 'solved', 'label': 'Solved', 'icon': Icons.check_circle_rounded},
-      {'id': 'unanswered', 'label': 'Unanswered', 'icon': Icons.help_outline_rounded},
-      {'id': 'hot', 'label': 'Hot 🔥', 'icon': Icons.local_fire_department_rounded},
+      {
+        'id': 'unanswered',
+        'label': 'Unanswered',
+        'icon': Icons.help_outline_rounded,
+      },
+      {
+        'id': 'hot',
+        'label': 'Hot 🔥',
+        'icon': Icons.local_fire_department_rounded,
+      },
     ];
 
     return SizedBox(
@@ -406,11 +485,14 @@ class _SkulkFeedScreenState extends ConsumerState<SkulkFeedScreen> {
                 if (f['id'] == 'subjects') {
                   ref.read(skulkFeedSubjectProvider.notifier).state = null;
                 }
-                ref.read(skulkFeedFilterProvider.notifier).state = f['id'] as String;
+                ref.read(skulkFeedFilterProvider.notifier).state =
+                    f['id'] as String;
               }
             },
             selectedColor: Theme.of(context).colorScheme.primary,
-            backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.grey[200],
+            backgroundColor: isDark
+                ? const Color(0xFF1E1E1E)
+                : Colors.grey[200],
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(20),
               side: BorderSide(
@@ -425,7 +507,10 @@ class _SkulkFeedScreenState extends ConsumerState<SkulkFeedScreen> {
     );
   }
 
-  Widget _buildSubjectSelectorRow(BuildContext context, AsyncValue<List<dynamic>> subjectsAsync) {
+  Widget _buildSubjectSelectorRow(
+    BuildContext context,
+    AsyncValue<List<dynamic>> subjectsAsync,
+  ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final activeFilter = ref.watch(skulkFeedFilterProvider);
     final selectedSubjectId = ref.watch(skulkFeedSubjectProvider);
@@ -474,8 +559,14 @@ class _SkulkFeedScreenState extends ConsumerState<SkulkFeedScreen> {
                           color: isDark ? Colors.grey[300] : Colors.grey[700],
                         ),
                       ),
-                      icon: const Icon(Icons.arrow_drop_down, size: 16, color: Colors.grey),
-                      dropdownColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                      icon: const Icon(
+                        Icons.arrow_drop_down,
+                        size: 16,
+                        color: Colors.grey,
+                      ),
+                      dropdownColor: isDark
+                          ? const Color(0xFF1E1E1E)
+                          : Colors.white,
                       style: GoogleFonts.outfit(fontSize: 11),
                       items: [
                         DropdownMenuItem<String?>(
@@ -496,14 +587,17 @@ class _SkulkFeedScreenState extends ConsumerState<SkulkFeedScreen> {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: GoogleFonts.outfit(
-                                color: isDark ? Colors.grey[300] : Colors.grey[800],
+                                color: isDark
+                                    ? Colors.grey[300]
+                                    : Colors.grey[800],
                               ),
                             ),
                           );
                         }),
                       ],
                       onChanged: (subjectId) {
-                        ref.read(skulkFeedSubjectProvider.notifier).state = subjectId;
+                        ref.read(skulkFeedSubjectProvider.notifier).state =
+                            subjectId;
                       },
                     ),
                   ),
@@ -541,21 +635,36 @@ class _SkulkFeedScreenState extends ConsumerState<SkulkFeedScreen> {
             Padding(
               padding: const EdgeInsets.only(right: 6),
               child: GestureDetector(
-                onTap: () => ref.read(skulkFeedTagProvider.notifier).state = null,
+                onTap: () =>
+                    ref.read(skulkFeedTagProvider.notifier).state = null,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.redAccent.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.redAccent.withOpacity(0.3)),
+                    border: Border.all(
+                      color: Colors.redAccent.withOpacity(0.3),
+                    ),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.close_rounded, size: 12, color: Colors.redAccent),
+                      const Icon(
+                        Icons.close_rounded,
+                        size: 12,
+                        color: Colors.redAccent,
+                      ),
                       const SizedBox(width: 4),
-                      Text('#$activeTag',
-                          style: GoogleFonts.outfit(
-                              fontSize: 11, color: Colors.redAccent, fontWeight: FontWeight.w600)),
+                      Text(
+                        '#$activeTag',
+                        style: GoogleFonts.outfit(
+                          fontSize: 11,
+                          color: Colors.redAccent,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -567,20 +676,28 @@ class _SkulkFeedScreenState extends ConsumerState<SkulkFeedScreen> {
               padding: const EdgeInsets.only(right: 6),
               child: GestureDetector(
                 onTap: () {
-                  ref.read(skulkFeedTagProvider.notifier).state =
-                      isActive ? null : tag;
+                  ref.read(skulkFeedTagProvider.notifier).state = isActive
+                      ? null
+                      : tag;
                 },
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 150),
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: isActive
-                        ? Theme.of(context).colorScheme.primary.withOpacity(0.15)
+                        ? Theme.of(
+                            context,
+                          ).colorScheme.primary.withOpacity(0.15)
                         : (isDark ? const Color(0xFF252525) : Colors.grey[100]),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
                       color: isActive
-                          ? Theme.of(context).colorScheme.primary.withOpacity(0.5)
+                          ? Theme.of(
+                              context,
+                            ).colorScheme.primary.withOpacity(0.5)
                           : (isDark ? Colors.grey[800]! : Colors.grey[300]!),
                     ),
                   ),
