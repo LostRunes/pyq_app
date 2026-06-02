@@ -66,7 +66,7 @@ class _SkulkFeedScreenState extends ConsumerState<SkulkFeedScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // Header row with title + notification bell
+            // Header row with title + Study Together + notification bell
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 12, 4),
               child: Row(
@@ -81,6 +81,42 @@ class _SkulkFeedScreenState extends ConsumerState<SkulkFeedScreen> {
                       ),
                     ),
                   ),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.pushNamed(
+                        context,
+                        '/study-together',
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.primary,
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.groups_rounded,
+                            size: 16,
+                            color: Colors.white,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Study Together',
+                            style: GoogleFonts.outfit(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
                   _NotificationBell(),
                 ],
               ),
