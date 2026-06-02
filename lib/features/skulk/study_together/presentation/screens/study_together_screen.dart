@@ -65,11 +65,15 @@ class _StudyTogetherScreenState extends ConsumerState<StudyTogetherScreen> {
       body: Container(
         decoration: BoxDecoration(
           image: DecorationImage(
-            image: const AssetImage('assets/images/skulk_bg5.jpg'),
+            image: AssetImage(
+              isDark
+                  ? 'assets/images/skulk_bg_dark2.jpg'
+                  : 'assets/images/skulk_bg5.jpg',
+            ),
             fit: BoxFit.cover,
             colorFilter: ColorFilter.mode(
               isDark
-                  ? Colors.black.withOpacity(0.88)
+                  ? Colors.black.withOpacity(0.30)
                   : Colors.white.withOpacity(0.45),
               BlendMode.srcOver,
             ),

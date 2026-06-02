@@ -5,10 +5,7 @@ import '../../data/models/study_room.dart';
 class CommunitySpaceTile extends StatelessWidget {
   final StudyRoom room;
 
-  const CommunitySpaceTile({
-    super.key,
-    required this.room,
-  });
+  const CommunitySpaceTile({super.key, required this.room});
 
   @override
   Widget build(BuildContext context) {
@@ -17,10 +14,10 @@ class CommunitySpaceTile extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+        color: isDark ? const Color.fromARGB(255, 49, 31, 79) : Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isDark ? Colors.grey[850]! : Colors.grey[200]!,
+          color: isDark ? const Color(0xFF381F4C) : Colors.grey[200]!,
         ),
       ),
       child: Material(
@@ -77,7 +74,10 @@ class CommunitySpaceTile extends StatelessWidget {
                 if (room.isVoiceEnabled)
                   Container(
                     margin: const EdgeInsets.only(right: 8),
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.redAccent.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),
