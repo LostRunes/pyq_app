@@ -22,6 +22,24 @@ final studyRoomsProvider = FutureProvider.autoDispose<List<StudyRoom>>((ref) asy
   return repo.getActiveRooms();
 });
 
+/// Active Lobbies provider: study_rooms.type = 'lobby'
+final activeLobbiesProvider = Provider.autoDispose<AsyncValue<List<StudyRoom>>>((ref) {
+  final roomsAsync = ref.watch(studyRoomsProvider);
+  return roomsAsync.whenData((rooms) => rooms.where((r) => r.type == 'lobby').toList());
+});
+
+/// Subject Rooms provider: study_rooms.type = 'subject'
+final subjectRoomsProvider = Provider.autoDispose<AsyncValue<List<StudyRoom>>>((ref) {
+  final roomsAsync = ref.watch(studyRoomsProvider);
+  return roomsAsync.whenData((rooms) => rooms.where((r) => r.type == 'subject').toList());
+});
+
+/// Community Spaces provider: study_rooms.type = 'community', 'general', or 'voice'
+final communitySpacesProvider = Provider.autoDispose<AsyncValue<List<StudyRoom>>>((ref) {
+  final roomsAsync = ref.watch(studyRoomsProvider);
+  return roomsAsync.whenData((rooms) => rooms.where((r) => r.type == 'community' || r.type == 'general' || r.type == 'voice').toList());
+});
+
 /// Chat room state management: manages paginated room history and receives real-time Postgres insertions
 class RoomChatNotifier extends Notifier<List<RoomMessage>> {
   RoomChatNotifier(this.roomId);
