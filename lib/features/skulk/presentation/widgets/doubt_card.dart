@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../data/models/doubt.dart';
 import '../providers/skulk_providers.dart';
 import 'report_bottom_sheet.dart';
@@ -20,6 +21,8 @@ class DoubtCard extends ConsumerWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final voteState = ref.watch(userVotesProvider);
     final isUpvoted = voteState.value?[doubt.id] ?? false;
+    final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+    final isOwnDoubt = currentUserId != null && currentUserId == doubt.userId;
 
     final cardBorder = isDark ? const Color(0xFF3E2361) : Colors.grey[200]!;
 
@@ -140,8 +143,45 @@ class DoubtCard extends ConsumerWidget {
                 PopupMenuButton<String>(
                   icon: Icon(Icons.more_vert_rounded, size: 18,
                       color: isDark ? Colors.grey[600] : Colors.grey[400]),
-                  onSelected: (value) {
-                    if (value == 'report') {
+                  onSelected: (value) async {
+                    if (value == 'edit') {
+                      Navigator.pushNamed(
+                        context,
+                        '/skulk_create',
+                        arguments: {
+                          'doubtToEdit': doubt,
+                        },
+                      );
+                    } else if (value == 'delete') {
+                      final confirm = await showDialog<bool>(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          title: Text('Delete Doubt', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+                          content: Text('Are you sure you want to delete this doubt?', style: GoogleFonts.outfit()),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, false),
+                              child: Text('Cancel', style: GoogleFonts.outfit(color: Colors.grey)),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, true),
+                              child: Text('Delete', style: GoogleFonts.outfit(color: Colors.redAccent)),
+                            ),
+                          ],
+                        ),
+                      );
+                      if (confirm == true) {
+                        await ref.read(skulkFeedProvider.notifier).deleteDoubt(doubt.id);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Doubt deleted successfully.')),
+                          );
+                        }
+                      }
+                    } else if (value == 'report') {
                       ReportBottomSheet.show(
                         context,
                         target: ReportTarget.doubt,
@@ -150,6 +190,28 @@ class DoubtCard extends ConsumerWidget {
                     }
                   },
                   itemBuilder: (_) => [
+                    if (isOwnDoubt) ...[
+                      PopupMenuItem(
+                        value: 'edit',
+                        child: Row(
+                          children: [
+                            const Icon(Icons.edit_outlined, size: 16, color: Colors.grey),
+                            const SizedBox(width: 8),
+                            Text('Edit Doubt', style: GoogleFonts.outfit(fontSize: 13)),
+                          ],
+                        ),
+                      ),
+                      PopupMenuItem(
+                        value: 'delete',
+                        child: Row(
+                          children: [
+                            const Icon(Icons.delete_outline_rounded, size: 16, color: Colors.redAccent),
+                            const SizedBox(width: 8),
+                            Text('Delete', style: GoogleFonts.outfit(fontSize: 13, color: Colors.redAccent)),
+                          ],
+                        ),
+                      ),
+                    ],
                     PopupMenuItem(
                       value: 'report',
                       child: Row(

@@ -179,15 +179,15 @@ class SolutionTile extends ConsumerWidget {
                         Text('Delete', style: GoogleFonts.outfit(fontSize: 13, color: Colors.redAccent)),
                       ]),
                     ),
-                  ] else
-                    PopupMenuItem(
-                      value: 'report',
-                      child: Row(children: [
-                        const Icon(Icons.flag_outlined, size: 16, color: Colors.redAccent),
-                        const SizedBox(width: 8),
-                        Text('Report', style: GoogleFonts.outfit(fontSize: 13, color: Colors.redAccent)),
-                      ]),
-                    ),
+                  ],
+                  PopupMenuItem(
+                    value: 'report',
+                    child: Row(children: [
+                      const Icon(Icons.flag_outlined, size: 16, color: Colors.redAccent),
+                      const SizedBox(width: 8),
+                      Text('Report', style: GoogleFonts.outfit(fontSize: 13, color: Colors.redAccent)),
+                    ]),
+                  ),
                 ],
               ),
             ],

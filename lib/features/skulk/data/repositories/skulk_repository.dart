@@ -108,6 +108,30 @@ class SkulkRepository {
     await _dbService.setDoubtSolved(doubtId, isSolved);
   }
 
+  /// Edits an existing doubt.
+  Future<Doubt> editDoubt({
+    required String doubtId,
+    required String title,
+    required String body,
+    required List<String> tags,
+  }) async {
+    await _ensureSubjectCache();
+    final raw = await _dbService.editDoubt(
+      doubtId: doubtId,
+      title: title,
+      body: body,
+      tags: tags,
+    );
+    final subjectId = raw['subject_id']?.toString() ?? '';
+    final subjectName = _subjectCache[subjectId] ?? subjectId;
+    return Doubt.fromJson(raw, subjectName: subjectName);
+  }
+
+  /// Deletes an existing doubt.
+  Future<void> deleteDoubt(String doubtId) async {
+    await _dbService.deleteDoubt(doubtId);
+  }
+
   /// Fetches all solutions (answers) for a doubt, ordered by accepted status then newest.
   Future<List<Solution>> getSolutions(String postId) async {
     final rawList = await _dbService.fetchSolutions(postId);
@@ -195,6 +219,33 @@ class SkulkRepository {
     _fireCommentNotification(postId, comment);
 
     return comment;
+  }
+
+  /// Edits an existing comment.
+  Future<Comment> editComment(String commentId, String body, String postId) async {
+    final raw = await _dbService.editComment(commentId, body);
+    final comments = await getComments(postId);
+    return comments.firstWhere((element) => element.id == raw['id'], orElse: () => Comment.fromJson(raw));
+  }
+
+  /// Deletes an existing comment.
+  Future<void> deleteComment(String commentId, String postId) async {
+    await _dbService.deleteComment(commentId, postId);
+  }
+
+  /// Reports a piece of content.
+  Future<void> reportContent({
+    String? postId,
+    String? answerId,
+    String? commentId,
+    required String reason,
+  }) async {
+    await _dbService.createReport(
+      postId: postId,
+      answerId: answerId,
+      commentId: commentId,
+      reason: reason,
+    );
   }
 
   /// Fires a notification to the doubt owner that a comment was posted.

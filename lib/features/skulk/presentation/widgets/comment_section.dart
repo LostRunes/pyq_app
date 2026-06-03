@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../data/models/comment.dart';
 import '../providers/skulk_providers.dart';
+import 'report_bottom_sheet.dart';
 
 class CommentSection extends ConsumerStatefulWidget {
   final String doubtId;
@@ -69,6 +72,51 @@ class _CommentSectionState extends ConsumerState<CommentSection> {
         });
       }
     }
+  }
+
+  void _showEditCommentDialog(Comment comment) {
+    final editController = TextEditingController(text: comment.body);
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text('Edit Comment', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+          content: TextField(
+            controller: editController,
+            maxLines: null,
+            keyboardType: TextInputType.multiline,
+            style: GoogleFonts.outfit(fontSize: 14),
+            decoration: InputDecoration(
+              hintText: 'Edit your comment...',
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancel', style: GoogleFonts.outfit(color: Colors.grey)),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final text = editController.text.trim();
+                if (text.isNotEmpty) {
+                  await ref
+                      .read(commentsNotifierProvider(widget.doubtId).notifier)
+                      .editComment(comment.id, text);
+                  if (context.mounted) Navigator.pop(context);
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              child: Text('Save', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -171,6 +219,9 @@ class _CommentSectionState extends ConsumerState<CommentSection> {
                     separatorBuilder: (_, __) => const SizedBox(height: 16),
                     itemBuilder: (context, index) {
                       final c = comments[index];
+                      final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+                      final isOwnComment = currentUserId != null && currentUserId == c.userId;
+
                       return Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -223,6 +274,74 @@ class _CommentSectionState extends ConsumerState<CommentSection> {
                                 ),
                               ],
                             ),
+                          ),
+                          PopupMenuButton<String>(
+                            icon: const Icon(Icons.more_vert_rounded, size: 16, color: Colors.grey),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            onSelected: (value) async {
+                              if (value == 'edit') {
+                                _showEditCommentDialog(c);
+                              } else if (value == 'delete') {
+                                final confirm = await showDialog<bool>(
+                                  context: context,
+                                  builder: (context) => AlertDialog(
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                    title: Text('Delete Comment', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+                                    content: Text('Are you sure you want to delete this comment?', style: GoogleFonts.outfit()),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(context, false),
+                                        child: Text('Cancel', style: GoogleFonts.outfit(color: Colors.grey)),
+                                      ),
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(context, true),
+                                        child: Text('Delete', style: GoogleFonts.outfit(color: Colors.redAccent)),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                                if (confirm == true) {
+                                  await ref
+                                      .read(commentsNotifierProvider(widget.doubtId).notifier)
+                                      .deleteComment(c.id);
+                                }
+                              } else if (value == 'report') {
+                                ReportBottomSheet.show(
+                                  context,
+                                  target: ReportTarget.comment,
+                                  targetId: c.id,
+                                );
+                              }
+                            },
+                            itemBuilder: (context) => [
+                              if (isOwnComment) ...[
+                                PopupMenuItem(
+                                  value: 'edit',
+                                  child: Row(children: [
+                                    const Icon(Icons.edit_outlined, size: 14, color: Colors.grey),
+                                    const SizedBox(width: 8),
+                                    Text('Edit', style: GoogleFonts.outfit(fontSize: 12)),
+                                  ]),
+                                ),
+                                PopupMenuItem(
+                                  value: 'delete',
+                                  child: Row(children: [
+                                    const Icon(Icons.delete_outline_rounded, size: 14, color: Colors.redAccent),
+                                    const SizedBox(width: 8),
+                                    Text('Delete', style: GoogleFonts.outfit(fontSize: 12, color: Colors.redAccent)),
+                                  ]),
+                                ),
+                              ],
+                              PopupMenuItem(
+                                value: 'report',
+                                child: Row(children: [
+                                  const Icon(Icons.flag_outlined, size: 14, color: Colors.redAccent),
+                                  const SizedBox(width: 8),
+                                  Text('Report', style: GoogleFonts.outfit(fontSize: 12, color: Colors.redAccent)),
+                                ]),
+                              ),
+                            ],
                           ),
                         ],
                       );
