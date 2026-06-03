@@ -8,6 +8,7 @@ import '../../data/models/solution.dart';
 import '../providers/skulk_providers.dart';
 import '../widgets/comment_section.dart';
 import '../widgets/solution_tile.dart';
+import '../widgets/report_bottom_sheet.dart';
 import '../../../../widgets/common/cloudinary_image_gallery.dart';
 import '../../data/services/cloudinary_service.dart';
 import '../../utils/image_utils.dart';
@@ -177,9 +178,6 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
       _isSubmittingSolution = true;
     });
 
-    List<String> uploadedUrls = [];
-    bool hasFailedUploads = false;
-
     try {
       final uploadedResults = await Future.wait(
         selectedSolutionImages.map((img) => CloudinaryService.uploadImage(img)),
@@ -282,7 +280,20 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final doubtId = ModalRoute.of(context)!.settings.arguments as String;
+    final args = ModalRoute.of(context)!.settings.arguments;
+    final String doubtId;
+    final String? branchId;
+    final int? semester;
+    if (args is Map<String, dynamic>) {
+      doubtId = args['doubtId'] as String;
+      branchId = args['branchId'] as String?;
+      semester = args['semester'] as int?;
+    } else {
+      doubtId = args as String;
+      branchId = null;
+      semester = null;
+    }
+
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     // Watch states
@@ -306,6 +317,92 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
         elevation: 0,
         backgroundColor: Colors.transparent,
         iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black),
+        actions: [
+          doubtAsync.when(
+            data: (doubt) {
+              if (doubt == null) return const SizedBox.shrink();
+              final isOwnDoubt = currentUserId != null && currentUserId == doubt.userId;
+              return PopupMenuButton<String>(
+                icon: const Icon(Icons.more_vert_rounded),
+                onSelected: (value) async {
+                  if (value == 'edit') {
+                    Navigator.pushNamed(
+                      context,
+                      '/skulk_create',
+                      arguments: {
+                        'branchId': branchId,
+                        'semester': semester,
+                        'doubtToEdit': doubt,
+                      },
+                    );
+                  } else if (value == 'delete') {
+                    final confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        title: Text('Delete Doubt', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+                        content: Text('Are you sure you want to delete this doubt?', style: GoogleFonts.outfit()),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            child: Text('Cancel', style: GoogleFonts.outfit(color: Colors.grey)),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, true),
+                            child: Text('Delete', style: GoogleFonts.outfit(color: Colors.redAccent)),
+                          ),
+                        ],
+                      ),
+                    );
+                    if (confirm == true) {
+                      await ref.read(skulkFeedProvider.notifier).deleteDoubt(doubt.id);
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Doubt deleted successfully.')),
+                        );
+                        Navigator.pop(context);
+                      }
+                    }
+                  } else if (value == 'report') {
+                    ReportBottomSheet.show(context, target: ReportTarget.doubt, targetId: doubt.id);
+                  }
+                },
+                itemBuilder: (context) => [
+                  if (isOwnDoubt) ...[
+                    PopupMenuItem(
+                      value: 'edit',
+                      child: Row(children: [
+                        const Icon(Icons.edit_outlined, size: 16, color: Colors.grey),
+                        const SizedBox(width: 8),
+                        Text('Edit Doubt', style: GoogleFonts.outfit(fontSize: 13)),
+                      ]),
+                    ),
+                    PopupMenuItem(
+                      value: 'delete',
+                      child: Row(children: [
+                        const Icon(Icons.delete_outline_rounded, size: 16, color: Colors.redAccent),
+                        const SizedBox(width: 8),
+                        Text('Delete', style: GoogleFonts.outfit(fontSize: 13, color: Colors.redAccent)),
+                      ]),
+                    ),
+                  ],
+                  PopupMenuItem(
+                    value: 'report',
+                    child: Row(children: [
+                      const Icon(Icons.flag_outlined, size: 16, color: Colors.redAccent),
+                      const SizedBox(width: 8),
+                      Text('Report', style: GoogleFonts.outfit(fontSize: 13, color: Colors.redAccent)),
+                    ]),
+                  ),
+                ],
+              );
+            },
+            loading: () => const SizedBox.shrink(),
+            error: (_, __) => const SizedBox.shrink(),
+          ),
+        ],
       ),
       body: doubtAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),

@@ -154,6 +154,37 @@ class SkulkFeedNotifier extends AsyncNotifier<List<Doubt>> {
       state = AsyncError(e, st);
     }
   }
+  Future<void> editDoubt({
+    required String doubtId,
+    required String title,
+    required String body,
+    required List<String> tags,
+  }) async {
+    final repo = ref.read(skulkRepositoryProvider);
+    final updated = await repo.editDoubt(
+      doubtId: doubtId,
+      title: title,
+      body: body,
+      tags: tags,
+    );
+    // Locally update state if loaded
+    if (state.hasValue) {
+      final list = state.value!;
+      state = AsyncData(list.map((d) => d.id == doubtId ? updated : d).toList());
+    }
+    ref.invalidate(doubtDetailProvider(doubtId));
+  }
+
+  Future<void> deleteDoubt(String doubtId) async {
+    final repo = ref.read(skulkRepositoryProvider);
+    await repo.deleteDoubt(doubtId);
+    // Locally update state if loaded
+    if (state.hasValue) {
+      final list = state.value!;
+      state = AsyncData(list.where((d) => d.id != doubtId).toList());
+    }
+    ref.invalidate(doubtDetailProvider(doubtId));
+  }
 }
 
 final skulkFeedProvider =
@@ -327,6 +358,20 @@ class CommentsNotifier extends Notifier<List<Comment>> {
     final repo = ref.read(skulkRepositoryProvider);
     final newComment = await repo.createComment(postId: arg, answerId: answerId, body: body);
     state = [...state, newComment];
+    ref.invalidate(skulkFeedProvider);
+    ref.invalidate(doubtDetailProvider(arg));
+  }
+
+  Future<void> editComment(String commentId, String body) async {
+    final repo = ref.read(skulkRepositoryProvider);
+    final updated = await repo.editComment(commentId, body, arg);
+    state = state.map((c) => c.id == commentId ? updated : c).toList();
+  }
+
+  Future<void> deleteComment(String commentId) async {
+    final repo = ref.read(skulkRepositoryProvider);
+    await repo.deleteComment(commentId, arg);
+    state = state.where((c) => c.id != commentId).toList();
     ref.invalidate(skulkFeedProvider);
     ref.invalidate(doubtDetailProvider(arg));
   }

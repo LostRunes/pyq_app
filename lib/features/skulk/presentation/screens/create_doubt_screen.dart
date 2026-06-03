@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/providers.dart';
+import '../../data/models/doubt.dart';
 import '../providers/skulk_providers.dart';
 import '../../data/services/cloudinary_service.dart';
 import '../../utils/image_utils.dart';
@@ -32,7 +34,23 @@ class _CreateDoubtScreenState extends ConsumerState<CreateDoubtScreen> {
   // re-reading on every rebuild.
   String? _branchId;
   int? _semester;
+  Doubt? _doubtToEdit;
   bool _argsParsed = false;
+
+  int _getSemesterFromBatch(String batch) {
+    final match = RegExp(r'\d+').firstMatch(batch);
+    if (match == null) return 1;
+    final batchNum = int.parse(match.group(0)!);
+
+    final month = DateTime.now().month;
+    final isEvenSemester = month >= 1 && month <= 6;
+
+    if (isEvenSemester) {
+      return (2 * batchNum - 2).clamp(1, 8);
+    } else {
+      return (2 * batchNum - 1).clamp(1, 8);
+    }
+  }
 
   @override
   void initState() {
@@ -76,10 +94,56 @@ class _CreateDoubtScreenState extends ConsumerState<CreateDoubtScreen> {
     super.didChangeDependencies();
     if (!_argsParsed) {
       final args =
-          ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
-      _branchId = args['branchId'] as String;
-      _semester = args['semester'] as int;
+          ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
+      if (args != null) {
+        _branchId = args['branchId'] as String?;
+        _semester = args['semester'] as int?;
+        _doubtToEdit = args['doubtToEdit'] as Doubt?;
+      }
       _argsParsed = true;
+      _initFields();
+    }
+  }
+
+  void _initFields() async {
+    if (_doubtToEdit != null) {
+      _titleController.text = _doubtToEdit!.title;
+      _bodyController.text = _doubtToEdit!.body;
+      _tagsController.text = _doubtToEdit!.tags.join(', ');
+      _selectedSubjectId = _doubtToEdit!.subjectId;
+    }
+
+    if (_branchId == null || _branchId!.isEmpty || _semester == null || _semester == 0) {
+      try {
+        final session = Supabase.instance.client.auth.currentSession;
+        if (session != null) {
+          final email = session.user.email ?? '';
+          final kiitRegex = RegExp(r'^(\d+)@kiit\.ac\.in$', caseSensitive: false);
+          final match = kiitRegex.firstMatch(email);
+
+          if (match != null) {
+            final rollNo = match.group(1)!;
+            final studentService = ref.read(supabaseServiceProvider);
+            final student = await studentService.getStudentByRollNo(rollNo);
+
+            if (student != null) {
+              final batch = student['batch']?.toString() ?? '';
+              final section = student['section']?.toString() ?? '';
+
+              final fetchedBranchId = await studentService.getBranchIdFromSection(section);
+              final fetchedSemester = _getSemesterFromBatch(batch);
+              if (mounted) {
+                setState(() {
+                  _branchId = fetchedBranchId;
+                  _semester = fetchedSemester;
+                });
+              }
+            }
+          }
+        }
+      } catch (e) {
+        debugPrint('Failed to auto-fetch branch/semester for edit: $e');
+      }
     }
   }
 
@@ -256,6 +320,29 @@ class _CreateDoubtScreenState extends ConsumerState<CreateDoubtScreen> {
         : _selectedSubjectId!;
 
     try {
+      if (_doubtToEdit != null) {
+        await ref.read(skulkFeedProvider.notifier).editDoubt(
+              doubtId: _doubtToEdit!.id,
+              title: _titleController.text.trim(),
+              body: _bodyController.text.trim(),
+              tags: parsedTags,
+            );
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: Colors.green[700],
+              content: Text(
+                'Doubt updated successfully! ✨',
+                style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+              ),
+            ),
+          );
+          Navigator.pop(context);
+        }
+        return;
+      }
+
       final uploadedResults = await Future.wait(
         selectedImages.map((img) => CloudinaryService.uploadImage(img)),
       );
@@ -320,7 +407,7 @@ class _CreateDoubtScreenState extends ConsumerState<CreateDoubtScreen> {
           isDark ? const Color(0xFF141414) : const Color(0xFFF5F5F5),
       appBar: AppBar(
         title: Text(
-          'Ask the Community',
+          _doubtToEdit != null ? 'Edit Doubt' : 'Ask the Community',
           style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18),
         ),
         elevation: 0,
@@ -594,7 +681,7 @@ class _CreateDoubtScreenState extends ConsumerState<CreateDoubtScreen> {
                               ),
                             )
                           : Text(
-                              'Publish Doubt',
+                              _doubtToEdit != null ? 'Update Doubt' : 'Publish Doubt',
                               style: GoogleFonts.outfit(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,

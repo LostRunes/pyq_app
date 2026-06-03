@@ -302,7 +302,11 @@ class _SkulkFeedScreenState extends ConsumerState<SkulkFeedScreen> {
                               Navigator.pushNamed(
                                 context,
                                 '/skulk_detail',
-                                arguments: doubt.id,
+                                arguments: {
+                                  'doubtId': doubt.id,
+                                  'branchId': widget.branchId,
+                                  'semester': widget.semester,
+                                },
                               );
                             },
                           );

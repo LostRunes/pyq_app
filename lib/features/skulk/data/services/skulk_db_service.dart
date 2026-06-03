@@ -183,6 +183,26 @@ class SkulkDbService {
     }).eq('id', doubtId);
   }
 
+  /// Edits an existing doubt
+  Future<Map<String, dynamic>> editDoubt({
+    required String doubtId,
+    required String title,
+    required String body,
+    required List<String> tags,
+  }) async {
+    final res = await _client.from('doubt_posts').update({
+      'title': title,
+      'body': body,
+      'tags': tags,
+    }).eq('id', doubtId).select().single();
+    return res;
+  }
+
+  /// Deletes a doubt post
+  Future<void> deleteDoubt(String doubtId) async {
+    await _client.from('doubt_posts').delete().eq('id', doubtId);
+  }
+
   // ----------------------------------------------------
   // SOLUTIONS (answers) Queries & Mutations
   // ----------------------------------------------------
@@ -296,6 +316,44 @@ class SkulkDbService {
     await _client.from('doubt_posts').update({'comments_count': count}).eq('id', postId);
 
     return res;
+  }
+
+  /// Edits an existing comment
+  Future<Map<String, dynamic>> editComment(String commentId, String body) async {
+    final res = await _client.from('comments').update({
+      'body': body,
+    }).eq('id', commentId).select().single();
+    return res;
+  }
+
+  /// Deletes a comment
+  Future<void> deleteComment(String commentId, String postId) async {
+    // 1. Delete comment
+    await _client.from('comments').delete().eq('id', commentId);
+
+    // 2. Decrement comments_count on doubt_posts
+    final doubt = await _client.from('doubt_posts').select('comments_count').eq('id', postId).single();
+    final count = ((doubt['comments_count'] as int? ?? 1) - 1).clamp(0, 99999);
+    await _client.from('doubt_posts').update({'comments_count': count}).eq('id', postId);
+  }
+
+  /// Creates a content report
+  Future<void> createReport({
+    String? postId,
+    String? answerId,
+    String? commentId,
+    required String reason,
+  }) async {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null) throw Exception('User must be logged in to report content.');
+    
+    await _client.from('reports').insert({
+      'reporter_id': userId,
+      if (postId != null) 'post_id': postId,
+      if (answerId != null) 'answer_id': answerId,
+      if (commentId != null) 'comment_id': commentId,
+      'reason': reason,
+    });
   }
 
   // ----------------------------------------------------
