@@ -48,9 +48,9 @@ class _QuestionListScreenState extends ConsumerState<QuestionListScreen> {
                     ref.read(pdfLoadingProvider.notifier).setLoading(true);
 
                     try {
-                      final service = ref.read(supabaseServiceProvider);
-                      final fullQuestions = await service
-                          .getQuestionsWithDetails(widget.topicId);
+                      final fullQuestions = await ref.read(
+                        topicPdfDataProvider(widget.topicId).future,
+                      );
 
                       final pdfService = PdfService();
                       final pdfBytes = await pdfService.generateTopicPdf(

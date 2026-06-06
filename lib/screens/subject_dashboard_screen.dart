@@ -233,74 +233,17 @@ class _LinkTab extends StatelessWidget {
   }
 }
 
-class _DriveExplorerTab extends StatefulWidget {
+class _DriveExplorerTab extends ConsumerStatefulWidget {
   final String title;
   final String? driveLink;
 
   const _DriveExplorerTab({required this.title, required this.driveLink});
 
   @override
-  State<_DriveExplorerTab> createState() => _DriveExplorerTabState();
+  ConsumerState<_DriveExplorerTab> createState() => _DriveExplorerTabState();
 }
 
-class _DriveExplorerTabState extends State<_DriveExplorerTab> {
-  final driveService = DriveService();
-  List files = [];
-  bool isLoading = true;
-  String? errorMessage;
-  late String currentFolderId;
-
-  @override
-  void initState() {
-    super.initState();
-    _initAndLoad();
-  }
-
-  void _initAndLoad() {
-    if (widget.driveLink != null && widget.driveLink!.isNotEmpty) {
-      try {
-        currentFolderId = extractFolderId(widget.driveLink!);
-        loadFiles();
-      } catch (e) {
-        setState(() {
-          isLoading = false;
-          errorMessage = e.toString();
-        });
-      }
-    } else {
-      setState(() {
-        isLoading = false;
-      });
-    }
-  }
-
-  Future<void> loadFiles() async {
-    setState(() {
-      isLoading = true;
-      errorMessage = null;
-    });
-
-    try {
-      final data = await driveService.fetchFolderContents(currentFolderId);
-      data.sort((a, b) {
-        final aFolder = a["mimeType"] == "application/vnd.google-apps.folder";
-        final bFolder = b["mimeType"] == "application/vnd.google-apps.folder";
-        if (aFolder == bFolder) return 0;
-        return aFolder ? -1 : 1;
-      });
-
-      setState(() {
-        files = data;
-        isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        isLoading = false;
-        errorMessage = "Failed to load files: $e";
-      });
-    }
-  }
-
+class _DriveExplorerTabState extends ConsumerState<_DriveExplorerTab> {
   Future<void> openItem(Map item) async {
     final isFolder = item["mimeType"] == "application/vnd.google-apps.folder";
 
@@ -367,156 +310,176 @@ class _DriveExplorerTabState extends State<_DriveExplorerTab> {
           ),
         ),
       );
-    } else if (isLoading) {
-      content = Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const CircularProgressIndicator(),
-            const SizedBox(height: 20),
-            Text(
-              "Fetching files from Google Drive...",
-              style: GoogleFonts.outfit(
-                color: theme.colorScheme.onSurface.withOpacity(0.6),
-                fontWeight: FontWeight.w500,
+    } else {
+      final folderId = extractFolderId(widget.driveLink!);
+      final filesAsync = ref.watch(driveFolderContentsProvider(folderId));
+
+      content = filesAsync.when(
+        data: (data) {
+          final List<dynamic> sortedData = List<dynamic>.from(data)
+            ..sort((a, b) {
+              final aFolder = a["mimeType"] == "application/vnd.google-apps.folder";
+              final bFolder = b["mimeType"] == "application/vnd.google-apps.folder";
+              if (aFolder == bFolder) return 0;
+              return aFolder ? -1 : 1;
+            });
+
+          if (sortedData.isEmpty) {
+            return SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: Container(
+                height: MediaQuery.of(context).size.height * 0.7,
+                alignment: Alignment.center,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Image.asset('assets/images/sleepy-shark.png', height: 130),
+                    const SizedBox(height: 16),
+                    Text(
+                      "This folder is empty.",
+                      style: GoogleFonts.outfit(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: theme.colorScheme.onSurface.withOpacity(0.5),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
-        ),
-      );
-    } else if (errorMessage != null) {
-      content = SingleChildScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        child: Container(
-          height: MediaQuery.of(context).size.height * 0.7,
-          alignment: Alignment.center,
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Image.asset('assets/images/sad_raccoon.png', height: 130),
-                const SizedBox(height: 16),
-                Text(
-                  "Something went wrong",
-                  style: GoogleFonts.outfit(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: theme.colorScheme.onSurface,
+            );
+          }
+
+          return ListView.builder(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(16),
+            itemCount: sortedData.length,
+            itemBuilder: (context, index) {
+              final item = sortedData[index];
+              final isFolder =
+                  item["mimeType"] == "application/vnd.google-apps.folder";
+
+              return Card(
+                elevation: 0,
+                margin: const EdgeInsets.only(bottom: 12),
+                color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  side: BorderSide(
+                    color: theme.colorScheme.outlineVariant.withOpacity(0.3),
                   ),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  errorMessage!,
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.outfit(
-                    color: theme.colorScheme.onSurface.withOpacity(0.6),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 8,
                   ),
-                ),
-                const SizedBox(height: 24),
-                ElevatedButton.icon(
-                  onPressed: loadFiles,
-                  icon: const Icon(Icons.refresh_rounded),
-                  label: const Text("Retry"),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 12,
+                  leading: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: (isFolder ? Colors.amber : Colors.blue).withOpacity(
+                        0.1,
+                      ),
+                      shape: BoxShape.circle,
                     ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+                    child: Icon(
+                      isFolder ? Icons.folder_rounded : Icons.description_rounded,
+                      color: isFolder ? Colors.amber[700] : Colors.blue[700],
+                      size: 24,
                     ),
                   ),
+                  title: Text(
+                    item["name"] ?? "Unnamed Item",
+                    style: GoogleFonts.outfit(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: theme.colorScheme.onSurface,
+                    ),
+                  ),
+                  trailing: Icon(
+                    Icons.chevron_right_rounded,
+                    color: theme.colorScheme.onSurface.withOpacity(0.3),
+                  ),
+                  onTap: () => openItem(item),
                 ),
-              ],
-            ),
-          ),
-        ),
-      );
-    } else if (files.isEmpty) {
-      content = SingleChildScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        child: Container(
-          height: MediaQuery.of(context).size.height * 0.7,
-          alignment: Alignment.center,
+              );
+            },
+          );
+        },
+        loading: () => Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Image.asset('assets/images/sleepy-shark.png', height: 130),
-              const SizedBox(height: 16),
+              const CircularProgressIndicator(),
+              const SizedBox(height: 20),
               Text(
-                "This folder is empty.",
+                "Fetching files from Google Drive...",
                 style: GoogleFonts.outfit(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: theme.colorScheme.onSurface.withOpacity(0.5),
+                  color: theme.colorScheme.onSurface.withOpacity(0.6),
+                  fontWeight: FontWeight.w500,
                 ),
               ),
             ],
           ),
         ),
-      );
-    } else {
-      content = ListView.builder(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(16),
-        itemCount: files.length,
-        itemBuilder: (context, index) {
-          final item = files[index];
-          final isFolder =
-              item["mimeType"] == "application/vnd.google-apps.folder";
-
-          return Card(
-            elevation: 0,
-            margin: const EdgeInsets.only(bottom: 12),
-            color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-              side: BorderSide(
-                color: theme.colorScheme.outlineVariant.withOpacity(0.3),
-              ),
-            ),
-            child: ListTile(
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 20,
-                vertical: 8,
-              ),
-              leading: Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: (isFolder ? Colors.amber : Colors.blue).withOpacity(
-                    0.1,
+        error: (err, _) => SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Container(
+            height: MediaQuery.of(context).size.height * 0.7,
+            alignment: Alignment.center,
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Image.asset('assets/images/sad_raccoon.png', height: 130),
+                  const SizedBox(height: 16),
+                  Text(
+                    "Something went wrong",
+                    style: GoogleFonts.outfit(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.onSurface,
+                    ),
                   ),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  isFolder ? Icons.folder_rounded : Icons.description_rounded,
-                  color: isFolder ? Colors.amber[700] : Colors.blue[700],
-                  size: 24,
-                ),
+                  const SizedBox(height: 8),
+                  Text(
+                    err.toString(),
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.outfit(
+                      color: theme.colorScheme.onSurface.withOpacity(0.6),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      ref.invalidate(driveFolderContentsProvider(folderId));
+                    },
+                    icon: const Icon(Icons.refresh_rounded),
+                    label: const Text("Retry"),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              title: Text(
-                item["name"] ?? "Unnamed Item",
-                style: GoogleFonts.outfit(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: theme.colorScheme.onSurface,
-                ),
-              ),
-              trailing: Icon(
-                Icons.chevron_right_rounded,
-                color: theme.colorScheme.onSurface.withOpacity(0.3),
-              ),
-              onTap: () => openItem(item),
             ),
-          );
-        },
+          ),
+        ),
       );
     }
 
     if (widget.driveLink != null && widget.driveLink!.isNotEmpty) {
+      final folderId = extractFolderId(widget.driveLink!);
       content = RefreshIndicator(
-        onRefresh: loadFiles,
+        onRefresh: () async {
+          await ref.refresh(driveFolderContentsProvider(folderId).future);
+        },
         child: content,
       );
     }
@@ -717,8 +680,7 @@ class _TopicTabState extends ConsumerState<_TopicTab> {
             : () async {
                 ref.read(pdfLoadingProvider.notifier).setLoading(true);
                 try {
-                  final service = ref.read(supabaseServiceProvider);
-                  final data = await service.getFullSubjectData(subjectId);
+                  final data = await ref.read(subjectPdfDataProvider(subjectId).future);
                   final pdfService = PdfService();
                   final pdfBytes = await pdfService.generateSubjectPdf(
                     subjectName,

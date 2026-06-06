@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:url_launcher/url_launcher.dart';
+
 import '../models/topic.dart';
 import '../core/providers.dart';
 
@@ -15,12 +15,6 @@ class TopicDetailSheet extends ConsumerWidget {
     required this.importanceProgress,
   });
 
-  Future<void> _launchUrl(String urlString) async {
-    final Uri url = Uri.parse(urlString);
-    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
-      throw Exception('Could not launch $urlString');
-    }
-  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -117,7 +111,19 @@ class TopicDetailSheet extends ConsumerWidget {
               final ytResource = resources.where((r) => r.resourceType.toLowerCase().contains('youtube') || r.resourceType.toLowerCase().contains('yt')).firstOrNull;
               
               return ElevatedButton.icon(
-                onPressed: ytResource != null ? () => _launchUrl(ytResource.url) : null,
+                onPressed: ytResource != null
+                    ? () {
+                        Navigator.pop(context); // Close bottom sheet
+                        Navigator.pushNamed(
+                          context,
+                          '/youtube_resource',
+                          arguments: {
+                            'url': ytResource.url,
+                            'title': ytResource.title,
+                          },
+                        );
+                      }
+                    : null,
                 icon: const Icon(Icons.play_circle_fill_rounded),
                 label: Text(ytResource != null ? 'YT Resource: ${ytResource.title}' : 'No YT Resource Available'),
                 style: ElevatedButton.styleFrom(

@@ -5,6 +5,9 @@ class Subject {
   final String? pyqDriveLink;
   final String? notesDriveLink;
   final String? courseOutcomeLink;
+  final int? priority;
+  final int? subjectCredit;
+  final String? subjectType;
 
   Subject({
     required this.id,
@@ -13,6 +16,9 @@ class Subject {
     this.pyqDriveLink,
     this.notesDriveLink,
     this.courseOutcomeLink,
+    this.priority,
+    this.subjectCredit,
+    this.subjectType,
   });
 
   factory Subject.fromJson(Map<String, dynamic> json) => Subject(
@@ -22,5 +28,8 @@ class Subject {
         pyqDriveLink: json['pyq_drive_link'] as String?,
         notesDriveLink: json['notes_drive_link'] as String?,
         courseOutcomeLink: json['course_outcome_link'] as String?,
+        priority: json['priority'] as int?,
+        subjectCredit: json['subject_credit'] as int?,
+        subjectType: json['subject_type'] as String?,
       );
 }

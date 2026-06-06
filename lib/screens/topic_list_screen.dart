@@ -31,17 +31,20 @@ class TopicListScreen extends ConsumerWidget {
                     ref.read(pdfLoadingProvider.notifier).setLoading(true);
 
                     try {
-                      final service = ref.read(supabaseServiceProvider);
-                      final data = await service.getFullSubjectData(subjectId);
+                      final data = await ref.read(
+                        subjectPdfDataProvider(subjectId).future,
+                      );
 
                       final pdfService = PdfService();
                       final pdfBytes = await pdfService.generateSubjectPdf(subjectName, data);
 
                       await pdfService.downloadPdf(pdfBytes, '${subjectName.replaceAll(' ', '_')}_Full.pdf');
                     } catch (e) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Error: $e')),
-                      );
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Error: $e')),
+                        );
+                      }
                     } finally {
                       ref.read(pdfLoadingProvider.notifier).setLoading(false);
                     }
