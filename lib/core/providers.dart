@@ -12,10 +12,14 @@ import '../models/question.dart';
 import '../models/pyq_source.dart';
 import '../models/image_item.dart';
 import '../models/topic_resource.dart';
+import '../models/question_full.dart';
+import '../models/topic_with_questions.dart';
+import '../services/drive_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 final supabaseServiceProvider = Provider((ref) => SupabaseService());
 final aiServiceProvider = Provider((ref) => AiService());
+final driveServiceProvider = Provider((ref) => DriveService());
 
 /// Fully signs the user out of both Google and Supabase.
 /// Call this from any logout button. After this, the next Google sign-in
@@ -62,6 +66,11 @@ final yearsProvider = FutureProvider<List<Year>>((ref) {
 final subjectsProvider = FutureProvider.family<List<Subject>, ({String branchId, int semester})>((ref, arg) {
   final service = ref.watch(supabaseServiceProvider);
   return service.getSubjectsBySemester(branchId: arg.branchId, semester: arg.semester);
+});
+
+final allSubjectsProvider = FutureProvider<List<Subject>>((ref) {
+  final service = ref.watch(supabaseServiceProvider);
+  return service.getAllSubjects();
 });
 
 final topicsProvider = FutureProvider.family<List<Topic>, String>((ref, subjectId) {
@@ -151,6 +160,53 @@ class ProgressNotifier extends Notifier<Map<String, bool>> {
 
 final sharedPrefsProvider = Provider<SharedPreferences>((ref) {
   throw UnimplementedError();
+});
+
+class SelectedBranchIdNotifier extends Notifier<String> {
+  @override
+  String build() {
+    final prefs = ref.watch(sharedPrefsProvider);
+    return prefs.getString('selected_branch_id') ?? '';
+  }
+
+  Future<void> setBranchId(String value) async {
+    state = value;
+    final prefs = ref.read(sharedPrefsProvider);
+    await prefs.setString('selected_branch_id', value);
+  }
+}
+
+final selectedBranchIdProvider = NotifierProvider<SelectedBranchIdNotifier, String>(SelectedBranchIdNotifier.new);
+
+class SelectedSemesterNotifier extends Notifier<int> {
+  @override
+  int build() {
+    final prefs = ref.watch(sharedPrefsProvider);
+    return prefs.getInt('selected_semester') ?? 1;
+  }
+
+  Future<void> setSemester(int value) async {
+    state = value;
+    final prefs = ref.read(sharedPrefsProvider);
+    await prefs.setInt('selected_semester', value);
+  }
+}
+
+final selectedSemesterProvider = NotifierProvider<SelectedSemesterNotifier, int>(SelectedSemesterNotifier.new);
+
+final driveFolderContentsProvider = FutureProvider.family<List<dynamic>, String>((ref, folderId) {
+  final service = ref.watch(driveServiceProvider);
+  return service.fetchFolderContents(folderId);
+});
+
+final subjectPdfDataProvider = FutureProvider.family<List<TopicWithQuestions>, String>((ref, subjectId) {
+  final service = ref.watch(supabaseServiceProvider);
+  return service.getFullSubjectData(subjectId);
+});
+
+final topicPdfDataProvider = FutureProvider.family<List<QuestionFull>, String>((ref, topicId) {
+  final service = ref.watch(supabaseServiceProvider);
+  return service.getQuestionsWithDetails(topicId);
 });
 
 final progressProvider = NotifierProvider<ProgressNotifier, Map<String, bool>>(ProgressNotifier.new);

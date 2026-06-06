@@ -20,6 +20,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _hapticFeedback = true;
 
   @override
+  void initState() {
+    super.initState();
+    _tempSemester = ref.read(selectedSemesterProvider);
+    _tempBranchId = ref.read(selectedBranchIdProvider);
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
@@ -195,6 +202,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 setState(() {
                   _tempSemester = sem;
                 });
+                ref.read(selectedSemesterProvider.notifier).setSemester(sem);
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text('Switched view to Semester $sem! ⚡'),
@@ -253,6 +261,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     setState(() {
                       _tempBranchId = branch.id;
                     });
+                    ref.read(selectedBranchIdProvider.notifier).setBranchId(branch.id);
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text('Switched view to ${branch.name}! ⚡'),

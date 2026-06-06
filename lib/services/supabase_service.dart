@@ -79,18 +79,32 @@ class SupabaseService {
   Future<List<Subject>> getSubjectsBySemester({required String branchId, required int semester}) async {
     final res = await supabase
         .from('branch_subjects')
-        .select('subjects(id, name, code, pyq_drive_link, notes_drive_link, course_outcome_link)')
+        .select('subjects(id, name, code, pyq_drive_link, notes_drive_link, course_outcome_link, priority, subject_credit, subject_type)')
         .eq('branch_id', branchId)
         .eq('semester', semester);
-    return (res as List)
+    final subjects = (res as List)
         .map((e) => Subject.fromJson(e['subjects']))
         .toList();
+    subjects.sort((a, b) {
+      if (a.priority == null && b.priority == null) return 0;
+      if (a.priority == null) return 1;
+      if (b.priority == null) return -1;
+      return a.priority!.compareTo(b.priority!);
+    });
+    return subjects;
   }
 
   Future<List<Subject>> getAllSubjects() async {
     try {
-      final res = await supabase.from('subjects').select('id, name, code, pyq_drive_link, notes_drive_link, course_outcome_link');
-      return (res as List).map((e) => Subject.fromJson(e)).toList();
+      final res = await supabase.from('subjects').select('id, name, code, pyq_drive_link, notes_drive_link, course_outcome_link, priority, subject_credit, subject_type');
+      final subjects = (res as List).map((e) => Subject.fromJson(e)).toList();
+      subjects.sort((a, b) {
+        if (a.priority == null && b.priority == null) return 0;
+        if (a.priority == null) return 1;
+        if (b.priority == null) return -1;
+        return a.priority!.compareTo(b.priority!);
+      });
+      return subjects;
     } catch (e) {
       debugPrint('Error getting all subjects: $e');
       return [];
