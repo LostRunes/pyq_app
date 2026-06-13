@@ -6,6 +6,9 @@ import '../core/providers.dart';
 import '../models/subject.dart';
 import '../features/skulk/presentation/screens/skulk_feed_screen.dart';
 import '../features/skulk/presentation/providers/skulk_providers.dart';
+import 'subjects_page.dart';
+import 'prep_zone_page.dart';
+import 'dashboard_page.dart';
 
 class SubjectListScreen extends ConsumerStatefulWidget {
   final String branchId;
@@ -121,21 +124,48 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
               ),
         title: _currentIndex == 3
             ? (_isSearching
-                  ? TextField(
-                      controller: _skulkSearchController,
-                      autofocus: true,
-                      style: GoogleFonts.outfit(fontSize: 14),
-                      decoration: InputDecoration(
-                        hintText: 'Search doubts, title or tags...',
-                        hintStyle: GoogleFonts.outfit(
-                          fontSize: 14,
-                          color: Colors.grey,
+                  ? Container(
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color: isDark 
+                            ? const Color(0xFF1E1B4B).withOpacity(0.4) 
+                            : Colors.black.withOpacity(0.04),
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(
+                          color: isDark 
+                              ? Colors.white.withOpacity(0.12) 
+                              : Colors.black.withOpacity(0.08),
+                          width: 1.5,
                         ),
-                        border: InputBorder.none,
                       ),
-                      onChanged: (val) {
-                        ref.read(skulkFeedSearchProvider.notifier).state = val;
-                      },
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      child: Center(
+                        child: TextField(
+                          controller: _skulkSearchController,
+                          autofocus: true,
+                          style: GoogleFonts.outfit(
+                            fontSize: 14,
+                            color: isDark ? Colors.white : Colors.black87,
+                          ),
+                          decoration: InputDecoration(
+                            hintText: 'Search doubts, titles or tags...',
+                            hintStyle: GoogleFonts.outfit(
+                              fontSize: 13,
+                              color: isDark ? Colors.white38 : Colors.black38,
+                            ),
+                            border: InputBorder.none,
+                            isDense: true,
+                            icon: Icon(
+                              Icons.search_rounded,
+                              size: 18,
+                              color: isDark ? Colors.white54 : Colors.black54,
+                            ),
+                          ),
+                          onChanged: (val) {
+                            ref.read(skulkFeedSearchProvider.notifier).state = val;
+                          },
+                        ),
+                      ),
                     )
                   : Row(
                       mainAxisSize: MainAxisSize.min,
@@ -325,9 +355,9 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
               });
             },
             children: [
-              _buildSubjectsPage(context),
-              _buildPrepZonePage(context),
-              _buildDashboardPage(context),
+              const SubjectsPage(),
+              const PrepZonePage(),
+              const DashboardPage(),
               _buildSkulkPage(context),
             ],
           ),
@@ -515,497 +545,6 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
     );
   }
 
-  Widget _buildSubjectsPage(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final subjectsAsync = ref.watch(
-      subjectsProvider((
-        branchId: _currentBranchId,
-        semester: _currentSemester,
-      )),
-    );
-
-    return RefreshIndicator(
-      onRefresh: () async {
-        await ref.refresh(
-          subjectsProvider((
-            branchId: _currentBranchId,
-            semester: _currentSemester,
-          )).future,
-        );
-      },
-      child: subjectsAsync.when(
-        data: (subjects) => ListView.builder(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-          itemCount: subjects.length + 1,
-          itemBuilder: (context, i) {
-            if (i == 0) {
-              return Container(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Text(
-                          'Subjects',
-                          style: GoogleFonts.outfit(
-                            fontSize: 32,
-                            fontWeight: FontWeight.w900,
-                            color: Theme.of(context).colorScheme.onSurface,
-                          ),
-                        ),
-                        const Spacer(),
-                        GestureDetector(
-                          onTap: () => Navigator.pop(context),
-                          behavior: HitTestBehavior.opaque,
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              vertical: 4,
-                              horizontal: 8,
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.arrow_back_ios_new_rounded,
-                                  size: 16,
-                                  color: Theme.of(context).colorScheme.primary,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Back',
-                                  style: GoogleFonts.outfit(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.primary,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Choose your path!',
-                                style: Theme.of(context).textTheme.headlineSmall
-                                    ?.copyWith(
-                                      fontWeight: FontWeight.w900,
-                                      color: isDark
-                                          ? Color(0xFFFFFFFF)
-                                          : Colors.black,
-                                    ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Select a subject to begin.',
-                                style: Theme.of(context).textTheme.bodyMedium,
-                              ),
-                            ],
-                          ),
-                        ),
-                        SizedBox(
-                          height: 140,
-                          width: 140,
-                          child: Image.asset('assets/images/panda.png'),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              );
-            }
-
-            final subject = subjects[i - 1];
-            final isIconLeft = (i - 1) % 2 == 0;
-
-            final iconWidget = Container(
-              width: 64,
-              height: 64,
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.secondary.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Icon(
-                Icons.book_rounded,
-                color: Theme.of(context).colorScheme.primary,
-                size: 32,
-              ),
-            );
-
-            final textWidget = Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  subject.name,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Text(
-                      'Code: ${subject.code}',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: Colors.grey,
-                      ),
-                    ),
-                    if (subject.subjectCredit != null ||
-                        subject.subjectType != null) ...[
-                      const SizedBox(width: 8),
-                      Text(
-                        '•',
-                        style: TextStyle(color: Colors.grey[400], fontSize: 12),
-                      ),
-                      const SizedBox(width: 8),
-                    ],
-                    if (subject.subjectCredit != null) ...[
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.primary.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          '${subject.subjectCredit} Cr',
-                          style: GoogleFonts.outfit(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
-                        ),
-                      ),
-                      if (subject.subjectType != null) const SizedBox(width: 6),
-                    ],
-                    if (subject.subjectType != null) ...[
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: subject.subjectType!.toLowerCase() == 'core'
-                              ? Colors.redAccent.withOpacity(0.1)
-                              : Colors.green.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          subject.subjectType!.toUpperCase(),
-                          style: GoogleFonts.outfit(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: subject.subjectType!.toLowerCase() == 'core'
-                                ? Colors.redAccent
-                                : Colors.green[700],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ],
-            );
-
-            /*
-            // Old Version: Standard layout (Icon then Text, with trailing arrow)
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: InkWell(
-                onTap: () {
-                  Navigator.pushNamed(
-                    context,
-                    '/subject_dashboard',
-                    arguments: {'subject': subject},
-                  );
-                },
-                borderRadius: BorderRadius.circular(32),
-                child: Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface,
-                    borderRadius: BorderRadius.circular(32),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.primary.withOpacity(0.08),
-                        blurRadius: 20,
-                        offset: const Offset(0, 10),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 64,
-                        height: 64,
-                        decoration: BoxDecoration(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.secondary.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Icon(
-                          Icons.book_rounded,
-                          color: Theme.of(context).colorScheme.primary,
-                          size: 32,
-                        ),
-                      ),
-                      const SizedBox(width: 20),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              subject.name,
-                              style: Theme.of(context).textTheme.titleMedium
-                                  ?.copyWith(fontWeight: FontWeight.w800),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              'Code: ${subject.code}',
-                              style: Theme.of(context).textTheme.bodyMedium
-                                  ?.copyWith(fontWeight: FontWeight.w600),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Icon(
-                        Icons.arrow_forward_ios_rounded,
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.primary.withOpacity(0.4),
-                        size: 20,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-            */
-
-            // New Version: Alternating layout (Odd: Icon -> Text; Even: Text -> Icon) without trailing arrow
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: InkWell(
-                onTap: () {
-                  Navigator.pushNamed(
-                    context,
-                    '/subject_dashboard',
-                    arguments: {'subject': subject},
-                  );
-                },
-                borderRadius: BorderRadius.circular(32),
-                child: Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface,
-                    borderRadius: BorderRadius.circular(32),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.primary.withOpacity(0.08),
-                        blurRadius: 20,
-                        offset: const Offset(0, 10),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      if (isIconLeft) ...[
-                        iconWidget,
-                        const SizedBox(width: 20),
-                      ],
-                      Expanded(child: textWidget),
-                      if (!isIconLeft) ...[
-                        const SizedBox(width: 20),
-                        iconWidget,
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
-        ),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          children: [
-            SizedBox(
-              height: MediaQuery.of(context).size.height * 0.4,
-              child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24.0),
-                  child: Text(
-                    'Error: $e\n\nPull down to retry',
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDashboardPage(BuildContext context) {
-    final theme = Theme.of(context);
-
-    final utils = [
-      {
-        'title': 'Upload Notes',
-        'desc': 'Share study notes & materials',
-        'icon': Icons.cloud_upload_rounded,
-        'route': '/upload_notes',
-        'color': const Color(0xFF6366F1), // Indigo
-      },
-      {
-        'title': 'GPA Calculator',
-        'desc': 'Calculate SGPA & CGPA',
-        'icon': Icons.calculate_rounded,
-        'route': '/gpa_calculator',
-        'color': const Color(0xFF10B981), // Emerald
-      },
-      {
-        'title': 'Syllabus',
-        'desc': 'Explore subjects & credits',
-        'icon': Icons.collections_bookmark_rounded,
-        'route': '/syllabus',
-        'color': const Color(0xFFF59E0B), // Amber
-      },
-    ];
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            'Utilities',
-            style: GoogleFonts.outfit(
-              fontSize: 28,
-              fontWeight: FontWeight.w900,
-              color: theme.colorScheme.onSurface,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Access all essential tools and peer rooms',
-            style: GoogleFonts.outfit(
-              fontSize: 14,
-              color: theme.colorScheme.onSurface.withOpacity(0.6),
-            ),
-          ),
-          const SizedBox(height: 32),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: utils.length,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              childAspectRatio: 1.0, // Force square boxes
-            ),
-            itemBuilder: (context, index) {
-              final util = utils[index];
-              final Color utilColor = util['color'] as Color;
-              return InkWell(
-                onTap: () {
-                  Navigator.pushNamed(context, util['route'] as String);
-                },
-                borderRadius: BorderRadius.circular(28),
-                child: Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.surface,
-                    borderRadius: BorderRadius.circular(28),
-                    border: Border.all(
-                      color: utilColor.withOpacity(0.12),
-                      width: 1.5,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: utilColor.withOpacity(0.06),
-                        blurRadius: 16,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: utilColor.withOpacity(0.1),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          util['icon'] as IconData,
-                          color: utilColor,
-                          size: 28,
-                        ),
-                      ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            util['title'] as String,
-                            style: GoogleFonts.outfit(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: theme.colorScheme.onSurface,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            util['desc'] as String,
-                            style: GoogleFonts.outfit(
-                              fontSize: 11,
-                              color: theme.colorScheme.onSurface.withOpacity(
-                                0.55,
-                              ),
-                              height: 1.3,
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildSkulkPage(BuildContext context) {
     return SkulkFeedScreen(
       branchId: _currentBranchId,
@@ -1074,131 +613,4 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
     );
   }
 
-  Widget _buildPrepZonePage(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
-    final prepItems = [
-      {
-        'title': 'Algo+Code Screen',
-        'desc': 'DSA patterns & Coding roadmaps',
-        'icon': Icons.code_rounded,
-        'route': '/algo_code',
-        'color': const Color(0xFF6366F1), // Indigo
-      },
-      {
-        'title': 'GATE Prep Screen',
-        'desc': 'Syllabus, weightage & mock tests',
-        'icon': Icons.psychology_rounded,
-        'route': '/gate_prep',
-        'color': const Color(0xFFEC4899), // Pink/Rose
-      },
-    ];
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            'Prep Zone',
-            style: GoogleFonts.outfit(
-              fontSize: 32,
-              fontWeight: FontWeight.w900,
-              color: theme.colorScheme.onSurface,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Sharpen your coding skills and prepare for core engineering exams.',
-            style: GoogleFonts.outfit(
-              fontSize: 14,
-              color: theme.colorScheme.onSurface.withOpacity(0.6),
-            ),
-          ),
-          const SizedBox(height: 32),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: prepItems.length,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              childAspectRatio: 0.85,
-            ),
-            itemBuilder: (context, index) {
-              final item = prepItems[index];
-              final Color itemColor = item['color'] as Color;
-              return InkWell(
-                onTap: () {
-                  Navigator.pushNamed(context, item['route'] as String);
-                },
-                borderRadius: BorderRadius.circular(28),
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.surface,
-                    borderRadius: BorderRadius.circular(28),
-                    border: Border.all(
-                      color: itemColor.withOpacity(0.12),
-                      width: 1.5,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: itemColor.withOpacity(0.06),
-                        blurRadius: 16,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: itemColor.withOpacity(0.1),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          item['icon'] as IconData,
-                          color: itemColor,
-                          size: 26,
-                        ),
-                      ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            item['title'] as String,
-                            style: GoogleFonts.outfit(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w800,
-                              color: theme.colorScheme.onSurface,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            item['desc'] as String,
-                            style: GoogleFonts.outfit(
-                              fontSize: 11,
-                              color: theme.colorScheme.onSurface.withOpacity(0.5),
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
 }

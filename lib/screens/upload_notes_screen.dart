@@ -19,8 +19,8 @@ class _UploadNotesScreenState extends ConsumerState<UploadNotesScreen> {
   int? _uploadSemester;
   Subject? _uploadSubject;
   bool _isUploadingNotes = false;
-  PlatformFile? _selectedFile;
-  String? _selectedFilePath;
+  List<PlatformFile> _selectedFiles = [];
+  String _uploadProgressText = '';
 
   @override
   void initState() {
@@ -246,13 +246,14 @@ class _UploadNotesScreenState extends ConsumerState<UploadNotesScreen> {
                       ),
                     ),
                     const SizedBox(height: 32),
-                    if (_selectedFile == null) ...[
+                    if (_selectedFiles.isEmpty) ...[
                       ElevatedButton.icon(
                         icon: const Icon(Icons.file_present_rounded),
                         onPressed: _uploadSubject == null ? null : () async {
                           try {
                             final result = await FilePicker.pickFiles(
                               type: FileType.custom,
+                              allowMultiple: true,
                               allowedExtensions: [
                                 'pdf',
                                 'doc',
@@ -265,11 +266,11 @@ class _UploadNotesScreenState extends ConsumerState<UploadNotesScreen> {
                               ],
                             );
 
-                            if (result != null &&
-                                result.files.single.path != null) {
+                            if (result != null) {
                               setState(() {
-                                _selectedFile = result.files.single;
-                                _selectedFilePath = result.files.single.path;
+                                _selectedFiles = result.files
+                                    .where((f) => f.path != null)
+                                    .toList();
                               });
                             }
                           } catch (e) {
@@ -289,93 +290,165 @@ class _UploadNotesScreenState extends ConsumerState<UploadNotesScreen> {
                             borderRadius: BorderRadius.circular(20),
                           ),
                         ),
-                        label: const Text('Select File'),
+                        label: const Text('Select Files'),
                       ),
                     ] else ...[
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.primary.withOpacity(0.05),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: theme.colorScheme.primary.withOpacity(0.15),
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.insert_drive_file_rounded,
-                              color: theme.colorScheme.primary,
-                              size: 28,
+                      Column(
+                        children: _selectedFiles.map((file) {
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 10),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
                             ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    _selectedFile!.name,
-                                    style: GoogleFonts.outfit(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 14,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  if (_selectedFile!.size > 0) ...[
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      '${(_selectedFile!.size / 1024).toStringAsFixed(1)} KB',
-                                      style: GoogleFonts.outfit(
-                                        fontSize: 11,
-                                        color: theme.colorScheme.onSurface
-                                            .withOpacity(0.5),
+                            decoration: BoxDecoration(
+                              color:
+                                  theme.colorScheme.primary.withOpacity(0.05),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: theme.colorScheme.primary.withOpacity(
+                                  0.15,
+                                ),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.insert_drive_file_rounded,
+                                  color: theme.colorScheme.primary,
+                                  size: 24,
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        file.name,
+                                        style: GoogleFonts.outfit(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 13,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
                                       ),
-                                    ),
-                                  ],
-                                ],
-                              ),
+                                      if (file.size > 0) ...[
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          '${(file.size / 1024).toStringAsFixed(1)} KB',
+                                          style: GoogleFonts.outfit(
+                                            fontSize: 11,
+                                            color: theme.colorScheme.onSurface
+                                                .withOpacity(0.5),
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.cancel_rounded,
+                                    color: Colors.redAccent,
+                                    size: 20,
+                                  ),
+                                  onPressed: _isUploadingNotes
+                                      ? null
+                                      : () {
+                                          setState(() {
+                                            _selectedFiles.remove(file);
+                                          });
+                                        },
+                                ),
+                              ],
                             ),
-                            IconButton(
-                              icon: const Icon(
-                                Icons.cancel_rounded,
-                                color: Colors.redAccent,
-                              ),
-                              onPressed: _isUploadingNotes
-                                  ? null
-                                  : () {
-                                      setState(() {
-                                        _selectedFile = null;
-                                        _selectedFilePath = null;
-                                      });
-                                    },
-                            ),
-                          ],
+                          );
+                        }).toList(),
+                      ),
+                      const SizedBox(height: 12),
+                      TextButton.icon(
+                        icon: const Icon(Icons.add_rounded),
+                        label: Text(
+                          'Add More Files',
+                          style:
+                              GoogleFonts.outfit(fontWeight: FontWeight.bold),
                         ),
+                        onPressed: _isUploadingNotes
+                            ? null
+                            : () async {
+                                try {
+                                  final result = await FilePicker.pickFiles(
+                                    type: FileType.custom,
+                                    allowMultiple: true,
+                                    allowedExtensions: [
+                                      'pdf',
+                                      'doc',
+                                      'docx',
+                                      'xls',
+                                      'xlsx',
+                                      'png',
+                                      'jpg',
+                                      'jpeg',
+                                    ],
+                                  );
+                                  if (result != null) {
+                                    setState(() {
+                                      final newFiles = result.files
+                                          .where((f) =>
+                                              f.path != null &&
+                                              !_selectedFiles.any((existing) =>
+                                                  existing.path == f.path))
+                                          .toList();
+                                      _selectedFiles.addAll(newFiles);
+                                    });
+                                  }
+                                } catch (e) {
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          'File selection failed: $e 😢',
+                                        ),
+                                        backgroundColor: Colors.redAccent,
+                                      ),
+                                    );
+                                  }
+                                }
+                              },
                       ),
                       const SizedBox(height: 20),
                       ElevatedButton.icon(
                         icon: const Icon(Icons.cloud_upload_rounded),
                         onPressed: _isUploadingNotes ? null : () async {
                           try {
-                            final filePath = _selectedFilePath!;
-                            final filename = _selectedFile!.name;
-                            final fileBytes =
-                                await File(filePath).readAsBytes();
-                            final mimeType =
-                                lookupMimeType(filePath) ??
-                                'application/octet-stream';
-
                             setState(() {
                               _isUploadingNotes = true;
                             });
 
-                            await DriveService().uploadFile(
-                              filename: filename,
-                              mimeType: mimeType,
-                              fileBytes: fileBytes,
-                              subjectName: _uploadSubject!.name,
-                            );
+                            final total = _selectedFiles.length;
+                            for (int i = 0; i < total; i++) {
+                              final file = _selectedFiles[i];
+                              final filePath = file.path!;
+
+                              setState(() {
+                                _uploadProgressText =
+                                    'Uploading ${i + 1} of $total:\n${file.name}';
+                              });
+
+                              final fileBytes =
+                                  await File(filePath).readAsBytes();
+                              final mimeType =
+                                  lookupMimeType(filePath) ??
+                                  'application/octet-stream';
+
+                              await DriveService().uploadFile(
+                                filename: file.name,
+                                mimeType: mimeType,
+                                fileBytes: fileBytes,
+                                subjectName: _uploadSubject!.name,
+                              );
+                            }
 
                             if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
@@ -389,7 +462,7 @@ class _UploadNotesScreenState extends ConsumerState<UploadNotesScreen> {
                                       const SizedBox(width: 8),
                                       Expanded(
                                         child: Text(
-                                          'Notes uploaded to Google Drive! ✨',
+                                          'All files uploaded to Google Drive! ✨',
                                           style: GoogleFonts.outfit(
                                             fontWeight: FontWeight.bold,
                                           ),
@@ -405,8 +478,7 @@ class _UploadNotesScreenState extends ConsumerState<UploadNotesScreen> {
                                 ),
                               );
                               setState(() {
-                                _selectedFile = null;
-                                _selectedFilePath = null;
+                                _selectedFiles.clear();
                               });
                             }
                           } catch (e) {
@@ -426,24 +498,43 @@ class _UploadNotesScreenState extends ConsumerState<UploadNotesScreen> {
                             if (mounted) {
                               setState(() {
                                 _isUploadingNotes = false;
+                                _uploadProgressText = '';
                               });
                             }
                           }
                         },
                         style: ElevatedButton.styleFrom(
-                          minimumSize: const Size.fromHeight(56),
+                          minimumSize: const Size.fromHeight(60),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(20),
                           ),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
                         ),
                         label: _isUploadingNotes
-                            ? const SizedBox(
-                                height: 24,
-                                width: 24,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
+                            ? Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 14),
+                                  Expanded(
+                                    child: Text(
+                                      _uploadProgressText,
+                                      style: GoogleFonts.outfit(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                      maxLines: 2,
+                                    ),
+                                  ),
+                                ],
                               )
                             : const Text('Upload Notes'),
                       ),
