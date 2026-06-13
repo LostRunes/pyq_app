@@ -48,9 +48,9 @@ class _QuestionListScreenState extends ConsumerState<QuestionListScreen> {
                     ref.read(pdfLoadingProvider.notifier).setLoading(true);
 
                     try {
-                      final service = ref.read(supabaseServiceProvider);
-                      final fullQuestions = await service
-                          .getQuestionsWithDetails(widget.topicId);
+                      final fullQuestions = await ref.read(
+                        topicPdfDataProvider(widget.topicId).future,
+                      );
 
                       final pdfService = PdfService();
                       final pdfBytes = await pdfService.generateTopicPdf(
@@ -91,419 +91,444 @@ class _QuestionListScreenState extends ConsumerState<QuestionListScreen> {
         child: SafeArea(
           child: Stack(
             children: [
-            questionsAsync.when(
-              data: (questions) {
-                final List<String> availableYears =
-                    questions
-                        .expand((q) => q.pyqSources.map((s) => s.year))
-                        .where((y) => y.isNotEmpty)
-                        .toSet()
-                        .toList()
-                      ..sort((a, b) => b.compareTo(a));
+              questionsAsync.when(
+                data: (questions) {
+                  final List<String> availableYears =
+                      questions
+                          .expand((q) => q.pyqSources.map((s) => s.year))
+                          .where((y) => y.isNotEmpty)
+                          .toSet()
+                          .toList()
+                        ..sort((a, b) => b.compareTo(a));
 
-                // Apply filtering
-                List<Question> filteredQuestions = List<Question>.from(questions);
+                  // Apply filtering
+                  List<Question> filteredQuestions = List<Question>.from(
+                    questions,
+                  );
 
-                if (_selectedType != null) {
-                  filteredQuestions = filteredQuestions.where((q) {
-                    return q.pyqSources.any(
-                      (s) =>
-                          s.examType.toLowerCase() ==
-                          _selectedType!.toLowerCase(),
-                    );
-                  }).toList();
-                }
-
-                if (_selectedYear != null) {
-                  filteredQuestions = filteredQuestions.where((q) {
-                    return q.pyqSources.any((s) => s.year == _selectedYear);
-                  }).toList();
-                }
-
-                // Helper for difficulty mapping
-                int getDifficultyValue(String difficulty) {
-                  switch (difficulty.toLowerCase()) {
-                    case 'easy':
-                      return 1;
-                    case 'medium':
-                      return 2;
-                    case 'hard':
-                      return 3;
-                    default:
-                      return 0;
+                  if (_selectedType != null) {
+                    filteredQuestions = filteredQuestions.where((q) {
+                      return q.pyqSources.any(
+                        (s) =>
+                            s.examType.toLowerCase() ==
+                            _selectedType!.toLowerCase(),
+                      );
+                    }).toList();
                   }
-                }
 
-                // Apply difficulty sorting
-                if (_difficultySort != null) {
-                  filteredQuestions.sort((a, b) {
-                    final valA = getDifficultyValue(a.difficulty);
-                    final valB = getDifficultyValue(b.difficulty);
-                    if (_difficultySort == 'Easy to Hard') {
-                      return valA.compareTo(valB);
-                    } else {
-                      return valB.compareTo(valA);
+                  if (_selectedYear != null) {
+                    filteredQuestions = filteredQuestions.where((q) {
+                      return q.pyqSources.any((s) => s.year == _selectedYear);
+                    }).toList();
+                  }
+
+                  // Helper for difficulty mapping
+                  int getDifficultyValue(String difficulty) {
+                    switch (difficulty.toLowerCase()) {
+                      case 'easy':
+                        return 1;
+                      case 'medium':
+                        return 2;
+                      case 'hard':
+                        return 3;
+                      default:
+                        return 0;
                     }
-                  });
-                }
+                  }
 
-                // Apply year sorting
-                if (_yearSort != null) {
-                  filteredQuestions.sort((a, b) {
-                    final yearA = a.pyqSources.isNotEmpty
-                        ? (int.tryParse(a.pyqSources.first.year) ?? 0)
-                        : 0;
-                    final yearB = b.pyqSources.isNotEmpty
-                        ? (int.tryParse(b.pyqSources.first.year) ?? 0)
-                        : 0;
-                    if (_yearSort == 'Ascending') {
-                      return yearA.compareTo(yearB);
-                    } else {
-                      return yearB.compareTo(yearA);
-                    }
-                  });
-                }
+                  // Apply difficulty sorting
+                  if (_difficultySort != null) {
+                    filteredQuestions.sort((a, b) {
+                      final valA = getDifficultyValue(a.difficulty);
+                      final valB = getDifficultyValue(b.difficulty);
+                      if (_difficultySort == 'Easy to Hard') {
+                        return valA.compareTo(valB);
+                      } else {
+                        return valB.compareTo(valA);
+                      }
+                    });
+                  }
 
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 8,
-                      ),
-                      child: Text(
-                        widget.topicName,
-                        style: GoogleFonts.outfit(
-                          fontSize: 28,
-                          fontWeight: FontWeight.w900,
-                          color: theme.colorScheme.onSurface,
+                  // Apply year sorting
+                  if (_yearSort != null) {
+                    filteredQuestions.sort((a, b) {
+                      final yearA = a.pyqSources.isNotEmpty
+                          ? (int.tryParse(a.pyqSources.first.year) ?? 0)
+                          : 0;
+                      final yearB = b.pyqSources.isNotEmpty
+                          ? (int.tryParse(b.pyqSources.first.year) ?? 0)
+                          : 0;
+                      if (_yearSort == 'Ascending') {
+                        return yearA.compareTo(yearB);
+                      } else {
+                        return yearB.compareTo(yearA);
+                      }
+                    });
+                  }
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 8,
+                        ),
+                        child: Text(
+                          widget.topicName,
+                          style: GoogleFonts.outfit(
+                            fontSize: 28,
+                            fontWeight: FontWeight.w900,
+                            color: theme.colorScheme.onSurface,
+                          ),
                         ),
                       ),
-                    ),
-                    // Horizontal Filter Bar
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 12,
-                      ),
-                      child: Row(
-                        children: [
-                          _buildActionPill(
-                            context: context,
-                            label: 'All',
-                            isActive:
-                                _selectedType == null &&
-                                _difficultySort == null &&
-                                _yearSort == null &&
-                                _selectedYear == null,
-                            onTap: () {
-                              setState(() {
-                                _selectedType = null;
-                                _difficultySort = null;
-                                _yearSort = null;
-                                _selectedYear = null;
-                              });
-                            },
-                          ),
-                          const SizedBox(width: 10),
-                          PopupMenuButton<String>(
-                            onSelected: (value) {
-                              setState(() {
-                                _selectedType = value == 'None' ? null : value;
-                              });
-                            },
-                            itemBuilder: (context) => [
-                              const PopupMenuItem(
-                                value: 'Midsem',
-                                child: Text('Midsem'),
-                              ),
-                              const PopupMenuItem(
-                                value: 'Endsem',
-                                child: Text('Endsem'),
-                              ),
-                              const PopupMenuItem(
-                                value: 'None',
-                                child: Text('None (Reset)'),
-                              ),
-                            ],
-                            child: _buildFilterPill(
+                      // Horizontal Filter Bar
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 12,
+                        ),
+                        child: Row(
+                          children: [
+                            _buildActionPill(
                               context: context,
-                              label: _selectedType ?? 'Type',
-                              isActive: _selectedType != null,
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          PopupMenuButton<String>(
-                            onSelected: (value) {
-                              setState(() {
-                                _difficultySort = value == 'None' ? null : value;
-                              });
-                            },
-                            itemBuilder: (context) => [
-                              const PopupMenuItem(
-                                value: 'Easy to Hard',
-                                child: Text('Easy to Hard'),
-                              ),
-                              const PopupMenuItem(
-                                value: 'Hard to Easy',
-                                child: Text('Hard to Easy'),
-                              ),
-                              const PopupMenuItem(
-                                value: 'None',
-                                child: Text('None (Reset)'),
-                              ),
-                            ],
-                            child: _buildFilterPill(
-                              context: context,
-                              label: _difficultySort ?? 'Difficulty',
-                              isActive: _difficultySort != null,
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          PopupMenuButton<String>(
-                            onSelected: (value) {
-                              setState(() {
-                                if (value == 'Ascending' ||
-                                    value == 'Descending') {
-                                  _yearSort = value;
-                                } else if (value == 'None') {
+                              label: 'All',
+                              isActive:
+                                  _selectedType == null &&
+                                  _difficultySort == null &&
+                                  _yearSort == null &&
+                                  _selectedYear == null,
+                              onTap: () {
+                                setState(() {
+                                  _selectedType = null;
+                                  _difficultySort = null;
                                   _yearSort = null;
                                   _selectedYear = null;
-                                } else {
-                                  _selectedYear = value;
-                                }
-                              });
-                            },
-                            itemBuilder: (context) => [
-                              const PopupMenuItem(
-                                value: 'Ascending',
-                                child: Text('Sort: Oldest First (Ascending)'),
-                              ),
-                              const PopupMenuItem(
-                                value: 'Descending',
-                                child: Text('Sort: Newest First (Descending)'),
-                              ),
-                              const PopupMenuItem(
-                                value: 'None',
-                                child: Text('None (Reset)'),
-                              ),
-                              if (availableYears.isNotEmpty) ...[
-                                const PopupMenuDivider(),
-                                ...availableYears.map(
-                                  (yr) => PopupMenuItem(
-                                    value: yr,
-                                    child: Row(
-                                      children: [
-                                        const Icon(
-                                          Icons.calendar_today,
-                                          size: 16,
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Text(yr),
-                                        if (_selectedYear == yr) ...[
-                                          const Spacer(),
-                                          const Icon(
-                                            Icons.check,
-                                            size: 16,
-                                            color: Colors.green,
-                                          ),
-                                        ],
-                                      ],
-                                    ),
-                                  ),
+                                });
+                              },
+                            ),
+                            const SizedBox(width: 10),
+                            PopupMenuButton<String>(
+                              onSelected: (value) {
+                                setState(() {
+                                  _selectedType = value == 'None'
+                                      ? null
+                                      : value;
+                                });
+                              },
+                              itemBuilder: (context) => [
+                                const PopupMenuItem(
+                                  value: 'Midsem',
+                                  child: Text('Midsem'),
+                                ),
+                                const PopupMenuItem(
+                                  value: 'Endsem',
+                                  child: Text('Endsem'),
+                                ),
+                                const PopupMenuItem(
+                                  value: 'None',
+                                  child: Text('None (Reset)'),
                                 ),
                               ],
-                            ],
-                            child: _buildFilterPill(
-                              context: context,
-                              label: _selectedYear != null
-                                  ? 'Year: $_selectedYear'
-                                  : (_yearSort ?? 'Year'),
-                              isActive:
-                                  _selectedYear != null || _yearSort != null,
+                              child: _buildFilterPill(
+                                context: context,
+                                label: _selectedType ?? 'Type',
+                                isActive: _selectedType != null,
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Expanded(
-                      child: filteredQuestions.isEmpty
-                          ? Center(
-                              child: Padding(
-                                padding: const EdgeInsets.all(32.0),
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Image.asset(
-                                      'assets/images/sad_raccoon.png',
-                                      height: 130,
-                                    ),
-                                    const SizedBox(height: 16),
-                                    Text(
-                                      'No questions match the selected filters.',
-                                      textAlign: TextAlign.center,
-                                      style: theme.textTheme.titleMedium
-                                          ?.copyWith(
-                                            color: theme.colorScheme.onSurface
-                                                .withOpacity(0.6),
-                                          ),
-                                    ),
-                                  ],
+                            const SizedBox(width: 10),
+                            PopupMenuButton<String>(
+                              onSelected: (value) {
+                                setState(() {
+                                  _difficultySort = value == 'None'
+                                      ? null
+                                      : value;
+                                });
+                              },
+                              itemBuilder: (context) => [
+                                const PopupMenuItem(
+                                  value: 'Easy to Hard',
+                                  child: Text('Easy to Hard'),
                                 ),
+                                const PopupMenuItem(
+                                  value: 'Hard to Easy',
+                                  child: Text('Hard to Easy'),
+                                ),
+                                const PopupMenuItem(
+                                  value: 'None',
+                                  child: Text('None (Reset)'),
+                                ),
+                              ],
+                              child: _buildFilterPill(
+                                context: context,
+                                label: _difficultySort ?? 'Difficulty',
+                                isActive: _difficultySort != null,
                               ),
-                            )
-                          : ListView.builder(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 20,
-                                vertical: 4,
+                            ),
+                            const SizedBox(width: 10),
+                            PopupMenuButton<String>(
+                              onSelected: (value) {
+                                setState(() {
+                                  if (value == 'Ascending' ||
+                                      value == 'Descending') {
+                                    _yearSort = value;
+                                  } else if (value == 'None') {
+                                    _yearSort = null;
+                                    _selectedYear = null;
+                                  } else {
+                                    _selectedYear = value;
+                                  }
+                                });
+                              },
+                              itemBuilder: (context) => [
+                                const PopupMenuItem(
+                                  value: 'Ascending',
+                                  child: Text('Sort: Oldest First (Ascending)'),
+                                ),
+                                const PopupMenuItem(
+                                  value: 'Descending',
+                                  child: Text(
+                                    'Sort: Newest First (Descending)',
+                                  ),
+                                ),
+                                const PopupMenuItem(
+                                  value: 'None',
+                                  child: Text('None (Reset)'),
+                                ),
+                                if (availableYears.isNotEmpty) ...[
+                                  const PopupMenuDivider(),
+                                  ...availableYears.map(
+                                    (yr) => PopupMenuItem(
+                                      value: yr,
+                                      child: Row(
+                                        children: [
+                                          const Icon(
+                                            Icons.calendar_today,
+                                            size: 16,
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Text(yr),
+                                          if (_selectedYear == yr) ...[
+                                            const Spacer(),
+                                            const Icon(
+                                              Icons.check,
+                                              size: 16,
+                                              color: Colors.green,
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                              child: _buildFilterPill(
+                                context: context,
+                                label: _selectedYear != null
+                                    ? 'Year: $_selectedYear'
+                                    : (_yearSort ?? 'Year'),
+                                isActive:
+                                    _selectedYear != null || _yearSort != null,
                               ),
-                              itemCount: filteredQuestions.length,
-                              itemBuilder: (context, i) {
-                                final question = filteredQuestions[i];
-                                final firstSource = question.pyqSources.isNotEmpty
-                                    ? question.pyqSources.first
-                                    : null;
+                            ),
+                          ],
+                        ),
+                      ),
+                      Expanded(
+                        child: filteredQuestions.isEmpty
+                            ? Center(
+                                child: Padding(
+                                  padding: const EdgeInsets.all(32.0),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Image.asset(
+                                        'assets/images/sad_raccoon.png',
+                                        height: 130,
+                                      ),
+                                      const SizedBox(height: 16),
+                                      Text(
+                                        'No questions match the selected filters.',
+                                        textAlign: TextAlign.center,
+                                        style: theme.textTheme.titleMedium
+                                            ?.copyWith(
+                                              color: theme.colorScheme.onSurface
+                                                  .withOpacity(0.6),
+                                            ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              )
+                            : ListView.builder(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 20,
+                                  vertical: 4,
+                                ),
+                                itemCount: filteredQuestions.length,
+                                itemBuilder: (context, i) {
+                                  final question = filteredQuestions[i];
+                                  final firstSource =
+                                      question.pyqSources.isNotEmpty
+                                      ? question.pyqSources.first
+                                      : null;
 
-                                String qNum = '';
-                                String examInfo = '';
-                                if (firstSource != null) {
-                                  qNum = firstSource.questionNumber.trim();
-                                  if (qNum.isNotEmpty) {
-                                    if (RegExp(r'^\d+$').hasMatch(qNum)) {
-                                      qNum = 'Q. $qNum';
-                                    } else if (!qNum.toLowerCase().startsWith(
-                                      'q',
-                                    )) {
-                                      qNum = 'Q. $qNum';
+                                  String qNum = '';
+                                  String examInfo = '';
+                                  if (firstSource != null) {
+                                    qNum = firstSource.questionNumber.trim();
+                                    if (qNum.isNotEmpty) {
+                                      if (RegExp(r'^\d+$').hasMatch(qNum)) {
+                                        qNum = 'Q. $qNum';
+                                      } else if (!qNum.toLowerCase().startsWith(
+                                        'q',
+                                      )) {
+                                        qNum = 'Q. $qNum';
+                                      }
+                                    }
+
+                                    if (firstSource.examType.isNotEmpty &&
+                                        firstSource.year.isNotEmpty) {
+                                      examInfo =
+                                          '${firstSource.examType} ${firstSource.year}';
+                                    } else if (firstSource.year.isNotEmpty) {
+                                      examInfo = firstSource.year;
+                                    } else if (firstSource
+                                        .examType
+                                        .isNotEmpty) {
+                                      examInfo = firstSource.examType;
                                     }
                                   }
 
-                                  if (firstSource.examType.isNotEmpty &&
-                                      firstSource.year.isNotEmpty) {
-                                    examInfo =
-                                        '${firstSource.examType} ${firstSource.year}';
-                                  } else if (firstSource.year.isNotEmpty) {
-                                    examInfo = firstSource.year;
-                                  } else if (firstSource.examType.isNotEmpty) {
-                                    examInfo = firstSource.examType;
-                                  }
-                                }
-
-                                return Padding(
-                                  padding: const EdgeInsets.only(bottom: 16),
-                                  child: InkWell(
-                                    onTap: () {
-                                      Navigator.pushNamed(
-                                        context,
-                                        '/question_detail',
-                                        arguments: {'questionId': question.id},
-                                      );
-                                    },
-                                    borderRadius: BorderRadius.circular(28),
-                                    child: Container(
-                                      padding: const EdgeInsets.all(20),
-                                      decoration: BoxDecoration(
-                                        color: theme.colorScheme.surface,
-                                        borderRadius: BorderRadius.circular(28),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: theme.colorScheme.primary
-                                                .withOpacity(0.05),
-                                            blurRadius: 15,
-                                            offset: const Offset(0, 8),
+                                  return Padding(
+                                    padding: const EdgeInsets.only(bottom: 16),
+                                    child: InkWell(
+                                      onTap: () {
+                                        Navigator.pushNamed(
+                                          context,
+                                          '/question_detail',
+                                          arguments: {
+                                            'questionId': question.id,
+                                          },
+                                        );
+                                      },
+                                      borderRadius: BorderRadius.circular(28),
+                                      child: Container(
+                                        padding: const EdgeInsets.all(20),
+                                        decoration: BoxDecoration(
+                                          color: theme.colorScheme.surface,
+                                          borderRadius: BorderRadius.circular(
+                                            28,
                                           ),
-                                        ],
-                                      ),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
-                                            children: [
-                                              Expanded(
-                                                child: Wrap(
-                                                  spacing: 8,
-                                                  runSpacing: 6,
-                                                  crossAxisAlignment:
-                                                      WrapCrossAlignment.center,
-                                                  children: [
-                                                    if (qNum.isNotEmpty)
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: theme.colorScheme.primary
+                                                  .withOpacity(0.05),
+                                              blurRadius: 15,
+                                              offset: const Offset(0, 8),
+                                            ),
+                                          ],
+                                        ),
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Row(
+                                              children: [
+                                                Expanded(
+                                                  child: Wrap(
+                                                    spacing: 8,
+                                                    runSpacing: 6,
+                                                    crossAxisAlignment:
+                                                        WrapCrossAlignment
+                                                            .center,
+                                                    children: [
+                                                      if (qNum.isNotEmpty)
+                                                        _buildTag(
+                                                          context,
+                                                          qNum,
+                                                          theme
+                                                              .colorScheme
+                                                              .tertiary
+                                                              .withOpacity(0.2),
+                                                          theme
+                                                              .colorScheme
+                                                              .onSurface
+                                                              .withOpacity(0.6),
+                                                        ),
+                                                      if (examInfo.isNotEmpty)
+                                                        _buildTag(
+                                                          context,
+                                                          examInfo,
+                                                          theme
+                                                              .colorScheme
+                                                              .primary
+                                                              .withOpacity(0.1),
+                                                          theme
+                                                              .colorScheme
+                                                              .primary,
+                                                        ),
                                                       _buildTag(
                                                         context,
-                                                        qNum,
-                                                        theme.colorScheme.tertiary
-                                                            .withOpacity(0.2),
-                                                        theme
-                                                            .colorScheme
-                                                            .onSurface
-                                                            .withOpacity(0.6),
+                                                        question.difficulty
+                                                            .toUpperCase(),
+                                                        _getDifficultyColor(
+                                                          question.difficulty,
+                                                        ).withOpacity(0.1),
+                                                        _getDifficultyColor(
+                                                          question.difficulty,
+                                                        ),
                                                       ),
-                                                    if (examInfo.isNotEmpty)
-                                                      _buildTag(
-                                                        context,
-                                                        examInfo,
-                                                        theme.colorScheme.primary
-                                                            .withOpacity(0.1),
-                                                        theme.colorScheme.primary,
-                                                      ),
-                                                    _buildTag(
-                                                      context,
-                                                      question.difficulty
-                                                          .toUpperCase(),
-                                                      _getDifficultyColor(
-                                                        question.difficulty,
-                                                      ).withOpacity(0.1),
-                                                      _getDifficultyColor(
-                                                        question.difficulty,
-                                                      ),
-                                                    ),
-                                                  ],
+                                                    ],
+                                                  ),
                                                 ),
-                                              ),
-                                              const SizedBox(width: 8),
-                                              Icon(
-                                                Icons.arrow_forward_ios_rounded,
-                                                size: 16,
-                                                color: theme.colorScheme.primary
-                                                    .withOpacity(0.3),
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 12),
-                                          Text(
-                                            question.questionText,
-                                            style: theme.textTheme.titleMedium
-                                                ?.copyWith(
-                                                  fontWeight: FontWeight.w600,
-                                                  height: 1.4,
+                                                const SizedBox(width: 8),
+                                                Icon(
+                                                  Icons
+                                                      .arrow_forward_ios_rounded,
+                                                  size: 16,
+                                                  color: theme
+                                                      .colorScheme
+                                                      .primary
+                                                      .withOpacity(0.3),
                                                 ),
-                                            maxLines: 3,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ],
+                                              ],
+                                            ),
+                                            const SizedBox(height: 12),
+                                            Text(
+                                              question.questionText,
+                                              style: theme.textTheme.titleMedium
+                                                  ?.copyWith(
+                                                    fontWeight: FontWeight.w600,
+                                                    height: 1.4,
+                                                  ),
+                                              maxLines: 3,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ],
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                );
-                              },
-                            ),
-                    ),
-                  ],
-                );
-              },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(child: Text('Error: $e')),
-            ),
-            if (isLoading)
-              const LoadingOverlay(message: 'Preparing your topic PDF... ✨'),
-          ],
+                                  );
+                                },
+                              ),
+                      ),
+                    ],
+                  );
+                },
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (e, _) => Center(child: Text('Error: $e')),
+              ),
+              if (isLoading)
+                const LoadingOverlay(message: 'Preparing your topic PDF... ✨'),
+            ],
+          ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _buildActionPill({
     required BuildContext context,

@@ -12,7 +12,8 @@ class SplashScreen extends ConsumerStatefulWidget {
   ConsumerState<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerProviderStateMixin {
+class _SplashScreenState extends ConsumerState<SplashScreen>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
@@ -26,13 +27,15 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPr
       duration: const Duration(milliseconds: 1200),
     );
 
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeIn),
-    );
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeIn));
 
-    _scaleAnimation = Tween<double>(begin: 0.85, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOutBack),
-    );
+    _scaleAnimation = Tween<double>(
+      begin: 0.85,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutBack));
 
     _controller.forward();
 
@@ -83,16 +86,36 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPr
             final batch = student['batch']?.toString() ?? '';
             final section = student['section']?.toString() ?? '';
 
-            final branchId = await studentService.getBranchIdFromSection(section);
+            final branchId = await studentService.getBranchIdFromSection(
+              section,
+            );
             final semester = _getSemesterFromBatch(batch);
 
             if (mounted) {
               Navigator.pushReplacementNamed(
                 context,
                 '/subjects',
+                arguments: {'branchId': branchId, 'semester': semester},
+              );
+            }
+            return;
+          }
+        } else {
+          // Non-KIIT user: Check SharedPreferences for previously saved branch & semester
+          final prefs = ref.read(sharedPrefsProvider);
+          final savedBranchId = prefs.getString('selected_branch_id');
+          final savedSemester = prefs.getInt('selected_semester');
+
+          if (savedBranchId != null &&
+              savedBranchId.isNotEmpty &&
+              savedSemester != null) {
+            if (mounted) {
+              Navigator.pushReplacementNamed(
+                context,
+                '/subjects',
                 arguments: {
-                  'branchId': branchId,
-                  'semester': semester,
+                  'branchId': savedBranchId,
+                  'semester': savedSemester,
                 },
               );
             }
@@ -109,8 +132,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPr
       }
     });
   }
-
-
 
   int _getSemesterFromBatch(String batch) {
     final match = RegExp(r'\d+').firstMatch(batch);
@@ -129,7 +150,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPr
     }
   }
 
-
   @override
   void dispose() {
     _controller.dispose();
@@ -139,10 +159,12 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPr
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     // Background color: Use a warm cream that blends perfectly with the logo
     // If dark mode is active, use the dark background for a comfortable transition
-    final backgroundColor = isDark ? const Color(0xFF1E110A) : const Color(0xFFFAF4EA);
+    final backgroundColor = isDark
+        ? const Color(0xFF1E110A)
+        : const Color(0xFFFAF4EA);
 
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -191,7 +213,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPr
                   fontSize: 36,
                   fontWeight: FontWeight.w900,
                   letterSpacing: 2.0,
-                  color: isDark ? const Color(0xFFFBF8F5) : const Color(0xFF3D2F27),
+                  color: isDark
+                      ? const Color(0xFFFBF8F5)
+                      : const Color(0xFF3D2F27),
                 ),
               ),
               const SizedBox(height: 8),
@@ -202,7 +226,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPr
                   fontSize: 12,
                   fontWeight: FontWeight.w800,
                   letterSpacing: 3.0,
-                  color: isDark ? const Color(0xFFBCA99C) : const Color(0xFF7A6456),
+                  color: isDark
+                      ? const Color(0xFFBCA99C)
+                      : const Color(0xFF7A6456),
                 ),
               ),
             ],

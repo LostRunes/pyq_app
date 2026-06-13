@@ -13,13 +13,15 @@ class SkulkDbService {
     int? semester,
     String? searchQuery,
     String? filterType, // 'all', 'mine', 'unanswered', 'solved', 'hot'
-    String? tagFilter,  // single tag to filter by
+    String? tagFilter, // single tag to filter by
     int limit = 20,
     int offset = 0,
   }) async {
     dynamic query = _client
         .from('doubt_posts')
-        .select('*, user_profiles(username, display_name, avatar_url, reputation)');
+        .select(
+          '*, user_profiles(username, display_name, avatar_url, reputation)',
+        );
 
     // 1. Text Search Filter (title or body ilike)
     if (searchQuery != null && searchQuery.trim().isNotEmpty) {
@@ -92,7 +94,9 @@ class SkulkDbService {
   }
 
   /// Fetches notifications for the current user, latest first.
-  Future<List<Map<String, dynamic>>> fetchNotifications({int limit = 50}) async {
+  Future<List<Map<String, dynamic>>> fetchNotifications({
+    int limit = 50,
+  }) async {
     final userId = _client.auth.currentUser?.id;
     if (userId == null) return [];
 
@@ -132,7 +136,9 @@ class SkulkDbService {
   Future<Map<String, dynamic>?> fetchDoubtDetail(String doubtId) async {
     final res = await _client
         .from('doubt_posts')
-        .select('*, user_profiles(username, display_name, avatar_url, reputation)')
+        .select(
+          '*, user_profiles(username, display_name, avatar_url, reputation)',
+        )
         .eq('id', doubtId)
         .maybeSingle();
     return res;
@@ -157,30 +163,57 @@ class SkulkDbService {
     List<String> imageUrls = const [],
   }) async {
     final userId = _client.auth.currentUser?.id;
-    if (userId == null) throw Exception('User must be logged in to post doubts.');
+    if (userId == null)
+      throw Exception('User must be logged in to post doubts.');
 
-    final res = await _client.from('doubt_posts').insert({
-      'user_id': userId,
-      'title': title,
-      'body': body,
-      'subject_id': subjectId,
-      'tags': tags,
-      'image_urls': imageUrls,
-      'is_solved': false,
-      'answers_count': 0,
-      'comments_count': 0,
-      'upvotes_count': 0,
-      'views_count': 0,
-    }).select().single();
+    final res = await _client
+        .from('doubt_posts')
+        .insert({
+          'user_id': userId,
+          'title': title,
+          'body': body,
+          'subject_id': subjectId,
+          'tags': tags,
+          'image_urls': imageUrls,
+          'is_solved': false,
+          'answers_count': 0,
+          'comments_count': 0,
+          'upvotes_count': 0,
+          'views_count': 0,
+        })
+        .select()
+        .single();
 
     return res;
   }
 
   /// Marks a doubt as solved or unsolved
   Future<void> setDoubtSolved(String doubtId, bool isSolved) async {
-    await _client.from('doubt_posts').update({
-      'is_solved': isSolved,
-    }).eq('id', doubtId);
+    await _client
+        .from('doubt_posts')
+        .update({'is_solved': isSolved})
+        .eq('id', doubtId);
+  }
+
+  /// Edits an existing doubt
+  Future<Map<String, dynamic>> editDoubt({
+    required String doubtId,
+    required String title,
+    required String body,
+    required List<String> tags,
+  }) async {
+    final res = await _client
+        .from('doubt_posts')
+        .update({'title': title, 'body': body, 'tags': tags})
+        .eq('id', doubtId)
+        .select()
+        .single();
+    return res;
+  }
+
+  /// Deletes a doubt post
+  Future<void> deleteDoubt(String doubtId) async {
+    await _client.from('doubt_posts').delete().eq('id', doubtId);
   }
 
   // ----------------------------------------------------
@@ -191,7 +224,9 @@ class SkulkDbService {
   Future<List<Map<String, dynamic>>> fetchSolutions(String postId) async {
     final res = await _client
         .from('answers')
-        .select('*, user_profiles(username, display_name, avatar_url, reputation)')
+        .select(
+          '*, user_profiles(username, display_name, avatar_url, reputation)',
+        )
         .eq('post_id', postId)
         .order('is_accepted', ascending: false) // Accepted solution on top
         .order('created_at', ascending: false);
@@ -205,23 +240,35 @@ class SkulkDbService {
     List<String> imageUrls = const [],
   }) async {
     final userId = _client.auth.currentUser?.id;
-    if (userId == null) throw Exception('User must be logged in to solve doubts.');
+    if (userId == null)
+      throw Exception('User must be logged in to solve doubts.');
 
     // 1. Insert answer
-    final res = await _client.from('answers').insert({
-      'post_id': postId,
-      'user_id': userId,
-      'body': body,
-      'image_urls': imageUrls,
-      'upvotes_count': 0,
-      'is_best': false,
-      'is_accepted': false,
-    }).select().single();
+    final res = await _client
+        .from('answers')
+        .insert({
+          'post_id': postId,
+          'user_id': userId,
+          'body': body,
+          'image_urls': imageUrls,
+          'upvotes_count': 0,
+          'is_best': false,
+          'is_accepted': false,
+        })
+        .select()
+        .single();
 
     // 2. Increment answers_count on doubt_posts
-    final doubt = await _client.from('doubt_posts').select('answers_count').eq('id', postId).single();
+    final doubt = await _client
+        .from('doubt_posts')
+        .select('answers_count')
+        .eq('id', postId)
+        .single();
     final count = (doubt['answers_count'] as int? ?? 0) + 1;
-    await _client.from('doubt_posts').update({'answers_count': count}).eq('id', postId);
+    await _client
+        .from('doubt_posts')
+        .update({'answers_count': count})
+        .eq('id', postId);
 
     return res;
   }
@@ -232,28 +279,51 @@ class SkulkDbService {
     await _client.from('answers').delete().eq('id', solutionId);
 
     // 2. Decrement answers_count on doubt_posts
-    final doubt = await _client.from('doubt_posts').select('answers_count').eq('id', postId).single();
+    final doubt = await _client
+        .from('doubt_posts')
+        .select('answers_count')
+        .eq('id', postId)
+        .single();
     final count = ((doubt['answers_count'] as int? ?? 1) - 1).clamp(0, 99999);
-    await _client.from('doubt_posts').update({'answers_count': count}).eq('id', postId);
+    await _client
+        .from('doubt_posts')
+        .update({'answers_count': count})
+        .eq('id', postId);
   }
 
   /// Edits a solution
-  Future<Map<String, dynamic>> editSolution(String solutionId, String body) async {
-    final res = await _client.from('answers').update({
-      'body': body,
-    }).eq('id', solutionId).select().single();
+  Future<Map<String, dynamic>> editSolution(
+    String solutionId,
+    String body,
+  ) async {
+    final res = await _client
+        .from('answers')
+        .update({'body': body})
+        .eq('id', solutionId)
+        .select()
+        .single();
     return res;
   }
 
   /// Toggles the accepted state of a solution and updates doubt post solved status
-  Future<void> toggleSolutionAccepted(String solutionId, String postId, bool accept) async {
+  Future<void> toggleSolutionAccepted(
+    String solutionId,
+    String postId,
+    bool accept,
+  ) async {
     // 1. Reset all solutions for this post to is_accepted = false
     if (accept) {
-      await _client.from('answers').update({'is_accepted': false}).eq('post_id', postId);
+      await _client
+          .from('answers')
+          .update({'is_accepted': false})
+          .eq('post_id', postId);
     }
 
     // 2. Update targeted solution
-    await _client.from('answers').update({'is_accepted': accept}).eq('id', solutionId);
+    await _client
+        .from('answers')
+        .update({'is_accepted': accept})
+        .eq('id', solutionId);
 
     // 3. Mark the doubt post as solved or unsolved accordingly
     await setDoubtSolved(postId, accept);
@@ -283,19 +353,82 @@ class SkulkDbService {
     if (userId == null) throw Exception('User must be logged in to comment.');
 
     // 1. Insert comment
-    final res = await _client.from('comments').insert({
-      'post_id': postId,
-      'answer_id': answerId,
-      'user_id': userId,
-      'body': body,
-    }).select().single();
+    final res = await _client
+        .from('comments')
+        .insert({
+          'post_id': postId,
+          'answer_id': answerId,
+          'user_id': userId,
+          'body': body,
+        })
+        .select()
+        .single();
 
     // 2. Increment comments_count on doubt_posts
-    final doubt = await _client.from('doubt_posts').select('comments_count').eq('id', postId).single();
+    final doubt = await _client
+        .from('doubt_posts')
+        .select('comments_count')
+        .eq('id', postId)
+        .single();
     final count = (doubt['comments_count'] as int? ?? 0) + 1;
-    await _client.from('doubt_posts').update({'comments_count': count}).eq('id', postId);
+    await _client
+        .from('doubt_posts')
+        .update({'comments_count': count})
+        .eq('id', postId);
 
     return res;
+  }
+
+  /// Edits an existing comment
+  Future<Map<String, dynamic>> editComment(
+    String commentId,
+    String body,
+  ) async {
+    final res = await _client
+        .from('comments')
+        .update({'body': body})
+        .eq('id', commentId)
+        .select()
+        .single();
+    return res;
+  }
+
+  /// Deletes a comment
+  Future<void> deleteComment(String commentId, String postId) async {
+    // 1. Delete comment
+    await _client.from('comments').delete().eq('id', commentId);
+
+    // 2. Decrement comments_count on doubt_posts
+    final doubt = await _client
+        .from('doubt_posts')
+        .select('comments_count')
+        .eq('id', postId)
+        .single();
+    final count = ((doubt['comments_count'] as int? ?? 1) - 1).clamp(0, 99999);
+    await _client
+        .from('doubt_posts')
+        .update({'comments_count': count})
+        .eq('id', postId);
+  }
+
+  /// Creates a content report
+  Future<void> createReport({
+    String? postId,
+    String? answerId,
+    String? commentId,
+    required String reason,
+  }) async {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null)
+      throw Exception('User must be logged in to report content.');
+
+    await _client.from('reports').insert({
+      'reporter_id': userId,
+      if (postId != null) 'post_id': postId,
+      if (answerId != null) 'answer_id': answerId,
+      if (commentId != null) 'comment_id': commentId,
+      'reason': reason,
+    });
   }
 
   // ----------------------------------------------------
@@ -331,9 +464,19 @@ class SkulkDbService {
     }
 
     // Update doubt_posts upvotes_count
-    final doubt = await _client.from('doubt_posts').select('upvotes_count').eq('id', doubtId).single();
-    final newCount = ((doubt['upvotes_count'] as int? ?? 0) + diff).clamp(0, 999999);
-    await _client.from('doubt_posts').update({'upvotes_count': newCount}).eq('id', doubtId);
+    final doubt = await _client
+        .from('doubt_posts')
+        .select('upvotes_count')
+        .eq('id', doubtId)
+        .single();
+    final newCount = ((doubt['upvotes_count'] as int? ?? 0) + diff).clamp(
+      0,
+      999999,
+    );
+    await _client
+        .from('doubt_posts')
+        .update({'upvotes_count': newCount})
+        .eq('id', doubtId);
 
     return newCount;
   }
@@ -367,9 +510,19 @@ class SkulkDbService {
     }
 
     // Update answers upvotes_count
-    final answer = await _client.from('answers').select('upvotes_count').eq('id', solutionId).single();
-    final newCount = ((answer['upvotes_count'] as int? ?? 0) + diff).clamp(0, 999999);
-    await _client.from('answers').update({'upvotes_count': newCount}).eq('id', solutionId);
+    final answer = await _client
+        .from('answers')
+        .select('upvotes_count')
+        .eq('id', solutionId)
+        .single();
+    final newCount = ((answer['upvotes_count'] as int? ?? 0) + diff).clamp(
+      0,
+      999999,
+    );
+    await _client
+        .from('answers')
+        .update({'upvotes_count': newCount})
+        .eq('id', solutionId);
 
     return newCount;
   }

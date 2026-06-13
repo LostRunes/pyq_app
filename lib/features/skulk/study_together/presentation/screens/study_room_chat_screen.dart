@@ -8,13 +8,11 @@ import '../widgets/room_message_bubble.dart';
 class StudyRoomChatScreen extends ConsumerStatefulWidget {
   final StudyRoom room;
 
-  const StudyRoomChatScreen({
-    super.key,
-    required this.room,
-  });
+  const StudyRoomChatScreen({super.key, required this.room});
 
   @override
-  ConsumerState<StudyRoomChatScreen> createState() => _StudyRoomChatScreenState();
+  ConsumerState<StudyRoomChatScreen> createState() =>
+      _StudyRoomChatScreenState();
 }
 
 class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen> {
@@ -38,7 +36,7 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen> {
   void _onScroll() {
     final messages = ref.read(roomChatProvider(widget.room.id));
     final chatNotifier = ref.read(roomChatProvider(widget.room.id).notifier);
-    
+
     // In reversed list, older messages are loaded when scrolled near top
     if (messages.length >= 12 &&
         _scrollController.position.pixels >=
@@ -53,7 +51,9 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen> {
 
     if (text.length > 2000) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Message too long (max 2000 characters).')),
+        const SnackBar(
+          content: Text('Message too long (max 2000 characters).'),
+        ),
       );
       return;
     }
@@ -62,8 +62,10 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen> {
     _messageController.clear();
 
     try {
-      await ref.read(roomChatProvider(widget.room.id).notifier).sendMessage(text);
-      
+      await ref
+          .read(roomChatProvider(widget.room.id).notifier)
+          .sendMessage(text);
+
       // Auto scroll to bottom when sending if in top-down layout
       final messages = ref.read(roomChatProvider(widget.room.id));
       if (messages.length < 12) {
@@ -79,9 +81,9 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to send: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to send: $e')));
       }
     } finally {
       if (mounted) {
@@ -98,7 +100,9 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen> {
     final chatNotifier = ref.read(roomChatProvider(widget.room.id).notifier);
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF141414) : const Color(0xFFF6F8FA),
+      backgroundColor: isDark
+          ? const Color(0xFF141414)
+          : const Color(0xFFF6F8FA),
       appBar: AppBar(
         backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
         elevation: 0.5,
@@ -186,32 +190,48 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen> {
                       ),
                     )
                   : (messages.length < 12
-                      ? ListView.builder(
-                          controller: _scrollController,
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                          reverse: false,
-                          itemCount: messages.length,
-                          itemBuilder: (context, index) {
-                            // Render oldest first from the top
-                            final oldestFirst = messages.reversed.toList();
-                            return RoomMessageBubble(message: oldestFirst[index]);
-                          },
-                        )
-                      : ListView.builder(
-                          controller: _scrollController,
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                          reverse: true,
-                          itemCount: messages.length + (chatNotifier.isLoadingMore ? 1 : 0),
-                          itemBuilder: (context, index) {
-                            if (index == messages.length) {
-                              return const Padding(
-                                padding: EdgeInsets.symmetric(vertical: 16),
-                                child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                        ? ListView.builder(
+                            controller: _scrollController,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                            reverse: false,
+                            itemCount: messages.length,
+                            itemBuilder: (context, index) {
+                              // Render oldest first from the top
+                              final oldestFirst = messages.reversed.toList();
+                              return RoomMessageBubble(
+                                message: oldestFirst[index],
                               );
-                            }
-                            return RoomMessageBubble(message: messages[index]);
-                          },
-                        )),
+                            },
+                          )
+                        : ListView.builder(
+                            controller: _scrollController,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                            reverse: true,
+                            itemCount:
+                                messages.length +
+                                (chatNotifier.isLoadingMore ? 1 : 0),
+                            itemBuilder: (context, index) {
+                              if (index == messages.length) {
+                                return const Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 16),
+                                  child: Center(
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  ),
+                                );
+                              }
+                              return RoomMessageBubble(
+                                message: messages[index],
+                              );
+                            },
+                          )),
             ),
 
             // Input composer
@@ -230,7 +250,9 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen> {
                   Expanded(
                     child: Container(
                       decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF282828) : const Color(0xFFF1F3F5),
+                        color: isDark
+                            ? const Color(0xFF282828)
+                            : const Color(0xFFF1F3F5),
                         borderRadius: BorderRadius.circular(24),
                       ),
                       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -243,9 +265,14 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen> {
                         onSubmitted: (_) => _sendMessage(),
                         decoration: InputDecoration(
                           hintText: 'Type academic thoughts...',
-                          hintStyle: GoogleFonts.outfit(color: Colors.grey, fontSize: 14),
+                          hintStyle: GoogleFonts.outfit(
+                            color: Colors.grey,
+                            fontSize: 14,
+                          ),
                           border: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 10,
+                          ),
                         ),
                       ),
                     ),

@@ -14,10 +14,10 @@ class BranchSubject {
   });
 
   factory BranchSubject.fromJson(Map<String, dynamic> json) => BranchSubject(
-        id: json['id'] as String,
-        branchId: json['branch_id'] as String,
-        subjectId: json['subject_id'] as String,
-        yearId: json['year_id'] as String,
-        semester: json['semester'] as int,
-      );
+    id: json['id'] as String,
+    branchId: json['branch_id'] as String,
+    subjectId: json['subject_id'] as String,
+    yearId: json['year_id'] as String,
+    semester: json['semester'] as int,
+  );
 }
