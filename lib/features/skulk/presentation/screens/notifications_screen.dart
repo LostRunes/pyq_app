@@ -6,10 +6,11 @@ import '../providers/skulk_providers.dart';
 // ---------------------------------------------------------------------------
 // Provider
 // ---------------------------------------------------------------------------
-final notificationsProvider = FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
-  final repo = ref.watch(skulkRepositoryProvider);
-  return repo.getNotifications();
-});
+final notificationsProvider =
+    FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
+      final repo = ref.watch(skulkRepositoryProvider);
+      return repo.getNotifications();
+    });
 
 // ---------------------------------------------------------------------------
 // Screen
@@ -23,7 +24,9 @@ class NotificationsScreen extends ConsumerWidget {
     final notifAsync = ref.watch(notificationsProvider);
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF141414) : const Color(0xFFF9F9F9),
+      backgroundColor: isDark
+          ? const Color(0xFF141414)
+          : const Color(0xFFF9F9F9),
       appBar: AppBar(
         backgroundColor: isDark ? const Color(0xFF141414) : Colors.white,
         elevation: 0,
@@ -59,8 +62,11 @@ class NotificationsScreen extends ConsumerWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.notifications_none_rounded,
-                      size: 60, color: isDark ? Colors.grey[800] : Colors.grey[300]),
+                  Icon(
+                    Icons.notifications_none_rounded,
+                    size: 60,
+                    color: isDark ? Colors.grey[800] : Colors.grey[300],
+                  ),
                   const SizedBox(height: 12),
                   Text(
                     'No notifications yet 🔔',
@@ -87,7 +93,8 @@ class NotificationsScreen extends ConsumerWidget {
           final earlier = <Map<String, dynamic>>[];
 
           for (final n in notifications) {
-            final dt = DateTime.tryParse(n['created_at']?.toString() ?? '') ?? now;
+            final dt =
+                DateTime.tryParse(n['created_at']?.toString() ?? '') ?? now;
             if (now.difference(dt).inHours < 24) {
               today.add(n);
             } else {
@@ -102,15 +109,27 @@ class NotificationsScreen extends ConsumerWidget {
               children: [
                 if (today.isNotEmpty) ...[
                   _sectionHeader('Today', isDark),
-                  ...today.map((n) => _NotificationTile(n: n, isDark: isDark, onTap: () {
-                    _navigateToDoubt(context, n);
-                  })),
+                  ...today.map(
+                    (n) => _NotificationTile(
+                      n: n,
+                      isDark: isDark,
+                      onTap: () {
+                        _navigateToDoubt(context, n);
+                      },
+                    ),
+                  ),
                 ],
                 if (earlier.isNotEmpty) ...[
                   _sectionHeader('Earlier', isDark),
-                  ...earlier.map((n) => _NotificationTile(n: n, isDark: isDark, onTap: () {
-                    _navigateToDoubt(context, n);
-                  })),
+                  ...earlier.map(
+                    (n) => _NotificationTile(
+                      n: n,
+                      isDark: isDark,
+                      onTap: () {
+                        _navigateToDoubt(context, n);
+                      },
+                    ),
+                  ),
                 ],
               ],
             ),
@@ -148,14 +167,19 @@ class _NotificationTile extends StatelessWidget {
   final bool isDark;
   final VoidCallback onTap;
 
-  const _NotificationTile({required this.n, required this.isDark, required this.onTap});
+  const _NotificationTile({
+    required this.n,
+    required this.isDark,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
     final isRead = n['read'] as bool? ?? true;
     final type = n['type']?.toString() ?? '';
     final message = n['message']?.toString() ?? '';
-    final dt = DateTime.tryParse(n['created_at']?.toString() ?? '') ?? DateTime.now();
+    final dt =
+        DateTime.tryParse(n['created_at']?.toString() ?? '') ?? DateTime.now();
 
     IconData icon;
     Color iconColor;
@@ -186,8 +210,8 @@ class _NotificationTile extends StatelessWidget {
           color: isRead
               ? (isDark ? const Color(0xFF1C1C1C) : Colors.white)
               : (isDark
-                  ? Theme.of(context).colorScheme.primary.withOpacity(0.08)
-                  : Theme.of(context).colorScheme.primary.withOpacity(0.05)),
+                    ? Theme.of(context).colorScheme.primary.withOpacity(0.08)
+                    : Theme.of(context).colorScheme.primary.withOpacity(0.05)),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: isRead

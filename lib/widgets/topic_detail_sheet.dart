@@ -15,7 +15,6 @@ class TopicDetailSheet extends ConsumerWidget {
     required this.importanceProgress,
   });
 
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
@@ -63,7 +62,9 @@ class TopicDetailSheet extends ConsumerWidget {
                     child: CircularProgressIndicator(
                       value: importanceProgress,
                       strokeWidth: 10,
-                      backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
+                      backgroundColor: theme.colorScheme.primary.withOpacity(
+                        0.1,
+                      ),
                       valueColor: AlwaysStoppedAnimation<Color>(
                         _getImportanceColor(importanceProgress, theme),
                       ),
@@ -82,7 +83,7 @@ class TopicDetailSheet extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 32),
-          
+
           // Action Buttons
           ElevatedButton.icon(
             onPressed: () {
@@ -90,26 +91,31 @@ class TopicDetailSheet extends ConsumerWidget {
               Navigator.pushNamed(
                 context,
                 '/questions',
-                arguments: {
-                  'topicId': topic.id,
-                  'topicName': topic.name,
-                },
+                arguments: {'topicId': topic.id, 'topicName': topic.name},
               );
             },
             icon: const Icon(Icons.description_rounded),
             label: const Text('See PYQs of this topic'),
             style: ElevatedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 18),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
             ),
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           resourcesAsync.when(
             data: (resources) {
-              final ytResource = resources.where((r) => r.resourceType.toLowerCase().contains('youtube') || r.resourceType.toLowerCase().contains('yt')).firstOrNull;
-              
+              final ytResource = resources
+                  .where(
+                    (r) =>
+                        r.resourceType.toLowerCase().contains('youtube') ||
+                        r.resourceType.toLowerCase().contains('yt'),
+                  )
+                  .firstOrNull;
+
               return ElevatedButton.icon(
                 onPressed: ytResource != null
                     ? () {
@@ -125,19 +131,25 @@ class TopicDetailSheet extends ConsumerWidget {
                       }
                     : null,
                 icon: const Icon(Icons.play_circle_fill_rounded),
-                label: Text(ytResource != null ? 'YT Resource: ${ytResource.title}' : 'No YT Resource Available'),
+                label: Text(
+                  ytResource != null
+                      ? 'YT Resource: ${ytResource.title}'
+                      : 'No YT Resource Available',
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: theme.colorScheme.secondary,
                   foregroundColor: theme.colorScheme.onSecondary,
                   padding: const EdgeInsets.symmetric(vertical: 18),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
                 ),
               );
             },
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (e, _) => Text('Error loading resources: $e'),
           ),
-          
+
           const SizedBox(height: 16),
         ],
       ),

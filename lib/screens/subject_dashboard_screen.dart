@@ -318,8 +318,10 @@ class _DriveExplorerTabState extends ConsumerState<_DriveExplorerTab> {
         data: (data) {
           final List<dynamic> sortedData = List<dynamic>.from(data)
             ..sort((a, b) {
-              final aFolder = a["mimeType"] == "application/vnd.google-apps.folder";
-              final bFolder = b["mimeType"] == "application/vnd.google-apps.folder";
+              final aFolder =
+                  a["mimeType"] == "application/vnd.google-apps.folder";
+              final bFolder =
+                  b["mimeType"] == "application/vnd.google-apps.folder";
               if (aFolder == bFolder) return 0;
               return aFolder ? -1 : 1;
             });
@@ -361,7 +363,9 @@ class _DriveExplorerTabState extends ConsumerState<_DriveExplorerTab> {
               return Card(
                 elevation: 0,
                 margin: const EdgeInsets.only(bottom: 12),
-                color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                color: theme.colorScheme.surfaceContainerHighest.withOpacity(
+                  0.3,
+                ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20),
                   side: BorderSide(
@@ -376,13 +380,14 @@ class _DriveExplorerTabState extends ConsumerState<_DriveExplorerTab> {
                   leading: Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: (isFolder ? Colors.amber : Colors.blue).withOpacity(
-                        0.1,
-                      ),
+                      color: (isFolder ? Colors.amber : Colors.blue)
+                          .withOpacity(0.1),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
-                      isFolder ? Icons.folder_rounded : Icons.description_rounded,
+                      isFolder
+                          ? Icons.folder_rounded
+                          : Icons.description_rounded,
                       color: isFolder ? Colors.amber[700] : Colors.blue[700],
                       size: 24,
                     ),
@@ -680,7 +685,9 @@ class _TopicTabState extends ConsumerState<_TopicTab> {
             : () async {
                 ref.read(pdfLoadingProvider.notifier).setLoading(true);
                 try {
-                  final data = await ref.read(subjectPdfDataProvider(subjectId).future);
+                  final data = await ref.read(
+                    subjectPdfDataProvider(subjectId).future,
+                  );
                   final pdfService = PdfService();
                   final pdfBytes = await pdfService.generateSubjectPdf(
                     subjectName,
@@ -800,7 +807,11 @@ class _ProgressTab extends ConsumerWidget {
                 final isDone = progress[topic.id] ?? false;
 
                 return Container(
-                  margin: const EdgeInsets.only(bottom: 12, left: 20, right: 20),
+                  margin: const EdgeInsets.only(
+                    bottom: 12,
+                    left: 20,
+                    right: 20,
+                  ),
                   decoration: BoxDecoration(
                     color: theme.colorScheme.surface,
                     borderRadius: BorderRadius.circular(20),
@@ -816,9 +827,7 @@ class _ProgressTab extends ConsumerWidget {
                       topic.name,
                       style: GoogleFonts.outfit(
                         fontWeight: FontWeight.w700,
-                        decoration: isDone
-                            ? TextDecoration.lineThrough
-                            : null,
+                        decoration: isDone ? TextDecoration.lineThrough : null,
                         color: isDone
                             ? theme.colorScheme.onSurface.withOpacity(0.5)
                             : null,

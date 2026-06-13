@@ -38,8 +38,14 @@ Future<void> signOutCompletely() async {
   } catch (_) {
     // Ignore Supabase sign-out errors
   }
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('selected_branch_id');
+    await prefs.remove('selected_semester');
+  } catch (_) {
+    // Ignore SharedPreferences errors
+  }
 }
-
 
 // Theme Mode Provider using the modern Notifier
 class ThemeModeNotifier extends Notifier<ThemeMode> {
@@ -51,7 +57,9 @@ class ThemeModeNotifier extends Notifier<ThemeMode> {
   }
 }
 
-final themeModeProvider = NotifierProvider<ThemeModeNotifier, ThemeMode>(ThemeModeNotifier.new);
+final themeModeProvider = NotifierProvider<ThemeModeNotifier, ThemeMode>(
+  ThemeModeNotifier.new,
+);
 
 final branchesProvider = FutureProvider<List<Branch>>((ref) {
   final service = ref.watch(supabaseServiceProvider);
@@ -63,47 +71,73 @@ final yearsProvider = FutureProvider<List<Year>>((ref) {
   return service.getYears();
 });
 
-final subjectsProvider = FutureProvider.family<List<Subject>, ({String branchId, int semester})>((ref, arg) {
-  final service = ref.watch(supabaseServiceProvider);
-  return service.getSubjectsBySemester(branchId: arg.branchId, semester: arg.semester);
-});
+final subjectsProvider =
+    FutureProvider.family<List<Subject>, ({String branchId, int semester})>((
+      ref,
+      arg,
+    ) {
+      final service = ref.watch(supabaseServiceProvider);
+      return service.getSubjectsBySemester(
+        branchId: arg.branchId,
+        semester: arg.semester,
+      );
+    });
 
 final allSubjectsProvider = FutureProvider<List<Subject>>((ref) {
   final service = ref.watch(supabaseServiceProvider);
   return service.getAllSubjects();
 });
 
-final topicsProvider = FutureProvider.family<List<Topic>, String>((ref, subjectId) {
+final topicsProvider = FutureProvider.family<List<Topic>, String>((
+  ref,
+  subjectId,
+) {
   final service = ref.watch(supabaseServiceProvider);
   return service.getTopics(subjectId);
 });
 
-final dashboardTopicsProvider = FutureProvider.family<List<Topic>, String>((ref, subjectId) {
+final dashboardTopicsProvider = FutureProvider.family<List<Topic>, String>((
+  ref,
+  subjectId,
+) {
   final service = ref.watch(supabaseServiceProvider);
   return service.getTopicsWithImportance(subjectId);
 });
 
-final topicResourcesProvider = FutureProvider.family<List<TopicResource>, String>((ref, topicId) {
-  final service = ref.watch(supabaseServiceProvider);
-  return service.getTopicResources(topicId);
-});
+final topicResourcesProvider =
+    FutureProvider.family<List<TopicResource>, String>((ref, topicId) {
+      final service = ref.watch(supabaseServiceProvider);
+      return service.getTopicResources(topicId);
+    });
 
-final questionsProvider = FutureProvider.family<List<Question>, String>((ref, topicId) {
+final questionsProvider = FutureProvider.family<List<Question>, String>((
+  ref,
+  topicId,
+) {
   final service = ref.watch(supabaseServiceProvider);
   return service.getQuestionsByTopic(topicId);
 });
 
-final questionDetailProvider = FutureProvider.family<Question, String>((ref, questionId) {
+final questionDetailProvider = FutureProvider.family<Question, String>((
+  ref,
+  questionId,
+) {
   final service = ref.watch(supabaseServiceProvider);
   return service.getQuestionDetail(questionId);
 });
 
-final pyqSourcesProvider = FutureProvider.family<List<PyqSource>, String>((ref, questionId) {
+final pyqSourcesProvider = FutureProvider.family<List<PyqSource>, String>((
+  ref,
+  questionId,
+) {
   final service = ref.watch(supabaseServiceProvider);
   return service.getPyqSourcesForQuestion(questionId);
 });
 
-final imagesProvider = FutureProvider.family<List<ImageItem>, String>((ref, questionId) {
+final imagesProvider = FutureProvider.family<List<ImageItem>, String>((
+  ref,
+  questionId,
+) {
   final service = ref.watch(supabaseServiceProvider);
   return service.getImagesForQuestion(questionId);
 });
@@ -116,7 +150,9 @@ class PdfLoadingNotifier extends Notifier<bool> {
   void setLoading(bool value) => state = value;
 }
 
-final pdfLoadingProvider = NotifierProvider<PdfLoadingNotifier, bool>(PdfLoadingNotifier.new);
+final pdfLoadingProvider = NotifierProvider<PdfLoadingNotifier, bool>(
+  PdfLoadingNotifier.new,
+);
 
 // Progress Tracking Provider
 class ProgressNotifier extends Notifier<Map<String, bool>> {
@@ -129,7 +165,10 @@ class ProgressNotifier extends Notifier<Map<String, bool>> {
     if (data != null) {
       try {
         final Map<String, dynamic> decoded = Map<String, dynamic>.from(
-          Uri.decodeComponent(data).split(',').fold<Map<String, dynamic>>({}, (prev, element) {
+          Uri.decodeComponent(data).split(',').fold<Map<String, dynamic>>({}, (
+            prev,
+            element,
+          ) {
             final parts = element.split(':');
             if (parts.length == 2) {
               prev[parts[0]] = parts[1] == 'true';
@@ -150,7 +189,7 @@ class ProgressNotifier extends Notifier<Map<String, bool>> {
     final newState = Map<String, bool>.from(state);
     newState[topicId] = !(state[topicId] ?? false);
     state = newState;
-    
+
     final encoded = state.entries.map((e) => '${e.key}:${e.value}').join(',');
     await prefs.setString(_key, Uri.encodeComponent(encoded));
   }
@@ -176,7 +215,10 @@ class SelectedBranchIdNotifier extends Notifier<String> {
   }
 }
 
-final selectedBranchIdProvider = NotifierProvider<SelectedBranchIdNotifier, String>(SelectedBranchIdNotifier.new);
+final selectedBranchIdProvider =
+    NotifierProvider<SelectedBranchIdNotifier, String>(
+      SelectedBranchIdNotifier.new,
+    );
 
 class SelectedSemesterNotifier extends Notifier<int> {
   @override
@@ -192,21 +234,41 @@ class SelectedSemesterNotifier extends Notifier<int> {
   }
 }
 
-final selectedSemesterProvider = NotifierProvider<SelectedSemesterNotifier, int>(SelectedSemesterNotifier.new);
+final selectedSemesterProvider =
+    NotifierProvider<SelectedSemesterNotifier, int>(
+      SelectedSemesterNotifier.new,
+    );
 
-final driveFolderContentsProvider = FutureProvider.family<List<dynamic>, String>((ref, folderId) {
-  final service = ref.watch(driveServiceProvider);
-  return service.fetchFolderContents(folderId);
-});
+final driveFolderContentsProvider =
+    FutureProvider.family<List<dynamic>, String>((ref, folderId) {
+      final service = ref.watch(driveServiceProvider);
+      return service.fetchFolderContents(folderId);
+    });
 
-final subjectPdfDataProvider = FutureProvider.family<List<TopicWithQuestions>, String>((ref, subjectId) {
-  final service = ref.watch(supabaseServiceProvider);
-  return service.getFullSubjectData(subjectId);
-});
+final subjectPdfDataProvider =
+    FutureProvider.family<List<TopicWithQuestions>, String>((ref, subjectId) {
+      final service = ref.watch(supabaseServiceProvider);
+      return service.getFullSubjectData(subjectId);
+    });
 
-final topicPdfDataProvider = FutureProvider.family<List<QuestionFull>, String>((ref, topicId) {
+final topicPdfDataProvider = FutureProvider.family<List<QuestionFull>, String>((
+  ref,
+  topicId,
+) {
   final service = ref.watch(supabaseServiceProvider);
   return service.getQuestionsWithDetails(topicId);
 });
 
-final progressProvider = NotifierProvider<ProgressNotifier, Map<String, bool>>(ProgressNotifier.new);
+final progressProvider = NotifierProvider<ProgressNotifier, Map<String, bool>>(
+  ProgressNotifier.new,
+);
+
+final userProfileProvider = FutureProvider<Map<String, dynamic>?>((ref) async {
+  final user = Supabase.instance.client.auth.currentUser;
+  if (user == null) return null;
+  return await Supabase.instance.client
+      .from('user_profiles')
+      .select()
+      .eq('id', user.id)
+      .maybeSingle();
+});

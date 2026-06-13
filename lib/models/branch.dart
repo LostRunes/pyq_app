@@ -4,8 +4,6 @@ class Branch {
 
   Branch({required this.id, required this.name});
 
-  factory Branch.fromJson(Map<String, dynamic> json) => Branch(
-        id: json['id'] as String,
-        name: json['name'] as String,
-      );
+  factory Branch.fromJson(Map<String, dynamic> json) =>
+      Branch(id: json['id'] as String, name: json['name'] as String);
 }

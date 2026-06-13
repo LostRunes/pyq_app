@@ -1,13 +1,16 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 class DriveService {
   String get apiKey => dotenv.env['DRIVE_API_KEY'] ?? '';
 
-  Future<List<dynamic>> fetchFolderContents(
-      String folderId) async {
+  // The central upload folder ID specified by the user
+  static const String centralUploadFolderId =
+      "1_hu36qpVvi-7HZJEJi3JKF597qZepRiA";
 
+  Future<List<dynamic>> fetchFolderContents(String folderId) async {
     final url =
         "https://www.googleapis.com/drive/v3/files"
         "?q='$folderId'+in+parents+and+trashed=false"
@@ -21,17 +24,108 @@ class DriveService {
     return data["files"] ?? [];
   }
 
+  Future<String?> findFolderByName(
+    String name,
+    String parentFolderId,
+    String accessToken,
+  ) async {
+    final nameEscaped = name.replaceAll("'", "\\'");
+    final url =
+        "https://www.googleapis.com/drive/v3/files"
+        "?q=name='$nameEscaped'+and+mimeType='application/vnd.google-apps.folder'+and+'$parentFolderId'+in+parents+and+trashed=false"
+        "&fields=files(id)";
+
+    final response = await http.get(
+      Uri.parse(url),
+      headers: {"Authorization": "Bearer $accessToken"},
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      final files = data['files'] as List<dynamic>?;
+      if (files != null && files.isNotEmpty) {
+        return files.first['id'] as String?;
+      }
+    }
+    return null;
+  }
+
+  Future<String> createFolder(
+    String name,
+    String parentFolderId,
+    String accessToken,
+  ) async {
+    final url = "https://www.googleapis.com/drive/v3/files";
+    final response = await http.post(
+      Uri.parse(url),
+      headers: {
+        "Authorization": "Bearer $accessToken",
+        "Content-Type": "application/json; charset=UTF-8",
+      },
+      body: jsonEncode({
+        "name": name,
+        "mimeType": "application/vnd.google-apps.folder",
+        "parents": [parentFolderId],
+      }),
+    );
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final data = jsonDecode(response.body);
+      return data['id'] as String;
+    } else {
+      throw Exception(
+        "Failed to create folder in Google Drive: ${response.statusCode} - ${response.body}",
+      );
+    }
+  }
+
   Future<String?> uploadFile({
     required String filename,
     required String mimeType,
     required List<int> fileBytes,
-    required String parentFolderId,
+    required String subjectName,
   }) async {
-    final url = "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&key=$apiKey";
-    
+    final googleSignIn = GoogleSignIn(
+      serverClientId: dotenv.env['GOOGLE_WEB_CLIENT_ID'],
+      scopes: [
+        'email',
+        'profile',
+        'https://www.googleapis.com/auth/drive.file',
+      ],
+    );
+
+    final currentUser =
+        googleSignIn.currentUser ?? await googleSignIn.signInSilently();
+    if (currentUser == null) {
+      throw Exception("User is not signed in to Google.");
+    }
+    final auth = await currentUser.authentication;
+    final accessToken = auth.accessToken;
+    if (accessToken == null) {
+      throw Exception("Failed to retrieve Google Access Token.");
+    }
+
+    // Find or create the subfolder named after the subject inside the central upload folder
+    String? subjectFolderId = await findFolderByName(
+      subjectName,
+      centralUploadFolderId,
+      accessToken,
+    );
+    if (subjectFolderId == null) {
+      subjectFolderId = await createFolder(
+        subjectName,
+        centralUploadFolderId,
+        accessToken,
+      );
+    }
+
+    final url =
+        "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart";
+
     final boundary = "upload_boundary_${DateTime.now().millisecondsSinceEpoch}";
-    final header = "--$boundary\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n"
-        '{"name": "$filename", "parents": ["$parentFolderId"]}\r\n\r\n'
+    final header =
+        "--$boundary\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n"
+        '{"name": "$filename", "parents": ["$subjectFolderId"]}\r\n\r\n'
         "--$boundary\r\nContent-Type: $mimeType\r\n\r\n";
     final footer = "\r\n--$boundary--\r\n";
 
@@ -43,6 +137,7 @@ class DriveService {
     final response = await http.post(
       Uri.parse(url),
       headers: {
+        "Authorization": "Bearer $accessToken",
         "Content-Type": "multipart/related; boundary=$boundary",
         "Content-Length": bodyBytes.length.toString(),
       },
@@ -53,7 +148,9 @@ class DriveService {
       final data = jsonDecode(response.body);
       return data['id'] as String?;
     } else {
-      throw Exception("Failed to upload to Google Drive: ${response.statusCode} - ${response.body}");
+      throw Exception(
+        "Failed to upload to Google Drive: ${response.statusCode} - ${response.body}",
+      );
     }
   }
 }

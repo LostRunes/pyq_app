@@ -64,9 +64,7 @@ class SupabaseService {
     }
   }
 
-
   Future<List<Branch>> getBranches() async {
-
     final res = await supabase.from('branches').select();
     return (res as List).map((e) => Branch.fromJson(e)).toList();
   }
@@ -76,10 +74,15 @@ class SupabaseService {
     return (res as List).map((e) => Year.fromJson(e)).toList();
   }
 
-  Future<List<Subject>> getSubjectsBySemester({required String branchId, required int semester}) async {
+  Future<List<Subject>> getSubjectsBySemester({
+    required String branchId,
+    required int semester,
+  }) async {
     final res = await supabase
         .from('branch_subjects')
-        .select('subjects(id, name, code, pyq_drive_link, notes_drive_link, course_outcome_link, priority, subject_credit, subject_type)')
+        .select(
+          'subjects(id, name, code, pyq_drive_link, notes_drive_link, course_outcome_link, priority, subject_credit, subject_type)',
+        )
         .eq('branch_id', branchId)
         .eq('semester', semester);
     final subjects = (res as List)
@@ -96,7 +99,11 @@ class SupabaseService {
 
   Future<List<Subject>> getAllSubjects() async {
     try {
-      final res = await supabase.from('subjects').select('id, name, code, pyq_drive_link, notes_drive_link, course_outcome_link, priority, subject_credit, subject_type');
+      final res = await supabase
+          .from('subjects')
+          .select(
+            'id, name, code, pyq_drive_link, notes_drive_link, course_outcome_link, priority, subject_credit, subject_type',
+          );
       final subjects = (res as List).map((e) => Subject.fromJson(e)).toList();
       subjects.sort((a, b) {
         if (a.priority == null && b.priority == null) return 0;
@@ -112,7 +119,10 @@ class SupabaseService {
   }
 
   Future<List<Topic>> getTopics(String subjectId) async {
-    final res = await supabase.from('topics').select().eq('subject_id', subjectId);
+    final res = await supabase
+        .from('topics')
+        .select()
+        .eq('subject_id', subjectId);
     return (res as List).map((e) => Topic.fromJson(e)).toList();
   }
 
@@ -166,7 +176,7 @@ class SupabaseService {
 
       // Formula: score = (questions * 2) + (unique_years * 3) + (total_pyqs)
       double score = (totalQuestions * 2.0) + (uniqueYears * 3.0) + totalPyqs;
-      
+
       // Normalize or cap if needed, for now we'll pass the raw score
       // We can normalize later in the UI relative to the max score in the list
       topic.importanceScore = score;
@@ -186,15 +196,19 @@ class SupabaseService {
   Future<List<Question>> getQuestionsByTopic(String topicId) async {
     final res = await supabase
         .from('question_topics')
-        .select('questions(id, question_text, difficulty, question_pyq_map(pyq_sources(id, year, exam_type, season, question_number)))')
+        .select(
+          'questions(id, question_text, difficulty, question_pyq_map(pyq_sources(id, year, exam_type, season, question_number)))',
+        )
         .eq('topic_id', topicId);
-    return (res as List)
-        .map((e) => Question.fromJson(e['questions']))
-        .toList();
+    return (res as List).map((e) => Question.fromJson(e['questions'])).toList();
   }
 
   Future<Question> getQuestionDetail(String questionId) async {
-    final res = await supabase.from('questions').select().eq('id', questionId).single();
+    final res = await supabase
+        .from('questions')
+        .select()
+        .eq('id', questionId)
+        .single();
     return Question.fromJson(res);
   }
 
@@ -222,9 +236,7 @@ class SupabaseService {
     try {
       final response = await supabase.rpc(
         'get_topic_pdf_data',
-        params: {
-          'topic_uuid': topicId,
-        },
+        params: {'topic_uuid': topicId},
       );
 
       if (response == null) return [];
@@ -236,10 +248,13 @@ class SupabaseService {
         final qMap = Map<String, dynamic>.from(qJson as Map);
 
         final images = qMap['images'] as List? ?? [];
-        final imageUrls = images.map((i) {
-          final iMap = Map<String, dynamic>.from(i as Map);
-          return iMap['image_url']?.toString() ?? '';
-        }).where((url) => url.isNotEmpty).toList();
+        final imageUrls = images
+            .map((i) {
+              final iMap = Map<String, dynamic>.from(i as Map);
+              return iMap['image_url']?.toString() ?? '';
+            })
+            .where((url) => url.isNotEmpty)
+            .toList();
 
         final pyqs = qMap['pyq_meta'] as List? ?? [];
         final pyqMeta = pyqs.map((p) {
@@ -261,20 +276,26 @@ class SupabaseService {
         );
       }).toList();
     } catch (e) {
-      debugPrint('RPC get_topic_pdf_data failed, falling back to legacy query: $e');
+      debugPrint(
+        'RPC get_topic_pdf_data failed, falling back to legacy query: $e',
+      );
       // Fallback in case RPC is not deployed yet or has error
       final questions = await getQuestionsByTopic(topicId);
       List<QuestionFull> fullQuestions = [];
-      await Future.wait(questions.map((q) async {
-        final pyqs = await getPyqSourcesForQuestion(q.id);
-        final images = await getImagesForQuestion(q.id);
-        fullQuestions.add(QuestionFull(
-          text: q.questionText,
-          difficulty: q.difficulty,
-          imageUrls: images.map((i) => i.imageUrl).toList(),
-          pyqMeta: pyqs,
-        ));
-      }));
+      await Future.wait(
+        questions.map((q) async {
+          final pyqs = await getPyqSourcesForQuestion(q.id);
+          final images = await getImagesForQuestion(q.id);
+          fullQuestions.add(
+            QuestionFull(
+              text: q.questionText,
+              difficulty: q.difficulty,
+              imageUrls: images.map((i) => i.imageUrl).toList(),
+              pyqMeta: pyqs,
+            ),
+          );
+        }),
+      );
       return fullQuestions;
     }
   }
@@ -283,9 +304,7 @@ class SupabaseService {
     try {
       final response = await supabase.rpc(
         'get_subject_pdf_data',
-        params: {
-          'subject_uuid': subjectId,
-        },
+        params: {'subject_uuid': subjectId},
       );
 
       if (response == null) return [];
@@ -301,10 +320,13 @@ class SupabaseService {
           final qMap = Map<String, dynamic>.from(qJson as Map);
 
           final images = qMap['images'] as List? ?? [];
-          final imageUrls = images.map((i) {
-            final iMap = Map<String, dynamic>.from(i as Map);
-            return iMap['image_url']?.toString() ?? '';
-          }).where((url) => url.isNotEmpty).toList();
+          final imageUrls = images
+              .map((i) {
+                final iMap = Map<String, dynamic>.from(i as Map);
+                return iMap['image_url']?.toString() ?? '';
+              })
+              .where((url) => url.isNotEmpty)
+              .toList();
 
           final pyqs = qMap['pyq_meta'] as List? ?? [];
           final pyqMeta = pyqs.map((p) {
@@ -326,21 +348,17 @@ class SupabaseService {
           );
         }).toList();
 
-        return TopicWithQuestions(
-          topicName: topicName,
-          questions: questions,
-        );
+        return TopicWithQuestions(topicName: topicName, questions: questions);
       }).toList();
     } catch (e) {
-      debugPrint('RPC get_subject_pdf_data failed, falling back to legacy query: $e');
+      debugPrint(
+        'RPC get_subject_pdf_data failed, falling back to legacy query: $e',
+      );
       // Fallback to legacy behavior
       final topics = await getTopics(subjectId);
       final futures = topics.map((topic) async {
         final questions = await getQuestionsWithDetails(topic.id);
-        return TopicWithQuestions(
-          topicName: topic.name,
-          questions: questions,
-        );
+        return TopicWithQuestions(topicName: topic.name, questions: questions);
       }).toList();
       return await Future.wait(futures);
     }

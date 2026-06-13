@@ -36,9 +36,12 @@ class Comment {
       answerId: json['answer_id']?.toString(),
       parentCommentId: json['parent_comment_id']?.toString(),
       body: json['body']?.toString() ?? '',
-      createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : DateTime.now(),
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'])
+          : DateTime.now(),
       authorUsername: authorMap['username']?.toString() ?? 'anonymous',
-      authorDisplayName: authorMap['display_name']?.toString() ?? 'Anonymous Student',
+      authorDisplayName:
+          authorMap['display_name']?.toString() ?? 'Anonymous Student',
       authorAvatarUrl: authorMap['avatar_url']?.toString(),
     );
   }

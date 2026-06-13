@@ -22,7 +22,9 @@ class Vote {
       postId: json['post_id']?.toString(),
       answerId: json['answer_id']?.toString(),
       value: json['value'] as int? ?? 1,
-      createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : DateTime.now(),
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'])
+          : DateTime.now(),
     );
   }
 }

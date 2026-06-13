@@ -4,10 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 class OnlineIndicator extends StatelessWidget {
   final int count;
 
-  const OnlineIndicator({
-    super.key,
-    required this.count,
-  });
+  const OnlineIndicator({super.key, required this.count});
 
   @override
   Widget build(BuildContext context) {
