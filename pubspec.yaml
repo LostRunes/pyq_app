@@ -56,6 +56,7 @@ dependencies:
   youtube_player_flutter: ^10.0.1
   flutter_pdfview: ^1.4.4
   path_provider: ^2.1.5
+  webview_flutter: ^4.8.0
 
 dev_dependencies:
   flutter_test:
