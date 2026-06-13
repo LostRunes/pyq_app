@@ -1,14 +1,9 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:file_picker/file_picker.dart';
-import 'package:mime/mime.dart';
 
 import '../core/providers.dart';
 import '../models/subject.dart';
-import '../services/drive_service.dart';
-import '../utils/drive_utils.dart';
 import '../features/skulk/presentation/screens/skulk_feed_screen.dart';
 import '../features/skulk/presentation/providers/skulk_providers.dart';
 
@@ -30,27 +25,10 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
   late int _currentSemester;
   late String _currentBranchId;
   int _currentIndex = 0; // 0: Subjects, 1: Syllabus, 2: Dashboard, 3: Skulk
-  int? _selectedSyllabusSemester; // null means 'All Semesters'
 
   // Skulk Feed Header Search State
   bool _isSearching = false;
   final TextEditingController _skulkSearchController = TextEditingController();
-
-  // For dummy upload notes form
-  int? _uploadSemester;
-  Subject? _uploadSubject;
-  bool _isUploadingNotes = false;
-
-  // GPA Calculator state
-  int _calculatorTab = 0; // 0: SGPA, 1: CGPA
-  final List<Map<String, dynamic>> _sgpaCourses = [
-    {'credits': 4.0, 'gradePoint': 10.0},
-    {'credits': 3.0, 'gradePoint': 9.0},
-    {'credits': 3.0, 'gradePoint': 8.0},
-  ];
-  final List<Map<String, dynamic>> _cgpaSemesters = [
-    {'semester': 1, 'credits': 20.0, 'sgpa': 9.0},
-  ];
 
   // Animation controller for fluid water wobble
   late AnimationController _wobbleController;
@@ -61,7 +39,6 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
     super.initState();
     _currentSemester = widget.semester;
     _currentBranchId = widget.branchId;
-    _uploadSemester = _currentSemester;
 
     Future.microtask(() {
       ref.read(selectedSemesterProvider.notifier).setSemester(widget.semester);
@@ -91,7 +68,6 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
 
     if (_currentSemester != activeSemester) {
       _currentSemester = activeSemester;
-      _uploadSemester = activeSemester;
     }
     _currentBranchId = activeBranchId;
 
@@ -350,7 +326,7 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
             },
             children: [
               _buildSubjectsPage(context),
-              _buildSemestersPage(context),
+              _buildPrepZonePage(context),
               _buildDashboardPage(context),
               _buildSkulkPage(context),
             ],
@@ -455,8 +431,8 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
                 ),
                 _buildNavBarItem(
                   1,
-                  Icons.collections_bookmark_rounded,
-                  'Syllabus',
+                  Icons.school_rounded,
+                  'Prep Zone',
                   orangeActive,
                   orangeInactive,
                 ),
@@ -895,824 +871,135 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
 
   Widget _buildDashboardPage(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
-    final AsyncValue<List<Subject>> subjectsAsync = _uploadSemester == null
-        ? ref.watch(allSubjectsProvider)
-        : ref.watch(
-            subjectsProvider((
-              branchId: _currentBranchId,
-              semester: _uploadSemester!,
-            )),
-          );
+    final utils = [
+      {
+        'title': 'Upload Notes',
+        'desc': 'Share study notes & materials',
+        'icon': Icons.cloud_upload_rounded,
+        'route': '/upload_notes',
+        'color': const Color(0xFF6366F1), // Indigo
+      },
+      {
+        'title': 'GPA Calculator',
+        'desc': 'Calculate SGPA & CGPA',
+        'icon': Icons.calculate_rounded,
+        'route': '/gpa_calculator',
+        'color': const Color(0xFF10B981), // Emerald
+      },
+      {
+        'title': 'Syllabus',
+        'desc': 'Explore subjects & credits',
+        'icon': Icons.collections_bookmark_rounded,
+        'route': '/syllabus',
+        'color': const Color(0xFFF59E0B), // Amber
+      },
+    ];
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            'Dashboard',
+            'Utilities',
             style: GoogleFonts.outfit(
-              fontSize: 32,
+              fontSize: 28,
               fontWeight: FontWeight.w900,
               color: theme.colorScheme.onSurface,
             ),
           ),
-          const SizedBox(height: 24),
-          // Upload Notes Panel
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surface,
-              borderRadius: BorderRadius.circular(28),
-              border: Border.all(
-                color: theme.colorScheme.primary.withOpacity(0.1),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: theme.colorScheme.primary.withOpacity(0.04),
-                  blurRadius: 15,
-                  offset: const Offset(0, 8),
-                ),
-              ],
+          const SizedBox(height: 8),
+          Text(
+            'Access all essential tools and peer rooms',
+            style: GoogleFonts.outfit(
+              fontSize: 14,
+              color: theme.colorScheme.onSurface.withOpacity(0.6),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.cloud_upload_rounded,
-                      color: theme.colorScheme.primary,
+          ),
+          const SizedBox(height: 32),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: utils.length,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
+              childAspectRatio: 1.0, // Force square boxes
+            ),
+            itemBuilder: (context, index) {
+              final util = utils[index];
+              final Color utilColor = util['color'] as Color;
+              return InkWell(
+                onTap: () {
+                  Navigator.pushNamed(context, util['route'] as String);
+                },
+                borderRadius: BorderRadius.circular(28),
+                child: Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surface,
+                    borderRadius: BorderRadius.circular(28),
+                    border: Border.all(
+                      color: utilColor.withOpacity(0.12),
+                      width: 1.5,
                     ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Upload Study Notes 📚',
-                      style: GoogleFonts.outfit(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
+                    boxShadow: [
+                      BoxShadow(
+                        color: utilColor.withOpacity(0.06),
+                        blurRadius: 16,
+                        offset: const Offset(0, 8),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      flex: 2,
-                      child: DropdownButtonFormField<int?>(
-                        value: _uploadSemester,
-                        isExpanded: true,
-                        decoration: const InputDecoration(
-                          labelText: 'Semester',
-                          contentPadding: EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
-                          ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: utilColor.withOpacity(0.1),
+                          shape: BoxShape.circle,
                         ),
-                        style: GoogleFonts.outfit(
-                          color: theme.colorScheme.onSurface,
-                          fontSize: 13,
+                        child: Icon(
+                          util['icon'] as IconData,
+                          color: utilColor,
+                          size: 28,
                         ),
-                        items: [
-                          DropdownMenuItem<int?>(
-                            value: null,
-                            child: Text(
-                              'All Semesters',
-                              style: TextStyle(
-                                color: isDark ? Colors.white : Colors.black87,
-                              ),
-                            ),
-                          ),
-                          ...List.generate(8, (i) => i + 1).map(
-                            (sem) => DropdownMenuItem<int?>(
-                              value: sem,
-                              child: Text(
-                                'S$sem',
-                                style: TextStyle(
-                                  color: isDark ? Colors.white : Colors.black87,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                        onChanged: (sem) {
-                          setState(() {
-                            _uploadSemester = sem;
-                            _uploadSubject = null;
-                          });
-                        },
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      flex: 3,
-                      child: subjectsAsync.when(
-                        data: (subs) {
-                          final otherSubject = Subject(
-                            id: 'other',
-                            name: 'Other',
-                            code: 'OTHER',
-                          );
-
-                          if (_uploadSubject != null &&
-                              _uploadSubject!.id != 'other' &&
-                              !subs.any((s) => s.id == _uploadSubject!.id)) {
-                            _uploadSubject = null;
-                          }
-                          return DropdownButtonFormField<Subject>(
-                            value: _uploadSubject,
-                            isExpanded: true,
-                            hint: Text(
-                              'Select Subject',
-                              style: GoogleFonts.outfit(fontSize: 12),
-                            ),
-                            decoration: const InputDecoration(
-                              labelText: 'Subject',
-                              contentPadding: EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 12,
-                              ),
-                            ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            util['title'] as String,
                             style: GoogleFonts.outfit(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
                               color: theme.colorScheme.onSurface,
-                              fontSize: 12,
-                            ),
-                            items: [
-                              DropdownMenuItem<Subject>(
-                                value: otherSubject,
-                                child: Text(
-                                  'Other',
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    color: isDark
-                                        ? Colors.white
-                                        : Colors.black87,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                              ...subs.map(
-                                (s) => DropdownMenuItem(
-                                  value: s,
-                                  child: Text(
-                                    s.name,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      color: isDark
-                                          ? Colors.white
-                                          : Colors.black87,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                            onChanged: (sub) {
-                              setState(() {
-                                _uploadSubject = sub;
-                              });
-                            },
-                          );
-                        },
-                        loading: () => Container(
-                          height: 48,
-                          alignment: Alignment.center,
-                          child: const SizedBox(
-                            height: 16,
-                            width: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          ),
-                        ),
-                        error: (_, __) => DropdownButtonFormField<Subject>(
-                          isExpanded: true,
-                          items: const [],
-                          onChanged: null,
-                          decoration: const InputDecoration(
-                            labelText: 'Error loading subjects',
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: (_uploadSubject == null || _isUploadingNotes)
-                      ? null
-                      : () async {
-                          try {
-                            final result = await FilePicker.pickFiles(
-                              type: FileType.custom,
-                              allowedExtensions: [
-                                'pdf',
-                                'doc',
-                                'docx',
-                                'xls',
-                                'xlsx',
-                                'png',
-                                'jpg',
-                                'jpeg',
-                              ],
-                            );
-
-                            if (result != null &&
-                                result.files.single.path != null) {
-                              final filePath = result.files.single.path!;
-                              final filename = result.files.single.name;
-                              final fileBytes = await File(
-                                filePath,
-                              ).readAsBytes();
-                              final mimeType =
-                                  lookupMimeType(filePath) ??
-                                  'application/octet-stream';
-
-                              setState(() {
-                                _isUploadingNotes = true;
-                              });
-
-                              final fileId = await DriveService().uploadFile(
-                                filename: filename,
-                                mimeType: mimeType,
-                                fileBytes: fileBytes,
-                                subjectName: _uploadSubject!.name,
-                              );
-
-                              if (mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Row(
-                                      children: [
-                                        const Icon(
-                                          Icons.check_circle_rounded,
-                                          color: Colors.white,
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Expanded(
-                                          child: Text(
-                                            'Notes uploaded to Google Drive!',
-                                            style: GoogleFonts.outfit(
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    backgroundColor: theme.colorScheme.primary,
-                                    behavior: SnackBarBehavior.floating,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(16),
-                                    ),
-                                  ),
-                                );
-                              }
-                            }
-                          } catch (e) {
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Upload failed: $e 😢'),
-                                  backgroundColor: Colors.redAccent,
-                                  behavior: SnackBarBehavior.floating,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                ),
-                              );
-                            }
-                          } finally {
-                            if (mounted) {
-                              setState(() {
-                                _isUploadingNotes = false;
-                              });
-                            }
-                          }
-                        },
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: const Size.fromHeight(48),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                  child: _isUploadingNotes
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Text('Upload Notes'),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-          // GPA Calculator Section
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surface,
-              borderRadius: BorderRadius.circular(28),
-              border: Border.all(
-                color: theme.colorScheme.primary.withOpacity(0.1),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: theme.colorScheme.primary.withOpacity(0.04),
-                  blurRadius: 15,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.calculate_rounded,
-                      color: theme.colorScheme.primary,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'GPA Calculator 📊',
-                      style: GoogleFonts.outfit(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                // Segmented selector for SGPA / CGPA
-                Row(
-                  children: [
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _calculatorTab = 0;
-                          });
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 10),
-                          decoration: BoxDecoration(
-                            color: _calculatorTab == 0
-                                ? theme.colorScheme.primary.withOpacity(0.15)
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: _calculatorTab == 0
-                                  ? theme.colorScheme.primary
-                                  : theme.colorScheme.onSurface.withOpacity(
-                                      0.1,
-                                    ),
                             ),
                           ),
-                          alignment: Alignment.center,
-                          child: Text(
-                            'SGPA',
+                          const SizedBox(height: 4),
+                          Text(
+                            util['desc'] as String,
                             style: GoogleFonts.outfit(
-                              fontWeight: FontWeight.bold,
-                              color: _calculatorTab == 0
-                                  ? theme.colorScheme.primary
-                                  : theme.colorScheme.onSurface.withOpacity(
-                                      0.6,
-                                    ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _calculatorTab = 1;
-                          });
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 10),
-                          decoration: BoxDecoration(
-                            color: _calculatorTab == 1
-                                ? theme.colorScheme.primary.withOpacity(0.15)
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: _calculatorTab == 1
-                                  ? theme.colorScheme.primary
-                                  : theme.colorScheme.onSurface.withOpacity(
-                                      0.1,
-                                    ),
-                            ),
-                          ),
-                          alignment: Alignment.center,
-                          child: Text(
-                            'CGPA',
-                            style: GoogleFonts.outfit(
-                              fontWeight: FontWeight.bold,
-                              color: _calculatorTab == 1
-                                  ? theme.colorScheme.primary
-                                  : theme.colorScheme.onSurface.withOpacity(
-                                      0.6,
-                                    ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                if (_calculatorTab == 0) ...[
-                  // SGPA Calculator
-                  ..._sgpaCourses.asMap().entries.map((entry) {
-                    final index = entry.key;
-                    final course = entry.value;
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12.0),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            flex: 3,
-                            child: DropdownButtonFormField<double>(
-                              value: course['credits'] as double?,
-                              decoration: InputDecoration(
-                                labelText: 'Credits',
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 8,
-                                ),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
+                              fontSize: 11,
+                              color: theme.colorScheme.onSurface.withOpacity(
+                                0.55,
                               ),
-                              style: GoogleFonts.outfit(
-                                color: theme.colorScheme.onSurface,
-                                fontSize: 13,
-                              ),
-                              items: [1.0, 2.0, 3.0, 4.0, 5.0]
-                                  .map(
-                                    (c) => DropdownMenuItem(
-                                      value: c,
-                                      child: Text('${c.toStringAsFixed(1)} Cr'),
-                                    ),
-                                  )
-                                  .toList(),
-                              onChanged: (val) {
-                                setState(() {
-                                  course['credits'] = val;
-                                });
-                              },
+                              height: 1.3,
                             ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            flex: 4,
-                            child: DropdownButtonFormField<double>(
-                              value: course['gradePoint'] as double?,
-                              decoration: InputDecoration(
-                                labelText: 'Grade',
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 8,
-                                ),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                              style: GoogleFonts.outfit(
-                                color: theme.colorScheme.onSurface,
-                                fontSize: 13,
-                              ),
-                              items:
-                                  [
-                                        {'label': 'O (10)', 'val': 10.0},
-                                        {'label': 'A (9)', 'val': 9.0},
-                                        {'label': 'B (8)', 'val': 8.0},
-                                        {'label': 'C (7)', 'val': 7.0},
-                                        {'label': 'D (6)', 'val': 6.0},
-                                        {'label': 'E (5)', 'val': 5.0},
-                                        {'label': 'F (0)', 'val': 0.0},
-                                      ]
-                                      .map(
-                                        (g) => DropdownMenuItem(
-                                          value: g['val'] as double,
-                                          child: Text(
-                                            g['label'] as String,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ),
-                                      )
-                                      .toList(),
-                              onChanged: (val) {
-                                setState(() {
-                                  course['gradePoint'] = val;
-                                });
-                              },
-                            ),
-                          ),
-                          if (_sgpaCourses.length > 1) ...[
-                            const SizedBox(width: 4),
-                            IconButton(
-                              icon: const Icon(
-                                Icons.delete_outline_rounded,
-                                color: Colors.redAccent,
-                              ),
-                              onPressed: () {
-                                setState(() {
-                                  _sgpaCourses.removeAt(index);
-                                });
-                              },
-                            ),
-                          ],
                         ],
                       ),
-                    );
-                  }).toList(),
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      TextButton.icon(
-                        onPressed: () {
-                          setState(() {
-                            _sgpaCourses.add({
-                              'credits': 3.0,
-                              'gradePoint': 9.0,
-                            });
-                          });
-                        },
-                        icon: const Icon(Icons.add_rounded),
-                        label: Text(
-                          'Add Course',
-                          style: GoogleFonts.outfit(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      _buildSGPAResultCard(theme),
                     ],
                   ),
-                ] else ...[
-                  // CGPA Calculator
-                  ..._cgpaSemesters.asMap().entries.map((entry) {
-                    final index = entry.key;
-                    final semester = entry.value;
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12.0),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            flex: 3,
-                            child: DropdownButtonFormField<int>(
-                              value: semester['semester'] as int?,
-                              decoration: InputDecoration(
-                                labelText: 'Semester',
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 8,
-                                ),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                              style: GoogleFonts.outfit(
-                                color: theme.colorScheme.onSurface,
-                                fontSize: 13,
-                              ),
-                              items: List.generate(8, (i) => i + 1)
-                                  .map(
-                                    (s) => DropdownMenuItem(
-                                      value: s,
-                                      child: Text('Sem $s'),
-                                    ),
-                                  )
-                                  .toList(),
-                              onChanged: (val) {
-                                setState(() {
-                                  semester['semester'] = val;
-                                });
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            flex: 3,
-                            child: DropdownButtonFormField<double>(
-                              value: semester['credits'] as double?,
-                              decoration: InputDecoration(
-                                labelText: 'Total Credits',
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 8,
-                                ),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                              style: GoogleFonts.outfit(
-                                color: theme.colorScheme.onSurface,
-                                fontSize: 13,
-                              ),
-                              items:
-                                  [
-                                        12.0,
-                                        14.0,
-                                        16.0,
-                                        18.0,
-                                        20.0,
-                                        22.0,
-                                        24.0,
-                                        26.0,
-                                        28.0,
-                                      ]
-                                      .map(
-                                        (c) => DropdownMenuItem(
-                                          value: c,
-                                          child: Text(
-                                            '${c.toStringAsFixed(0)} Cr',
-                                          ),
-                                        ),
-                                      )
-                                      .toList(),
-                              onChanged: (val) {
-                                setState(() {
-                                  semester['credits'] = val;
-                                });
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            flex: 3,
-                            child: DropdownButtonFormField<double>(
-                              value: semester['sgpa'] as double?,
-                              decoration: InputDecoration(
-                                labelText: 'SGPA',
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 8,
-                                ),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                              style: GoogleFonts.outfit(
-                                color: theme.colorScheme.onSurface,
-                                fontSize: 13,
-                              ),
-                              items: List.generate(61, (i) => 4.0 + (i * 0.1))
-                                  .map(
-                                    (g) => DropdownMenuItem(
-                                      value: double.parse(g.toStringAsFixed(1)),
-                                      child: Text(g.toStringAsFixed(1)),
-                                    ),
-                                  )
-                                  .toList(),
-                              onChanged: (val) {
-                                setState(() {
-                                  semester['sgpa'] = val;
-                                });
-                              },
-                            ),
-                          ),
-                          if (_cgpaSemesters.length > 1) ...[
-                            const SizedBox(width: 4),
-                            IconButton(
-                              icon: const Icon(
-                                Icons.delete_outline_rounded,
-                                color: Colors.redAccent,
-                              ),
-                              onPressed: () {
-                                setState(() {
-                                  _cgpaSemesters.removeAt(index);
-                                });
-                              },
-                            ),
-                          ],
-                        ],
-                      ),
-                    );
-                  }).toList(),
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      TextButton.icon(
-                        onPressed: () {
-                          setState(() {
-                            final nextSem = _cgpaSemesters.isEmpty
-                                ? 1
-                                : (_cgpaSemesters.last['semester'] as int) + 1;
-                            _cgpaSemesters.add({
-                              'semester': nextSem > 8 ? 8 : nextSem,
-                              'sgpa': 9.0,
-                              'credits': 20.0,
-                            });
-                          });
-                        },
-                        icon: const Icon(Icons.add_rounded),
-                        label: Text(
-                          'Add Semester',
-                          style: GoogleFonts.outfit(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      _buildCGPAResultCard(theme),
-                    ],
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSGPAResultCard(ThemeData theme) {
-    double totalPoints = 0;
-    double totalCredits = 0;
-    for (var course in _sgpaCourses) {
-      final double credits = course['credits'] ?? 0.0;
-      final double gradePoint = course['gradePoint'] ?? 0.0;
-      totalPoints += credits * gradePoint;
-      totalCredits += credits;
-    }
-    final double sgpa = totalCredits > 0 ? totalPoints / totalCredits : 0.0;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.primary.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: theme.colorScheme.primary.withOpacity(0.2)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Text(
-            'SGPA',
-            style: GoogleFonts.outfit(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: theme.colorScheme.primary,
-            ),
-          ),
-          Text(
-            sgpa.toStringAsFixed(2),
-            style: GoogleFonts.outfit(
-              fontSize: 22,
-              fontWeight: FontWeight.w900,
-              color: theme.colorScheme.primary,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCGPAResultCard(ThemeData theme) {
-    double totalPoints = 0;
-    double totalCredits = 0;
-    for (var sem in _cgpaSemesters) {
-      final double credits = sem['credits'] ?? 0.0;
-      final double sgpa = sem['sgpa'] ?? 0.0;
-      totalPoints += credits * sgpa;
-      totalCredits += credits;
-    }
-    final double cgpa = totalCredits > 0 ? totalPoints / totalCredits : 0.0;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.primary.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: theme.colorScheme.primary.withOpacity(0.2)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Text(
-            'CGPA',
-            style: GoogleFonts.outfit(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: theme.colorScheme.primary,
-            ),
-          ),
-          Text(
-            cgpa.toStringAsFixed(2),
-            style: GoogleFonts.outfit(
-              fontSize: 22,
-              fontWeight: FontWeight.w900,
-              color: theme.colorScheme.primary,
-            ),
+                ),
+              );
+            },
           ),
         ],
       ),
@@ -1787,348 +1074,130 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
     );
   }
 
-  Widget _buildSemestersPage(BuildContext context) {
+  Widget _buildPrepZonePage(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    final filterSemesters = [null, 1, 2, 3, 4, 5, 6, 7, 8];
-
-    // Determine what to display: single semester or all semesters
-    final List<int> displayedSemesters = _selectedSyllabusSemester == null
-        ? List.generate(8, (i) => i + 1)
-        : [_selectedSyllabusSemester!];
-
-    return RefreshIndicator(
-      onRefresh: () async {
-        final futures = displayedSemesters.map(
-          (sem) => ref.refresh(
-            subjectsProvider((
-              branchId: _currentBranchId,
-              semester: sem,
-            )).future,
-          ),
-        );
-        await Future.wait(futures);
+    final prepItems = [
+      {
+        'title': 'Algo+Code Screen',
+        'desc': 'DSA patterns & Coding roadmaps',
+        'icon': Icons.code_rounded,
+        'route': '/algo_code',
+        'color': const Color(0xFF6366F1), // Indigo
       },
-      child: ListView.builder(
-        padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 16),
-        itemCount:
-            1 +
-            displayedSemesters.length, // index 0 is header, rest are semesters
-        itemBuilder: (context, index) {
-          if (index == 0) {
-            return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Syllabus',
-                          style: GoogleFonts.outfit(
-                            fontSize: 32,
-                            fontWeight: FontWeight.w900,
-                            color: theme.colorScheme.onSurface,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Explore subjects across semesters.',
-                          style: theme.textTheme.bodyMedium,
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  // Horizontal scrollable semester filter pills
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 8,
-                    ),
-                    child: Row(
-                      children: filterSemesters.map((sem) {
-                        final isSelected = _selectedSyllabusSemester == sem;
-                        final label = sem == null
-                            ? 'All Semesters'
-                            : 'Semester $sem';
+      {
+        'title': 'GATE Prep Screen',
+        'desc': 'Syllabus, weightage & mock tests',
+        'icon': Icons.psychology_rounded,
+        'route': '/gate_prep',
+        'color': const Color(0xFFEC4899), // Pink/Rose
+      },
+    ];
 
-                        return Padding(
-                          padding: const EdgeInsets.only(right: 10),
-                          child: GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                _selectedSyllabusSemester = sem;
-                              });
-                            },
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 200),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 18,
-                                vertical: 10,
-                              ),
-                              decoration: BoxDecoration(
-                                color: isSelected
-                                    ? (isDark
-                                          ? theme.colorScheme.primary
-                                          : const Color(0xFF7D4B26))
-                                    : (isDark
-                                          ? theme.colorScheme.surface
-                                                .withOpacity(0.4)
-                                          : const Color(0xFFFFF7ED)),
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(
-                                  color: isSelected
-                                      ? Colors.transparent
-                                      : (isDark
-                                            ? theme.colorScheme.primary
-                                                  .withOpacity(0.15)
-                                            : const Color(0xFFF6DDB7)),
-                                  width: 1.2,
-                                ),
-                                boxShadow: isSelected
-                                    ? [
-                                        BoxShadow(
-                                          color: isDark
-                                              ? theme.colorScheme.primary
-                                                    .withOpacity(0.25)
-                                              : const Color(
-                                                  0xFF7D4B26,
-                                                ).withOpacity(0.2),
-                                          blurRadius: 8,
-                                          offset: const Offset(0, 4),
-                                        ),
-                                      ]
-                                    : [],
-                              ),
-                              child: Text(
-                                label,
-                                style: GoogleFonts.outfit(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
-                                  color: isSelected
-                                      ? (isDark
-                                            ? theme.colorScheme.onPrimary
-                                            : Colors.white)
-                                      : (isDark
-                                            ? Colors.white70
-                                            : const Color(0xFF7D4B26)),
-                                ),
-                              ),
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          final sem = displayedSemesters[index - 1];
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
-                child: Text(
-                  'Semester $sem',
-                  style: GoogleFonts.outfit(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w900,
-                    color: theme.colorScheme.primary,
-                  ),
-                ),
-              ),
-              _SemesterSubjectsList(branchId: _currentBranchId, semester: sem),
-              const SizedBox(height: 8),
-            ],
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _SemesterSubjectsList extends ConsumerWidget {
-  final String branchId;
-  final int semester;
-
-  const _SemesterSubjectsList({required this.branchId, required this.semester});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final subjectsAsync = ref.watch(
-      subjectsProvider((branchId: branchId, semester: semester)),
-    );
-
-    return subjectsAsync.when(
-      data: (subjects) {
-        if (subjects.isEmpty) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(vertical: 8, horizontal: 24),
-            child: Text(
-              'No subjects found for this semester.',
-              style: TextStyle(
-                fontStyle: FontStyle.italic,
-                fontSize: 13,
-                color: Colors.grey,
-              ),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            'Prep Zone',
+            style: GoogleFonts.outfit(
+              fontSize: 32,
+              fontWeight: FontWeight.w900,
+              color: theme.colorScheme.onSurface,
             ),
-          );
-        }
-
-        return ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          itemCount: subjects.length,
-          itemBuilder: (context, idx) {
-            final subject = subjects[idx];
-            return Card(
-              margin: const EdgeInsets.only(bottom: 8),
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-                side: BorderSide(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.primary.withOpacity(0.15),
-                ),
-              ),
-              child: ListTile(
-                dense: true,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 4,
-                ),
-                leading: Icon(
-                  Icons.book_rounded,
-                  color: Theme.of(context).colorScheme.primary,
-                  size: 20,
-                ),
-                title: Text(
-                  subject.name,
-                  style: GoogleFonts.outfit(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
-                ),
-                subtitle: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Code: ${subject.code}',
-                      style: GoogleFonts.outfit(
-                        fontSize: 12,
-                        color: Colors.grey,
-                      ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Sharpen your coding skills and prepare for core engineering exams.',
+            style: GoogleFonts.outfit(
+              fontSize: 14,
+              color: theme.colorScheme.onSurface.withOpacity(0.6),
+            ),
+          ),
+          const SizedBox(height: 32),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: prepItems.length,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
+              childAspectRatio: 0.85,
+            ),
+            itemBuilder: (context, index) {
+              final item = prepItems[index];
+              final Color itemColor = item['color'] as Color;
+              return InkWell(
+                onTap: () {
+                  Navigator.pushNamed(context, item['route'] as String);
+                },
+                borderRadius: BorderRadius.circular(28),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surface,
+                    borderRadius: BorderRadius.circular(28),
+                    border: Border.all(
+                      color: itemColor.withOpacity(0.12),
+                      width: 1.5,
                     ),
-                    if (subject.subjectCredit != null ||
-                        subject.subjectType != null) ...[
-                      const SizedBox(height: 4),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
+                    boxShadow: [
+                      BoxShadow(
+                        color: itemColor.withOpacity(0.06),
+                        blurRadius: 16,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: itemColor.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          item['icon'] as IconData,
+                          color: itemColor,
+                          size: 26,
+                        ),
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          if (subject.subjectCredit != null) ...[
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.primary.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                '${subject.subjectCredit} Cr',
-                                style: GoogleFonts.outfit(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  color: Theme.of(context).colorScheme.primary,
-                                ),
-                              ),
+                          Text(
+                            item['title'] as String,
+                            style: GoogleFonts.outfit(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800,
+                              color: theme.colorScheme.onSurface,
                             ),
-                            if (subject.subjectType != null)
-                              const SizedBox(width: 6),
-                          ],
-                          if (subject.subjectType != null) ...[
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color:
-                                    subject.subjectType!.toLowerCase() == 'core'
-                                    ? Colors.redAccent.withOpacity(0.1)
-                                    : Colors.green.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                subject.subjectType!.toUpperCase(),
-                                style: GoogleFonts.outfit(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  color:
-                                      subject.subjectType!.toLowerCase() ==
-                                          'core'
-                                      ? Colors.redAccent
-                                      : Colors.green[700],
-                                ),
-                              ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            item['desc'] as String,
+                            style: GoogleFonts.outfit(
+                              fontSize: 11,
+                              color: theme.colorScheme.onSurface.withOpacity(0.5),
                             ),
-                          ],
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ],
                       ),
                     ],
-                  ],
+                  ),
                 ),
-
-                /*
-                // Old Version: Had a trailing arrow
-                trailing: const Icon(
-                  Icons.arrow_forward_ios_rounded,
-                  size: 14,
-                  color: Colors.grey,
-                ),
-                */
-                onTap: () {
-                  Navigator.pushNamed(
-                    context,
-                    '/subject_dashboard',
-                    arguments: {'subject': subject},
-                  );
-                },
-              ),
-            );
-          },
-        );
-      },
-      loading: () => const Padding(
-        padding: EdgeInsets.symmetric(vertical: 12),
-        child: Center(
-          child: SizedBox(
-            width: 20,
-            height: 20,
-            child: CircularProgressIndicator(strokeWidth: 2),
+              );
+            },
           ),
-        ),
-      ),
-      error: (e, _) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 24),
-        child: Text(
-          'Error: $e',
-          style: const TextStyle(color: Colors.red, fontSize: 12),
-        ),
+        ],
       ),
     );
   }
