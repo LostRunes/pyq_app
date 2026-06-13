@@ -6,10 +6,7 @@ import '../../data/models/room_message.dart';
 class RoomMessageBubble extends StatelessWidget {
   final RoomMessage message;
 
-  const RoomMessageBubble({
-    super.key,
-    required this.message,
-  });
+  const RoomMessageBubble({super.key, required this.message});
 
   @override
   Widget build(BuildContext context) {
@@ -33,14 +30,18 @@ class RoomMessageBubble extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
-        mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+        mainAxisAlignment: isMe
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Render other user's avatar on the left
           if (!isMe) ...[
             CircleAvatar(
               radius: 16,
-              backgroundColor: isDark ? const Color(0xFF383838) : const Color(0xFFE2E6EA),
+              backgroundColor: isDark
+                  ? const Color(0xFF383838)
+                  : const Color(0xFFE2E6EA),
               backgroundImage: message.senderAvatarUrl != null
                   ? NetworkImage(message.senderAvatarUrl!)
                   : null,
@@ -57,11 +58,13 @@ class RoomMessageBubble extends StatelessWidget {
             ),
             const SizedBox(width: 8),
           ],
-          
+
           // Message Content bubble
           Flexible(
             child: Column(
-              crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+              crossAxisAlignment: isMe
+                  ? CrossAxisAlignment.end
+                  : CrossAxisAlignment.start,
               children: [
                 // Sender name (only for other users)
                 if (!isMe)
@@ -89,10 +92,13 @@ class RoomMessageBubble extends StatelessWidget {
                       ],
                     ),
                   ),
-                  
+
                 // Actual bubble text container
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
                   decoration: BoxDecoration(
                     color: bubbleColor,
                     borderRadius: BorderRadius.only(
@@ -104,7 +110,9 @@ class RoomMessageBubble extends StatelessWidget {
                     border: isMe
                         ? null
                         : Border.all(
-                            color: isDark ? Colors.grey[850]! : Colors.grey[200]!,
+                            color: isDark
+                                ? Colors.grey[850]!
+                                : Colors.grey[200]!,
                           ),
                   ),
                   child: Column(
@@ -136,13 +144,15 @@ class RoomMessageBubble extends StatelessWidget {
               ],
             ),
           ),
-          
+
           // Render own avatar on the right
           if (isMe) ...[
             const SizedBox(width: 8),
             CircleAvatar(
               radius: 16,
-              backgroundColor: isDark ? const Color(0xFF383838) : const Color(0xFFE2E6EA),
+              backgroundColor: isDark
+                  ? const Color(0xFF383838)
+                  : const Color(0xFFE2E6EA),
               backgroundImage: message.senderAvatarUrl != null
                   ? NetworkImage(message.senderAvatarUrl!)
                   : null,
@@ -165,7 +175,9 @@ class RoomMessageBubble extends StatelessWidget {
 
   String _formatTimestamp(DateTime dt) {
     final localDt = dt.toLocal();
-    final hour = localDt.hour == 0 ? 12 : (localDt.hour > 12 ? localDt.hour - 12 : localDt.hour);
+    final hour = localDt.hour == 0
+        ? 12
+        : (localDt.hour > 12 ? localDt.hour - 12 : localDt.hour);
     final minute = localDt.minute.toString().padLeft(2, '0');
     final amPm = localDt.hour >= 12 ? 'PM' : 'AM';
     return '$hour:$minute $amPm';

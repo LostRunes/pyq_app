@@ -33,7 +33,8 @@ class StudyTogetherService {
   /// Sends a message, fetching current user profile to create a snapshot
   Future<Map<String, dynamic>> sendMessage(String roomId, String text) async {
     final user = _client.auth.currentUser;
-    if (user == null) throw Exception('User must be logged in to send messages.');
+    if (user == null)
+      throw Exception('User must be logged in to send messages.');
 
     // Fetch user profile info for snapshotting
     final profileRes = await _client

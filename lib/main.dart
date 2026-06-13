@@ -8,12 +8,18 @@ import 'screens/topic_list_screen.dart';
 import 'screens/question_list_screen.dart';
 import 'screens/question_detail_screen.dart';
 import 'screens/subject_dashboard_screen.dart';
+import 'screens/youtube_resource_screen.dart';
 import 'screens/splash_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/login_screen.dart';
 import 'models/subject.dart';
 import 'core/providers.dart';
+import 'screens/upload_notes_screen.dart';
+import 'screens/gpa_calculator_screen.dart';
+import 'screens/syllabus_screen.dart';
+import 'screens/algo_code_screen.dart';
+import 'screens/gate_prep_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'features/skulk/presentation/screens/create_doubt_screen.dart';
@@ -59,8 +65,12 @@ class PyqApp extends ConsumerWidget {
       routes: {
         '/': (context) => const SplashScreen(),
         '/login': (context) {
-          final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-          return LoginScreen(showUsernameDialog: args?['showUsernameDialog'] ?? false);
+          final args =
+              ModalRoute.of(context)?.settings.arguments
+                  as Map<String, dynamic>?;
+          return LoginScreen(
+            showUsernameDialog: args?['showUsernameDialog'] ?? false,
+          );
         },
         '/selection': (context) => const BranchYearSelectionScreen(),
         '/subjects': (context) {
@@ -112,9 +122,21 @@ class PyqApp extends ConsumerWidget {
           final room = ModalRoute.of(context)!.settings.arguments as StudyRoom;
           return StudyRoomChatScreen(room: room);
         },
+        '/youtube_resource': (context) {
+          final args =
+              ModalRoute.of(context)!.settings.arguments
+                  as Map<String, dynamic>;
+          return YoutubeResourceScreen(
+            url: args['url'] as String,
+            title: args['title'] as String,
+          );
+        },
+        '/upload_notes': (context) => const UploadNotesScreen(),
+        '/gpa_calculator': (context) => const GpaCalculatorScreen(),
+        '/syllabus': (context) => const SyllabusScreen(),
+        '/algo_code': (context) => const AlgoCodeScreen(),
+        '/gate_prep': (context) => const GatePrepScreen(),
       },
     );
   }
 }
-
-

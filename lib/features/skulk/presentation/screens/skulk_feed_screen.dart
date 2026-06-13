@@ -21,8 +21,6 @@ class SkulkFeedScreen extends ConsumerStatefulWidget {
 }
 
 class _SkulkFeedScreenState extends ConsumerState<SkulkFeedScreen> {
-  final TextEditingController _searchController = TextEditingController();
-  final FocusNode _searchFocusNode = FocusNode();
   final ScrollController _scrollController = ScrollController();
 
   @override
@@ -40,8 +38,6 @@ class _SkulkFeedScreenState extends ConsumerState<SkulkFeedScreen> {
 
   @override
   void dispose() {
-    _searchController.dispose();
-    _searchFocusNode.dispose();
     _scrollController.dispose();
     super.dispose();
   }
@@ -91,139 +87,10 @@ class _SkulkFeedScreenState extends ConsumerState<SkulkFeedScreen> {
               controller: _scrollController,
               physics: const AlwaysScrollableScrollPhysics(),
               children: [
-                // Header row with title + Study Together + notification bell
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 12, 4),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Row(
-                          children: [
-                            Text(
-                              'Skulk ',
-                              style: GoogleFonts.outfit(
-                                fontSize: 22,
-                                fontWeight: FontWeight.w900,
-                                color: isDark ? Colors.white : Colors.black87,
-                              ),
-                            ),
-                            Image.asset(
-                              'assets/images/lil_fox.png',
-                              width: 40,
-                              height: 40,
-                              fit: BoxFit.contain,
-                            ),
-                          ],
-                        ),
-                      ),
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.pushNamed(context, '/study-together');
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.primary,
-                            borderRadius: BorderRadius.circular(30),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(
-                                Icons.groups_rounded,
-                                size: 16,
-                                color: Colors.white,
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                'Study Together',
-                                style: GoogleFonts.outfit(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      _NotificationBell(),
-                    ],
-                  ),
-                ),
+                const SizedBox(height: 12),
 
-                // Search field
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 6, 16, 8),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF202020) : Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: isDark ? Colors.grey[850]! : Colors.grey[200]!,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(isDark ? 0.2 : 0.03),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: TextField(
-                      controller: _searchController,
-                      focusNode: _searchFocusNode,
-                      style: GoogleFonts.outfit(fontSize: 14),
-                      onChanged: (val) {
-                        ref.read(skulkFeedSearchProvider.notifier).state = val;
-                      },
-                      decoration: InputDecoration(
-                        hintText: 'Search doubts, title or tags...',
-                        hintStyle: GoogleFonts.outfit(
-                          fontSize: 14,
-                          color: Colors.grey,
-                        ),
-                        prefixIcon: const Icon(
-                          Icons.search_rounded,
-                          color: Colors.grey,
-                        ),
-                        suffixIcon: _searchController.text.isNotEmpty
-                            ? IconButton(
-                                icon: const Icon(
-                                  Icons.close_rounded,
-                                  color: Colors.grey,
-                                ),
-                                onPressed: () {
-                                  _searchController.clear();
-                                  ref
-                                          .read(
-                                            skulkFeedSearchProvider.notifier,
-                                          )
-                                          .state =
-                                      '';
-                                  FocusScope.of(context).unfocus();
-                                },
-                              )
-                            : null,
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(
-                          vertical: 12,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-
-                // Horizontal Filter Chips row
-                _buildFilterChips(context),
-
-                // Subject Filter dropdown row (if active)
-                _buildSubjectSelectorRow(context, subjectsAsync),
-
-                // Tag filter chips
-                _buildTagFilterRow(context),
+                // New horizontally aligned controls row
+                _buildControlRow(context, isDark, subjectsAsync),
 
                 const SizedBox(height: 8),
 
@@ -302,7 +169,11 @@ class _SkulkFeedScreenState extends ConsumerState<SkulkFeedScreen> {
                               Navigator.pushNamed(
                                 context,
                                 '/skulk_detail',
-                                arguments: doubt.id,
+                                arguments: {
+                                  'doubtId': doubt.id,
+                                  'branchId': widget.branchId,
+                                  'semester': widget.semester,
+                                },
                               );
                             },
                           );
@@ -340,7 +211,7 @@ class _SkulkFeedScreenState extends ConsumerState<SkulkFeedScreen> {
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: FloatingActionButton(
         onPressed: () {
           Navigator.pushNamed(
             context,
@@ -353,14 +224,8 @@ class _SkulkFeedScreenState extends ConsumerState<SkulkFeedScreen> {
         },
         backgroundColor: Theme.of(context).colorScheme.primary,
         elevation: 4,
-        icon: const Icon(Icons.add_rounded, color: Colors.white),
-        label: Text(
-          'Ask Doubt',
-          style: GoogleFonts.outfit(
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
+        shape: const CircleBorder(),
+        child: const Icon(Icons.add_rounded, color: Colors.white),
       ),
     );
   }
@@ -425,300 +290,207 @@ class _SkulkFeedScreenState extends ConsumerState<SkulkFeedScreen> {
     );
   }
 
-  Widget _buildFilterChips(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final activeFilter = ref.watch(skulkFeedFilterProvider);
-
-    final filters = [
-      {'id': 'all', 'label': 'All Doubts', 'icon': Icons.public_rounded},
-      {
-        'id': 'subjects',
-        'label': 'My Subjects',
-        'icon': Icons.library_books_rounded,
-      },
-      {'id': 'solved', 'label': 'Solved', 'icon': Icons.check_circle_rounded},
-      {
-        'id': 'unanswered',
-        'label': 'Unanswered',
-        'icon': Icons.help_outline_rounded,
-      },
-      {
-        'id': 'hot',
-        'label': 'Hot 🔥',
-        'icon': Icons.local_fire_department_rounded,
-      },
-    ];
-
-    return SizedBox(
-      height: 40,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: filters.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
-        itemBuilder: (context, index) {
-          final f = filters[index];
-          final isSelected = activeFilter == f['id'];
-
-          return ChoiceChip(
-            label: Row(
-              children: [
-                Icon(
-                  f['icon'] as IconData,
-                  size: 14,
-                  color: isSelected
-                      ? Colors.white
-                      : (isDark ? Colors.grey[400] : Colors.grey[600]),
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  f['label'] as String,
-                  style: GoogleFonts.outfit(
-                    fontSize: 12,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                    color: isSelected
-                        ? Colors.white
-                        : (isDark ? Colors.grey[400] : Colors.grey[700]),
-                  ),
-                ),
-              ],
-            ),
-            selected: isSelected,
-            onSelected: (val) {
-              if (val) {
-                if (f['id'] == 'subjects') {
-                  ref.read(skulkFeedSubjectProvider.notifier).state = null;
-                }
-                ref.read(skulkFeedFilterProvider.notifier).state =
-                    f['id'] as String;
-              }
-            },
-            selectedColor: Theme.of(context).colorScheme.primary,
-            backgroundColor: isDark
-                ? const Color(0xFF1E1E1E)
-                : Colors.grey[200],
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-              side: BorderSide(
-                color: isSelected
-                    ? Colors.transparent
-                    : (isDark ? Colors.grey[850]! : Colors.grey[300]!),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildSubjectSelectorRow(
+  Widget _buildControlRow(
     BuildContext context,
+    bool isDark,
     AsyncValue<List<dynamic>> subjectsAsync,
   ) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final activeFilter = ref.watch(skulkFeedFilterProvider);
     final selectedSubjectId = ref.watch(skulkFeedSubjectProvider);
 
-    if (activeFilter == 'subjects') return const SizedBox.shrink();
-
-    return subjectsAsync.when(
-      loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
-      data: (subjects) {
-        if (subjects.isEmpty) return const SizedBox.shrink();
-
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-          alignment: Alignment.centerLeft,
-          child: Row(
-            children: [
-              Text(
-                'Subject:',
-                style: GoogleFonts.outfit(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.grey,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      child: Row(
+        children: [
+          // Filter Dropdown
+          Expanded(
+            flex: 12,
+            child: Container(
+              height: 40,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isDark ? Colors.grey[850]! : Colors.grey[300]!,
                 ),
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Container(
-                  height: 32,
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF1E1E1E) : Colors.grey[100],
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: isDark ? Colors.grey[850]! : Colors.grey[200]!,
-                    ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: activeFilter,
+                  isExpanded: true,
+                  icon: const Icon(
+                    Icons.filter_list_rounded,
+                    size: 14,
+                    color: Colors.grey,
                   ),
-                  child: DropdownButtonHideUnderline(
+                  dropdownColor: isDark
+                      ? const Color(0xFF1E1E1E)
+                      : Colors.white,
+                  style: GoogleFonts.outfit(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? Colors.white : Colors.black87,
+                  ),
+                  items: [
+                    DropdownMenuItem(
+                      value: 'all',
+                      child: Text('All Doubts', style: GoogleFonts.outfit()),
+                    ),
+                    DropdownMenuItem(
+                      value: 'subjects',
+                      child: Text('My Subjects', style: GoogleFonts.outfit()),
+                    ),
+                    DropdownMenuItem(
+                      value: 'solved',
+                      child: Text('Solved', style: GoogleFonts.outfit()),
+                    ),
+                    DropdownMenuItem(
+                      value: 'unanswered',
+                      child: Text('Unanswered', style: GoogleFonts.outfit()),
+                    ),
+                    DropdownMenuItem(
+                      value: 'hot',
+                      child: Text('Hot', style: GoogleFonts.outfit()),
+                    ),
+                  ],
+                  onChanged: (val) {
+                    if (val != null) {
+                      if (val == 'subjects') {
+                        ref.read(skulkFeedSubjectProvider.notifier).state =
+                            null;
+                      }
+                      ref.read(skulkFeedFilterProvider.notifier).state = val;
+                    }
+                  },
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 6),
+          // Subject Dropdown
+          Expanded(
+            flex: 13,
+            child: Container(
+              height: 40,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isDark ? Colors.grey[850]! : Colors.grey[300]!,
+                ),
+              ),
+              child: subjectsAsync.when(
+                loading: () => const Center(
+                  child: SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
+                error: (_, __) =>
+                    Text('Error', style: GoogleFonts.outfit(fontSize: 11)),
+                data: (subjects) {
+                  return DropdownButtonHideUnderline(
                     child: DropdownButton<String?>(
                       value: selectedSubjectId,
+                      isExpanded: true,
                       hint: Text(
                         'All Subjects',
                         style: GoogleFonts.outfit(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                          color: isDark ? Colors.grey[300] : Colors.grey[700],
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? Colors.grey[400] : Colors.grey[600],
                         ),
                       ),
                       icon: const Icon(
                         Icons.arrow_drop_down,
-                        size: 16,
+                        size: 14,
                         color: Colors.grey,
                       ),
                       dropdownColor: isDark
                           ? const Color(0xFF1E1E1E)
                           : Colors.white,
-                      style: GoogleFonts.outfit(fontSize: 11),
+                      style: GoogleFonts.outfit(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? Colors.white : Colors.black87,
+                      ),
                       items: [
                         DropdownMenuItem<String?>(
                           value: null,
                           child: Text(
                             'All Subjects',
-                            style: GoogleFonts.outfit(
-                              fontWeight: FontWeight.bold,
-                              color: isDark ? Colors.white : Colors.black,
-                            ),
+                            style: GoogleFonts.outfit(),
                           ),
                         ),
                         ...subjects.map((sub) {
                           return DropdownMenuItem<String?>(
                             value: sub.id,
                             child: Text(
-                              '${sub.name} (${sub.code})',
+                              sub.name,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.outfit(
-                                color: isDark
-                                    ? Colors.grey[300]
-                                    : Colors.grey[800],
-                              ),
+                              style: GoogleFonts.outfit(),
                             ),
                           );
                         }),
                       ],
-                      onChanged: (subjectId) {
-                        ref.read(skulkFeedSubjectProvider.notifier).state =
-                            subjectId;
+                      onChanged: (val) {
+                        ref.read(skulkFeedSubjectProvider.notifier).state = val;
                       },
                     ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildTagFilterRow(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final activeTag = ref.watch(skulkFeedTagProvider);
-    final doubtsAsync = ref.watch(skulkFeedProvider);
-
-    // Collect all unique tags from current feed
-    final tags = <String>{};
-    if (doubtsAsync.hasValue) {
-      for (final d in doubtsAsync.value!) {
-        tags.addAll(d.tags);
-      }
-    }
-    if (tags.isEmpty) return const SizedBox.shrink();
-
-    return SizedBox(
-      height: 34,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        children: [
-          // Clear tag button
-          if (activeTag != null)
-            Padding(
-              padding: const EdgeInsets.only(right: 6),
-              child: GestureDetector(
-                onTap: () =>
-                    ref.read(skulkFeedTagProvider.notifier).state = null,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.redAccent.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: Colors.redAccent.withOpacity(0.3),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.close_rounded,
-                        size: 12,
-                        color: Colors.redAccent,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '#$activeTag',
-                        style: GoogleFonts.outfit(
-                          fontSize: 11,
-                          color: Colors.redAccent,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                  );
+                },
               ),
             ),
-          ...tags.take(15).map((tag) {
-            final isActive = activeTag == tag;
-            return Padding(
-              padding: const EdgeInsets.only(right: 6),
-              child: GestureDetector(
-                onTap: () {
-                  ref.read(skulkFeedTagProvider.notifier).state = isActive
-                      ? null
-                      : tag;
-                },
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 150),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isActive
-                        ? Theme.of(
-                            context,
-                          ).colorScheme.primary.withOpacity(0.15)
-                        : (isDark ? const Color(0xFF252525) : Colors.grey[100]),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: isActive
-                          ? Theme.of(
-                              context,
-                            ).colorScheme.primary.withOpacity(0.5)
-                          : (isDark ? Colors.grey[800]! : Colors.grey[300]!),
-                    ),
-                  ),
-                  child: Text(
-                    '#$tag',
-                    style: GoogleFonts.outfit(
-                      fontSize: 11,
-                      fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
-                      color: isActive
-                          ? Theme.of(context).colorScheme.primary
-                          : (isDark ? Colors.grey[400] : Colors.grey[600]),
-                    ),
-                  ),
+          ),
+          const SizedBox(width: 6),
+          // Study Together Button
+          GestureDetector(
+            onTap: () {
+              Navigator.pushNamed(context, '/study-together');
+            },
+            child: Container(
+              height: 40,
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF00B4DB), Color(0xFF0083B0)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF0083B0).withOpacity(0.3),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
-            );
-          }),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.groups_rounded,
+                    size: 14,
+                    color: Colors.white,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Study Room',
+                    style: GoogleFonts.outfit(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -726,13 +498,15 @@ class _SkulkFeedScreenState extends ConsumerState<SkulkFeedScreen> {
 }
 
 // ---------------------------------------------------------------------------
-// Notification Bell Widget
+// Notification Bell Widget (Public)
 // ---------------------------------------------------------------------------
-class _NotificationBell extends ConsumerWidget {
+class NotificationBell extends ConsumerWidget {
+  const NotificationBell({super.key});
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final countAsync = ref.watch(_unreadCountProvider);
+    final countAsync = ref.watch(unreadCountProvider);
 
     final count = countAsync.value ?? 0;
 
@@ -754,7 +528,7 @@ class _NotificationBell extends ConsumerWidget {
   }
 }
 
-final _unreadCountProvider = FutureProvider.autoDispose<int>((ref) async {
+final unreadCountProvider = FutureProvider.autoDispose<int>((ref) async {
   final repo = ref.watch(skulkRepositoryProvider);
   return repo.getUnreadNotificationCount();
 });

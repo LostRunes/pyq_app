@@ -56,7 +56,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     // This enables the native in-app account picker popup
     _googleSignIn = GoogleSignIn(
       serverClientId: dotenv.env['GOOGLE_WEB_CLIENT_ID'],
-      scopes: ['email', 'profile'],
+      scopes: [
+        'email',
+        'profile',
+        'https://www.googleapis.com/auth/drive.file',
+      ],
     );
 
     if (widget.showUsernameDialog) {
@@ -476,40 +480,51 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Mascot Icon
+                    // Mascot Icon (Focus Fox Logo)
                     Center(
                       child: Container(
-                        padding: const EdgeInsets.all(24),
+                        width: 110,
+                        height: 110,
                         decoration: BoxDecoration(
-                          color: theme.colorScheme.primary.withOpacity(0.1),
                           shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(
+                                isDark ? 0.3 : 0.05,
+                              ),
+                              blurRadius: 15,
+                              offset: const Offset(0, 5),
+                            ),
+                          ],
                         ),
-                        child: Icon(
-                          Icons.diversity_3_rounded,
-                          size: 72,
-                          color: theme.colorScheme.primary,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(24),
+                          child: Image.asset(
+                            'assets/images/focus_fox_nobg.png',
+                            fit: BoxFit.cover,
+                          ),
                         ),
                       ),
                     ),
                     const SizedBox(height: 32),
                     Text(
-                      'SKULK',
+                      'Focus Fox',
                       textAlign: TextAlign.center,
                       style: GoogleFonts.outfit(
                         fontSize: 40,
                         fontWeight: FontWeight.w900,
-                        letterSpacing: 4.0,
+                        letterSpacing: 2.0,
                         color: theme.colorScheme.onBackground,
                       ),
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'HEAR THE HERD • JOIN THE PACK',
+                      'STUDY • FOCUS • GROW',
                       textAlign: TextAlign.center,
                       style: GoogleFonts.outfit(
                         fontSize: 12,
                         fontWeight: FontWeight.w800,
-                        letterSpacing: 2.0,
+                        letterSpacing: 3.0,
                         color: theme.colorScheme.onBackground.withOpacity(0.6),
                       ),
                     ),

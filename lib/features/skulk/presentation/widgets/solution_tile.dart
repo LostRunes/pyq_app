@@ -32,11 +32,16 @@ class SolutionTile extends ConsumerWidget {
     final isUpvoted = voteState.value?[solution.id] ?? false;
 
     final currentUserId = Supabase.instance.client.auth.currentUser?.id;
-    final isOwnSolution = currentUserId != null && currentUserId == solution.userId;
+    final isOwnSolution =
+        currentUserId != null && currentUserId == solution.userId;
 
     final cardColor = isDark ? const Color(0xFF1E1E1E) : Colors.white;
-    final acceptedBg = isDark ? Colors.green.withOpacity(0.06) : Colors.green.withOpacity(0.03);
-    final acceptedBorder = isDark ? Colors.green.withOpacity(0.4) : Colors.green.withOpacity(0.3);
+    final acceptedBg = isDark
+        ? Colors.green.withOpacity(0.06)
+        : Colors.green.withOpacity(0.03);
+    final acceptedBorder = isDark
+        ? Colors.green.withOpacity(0.4)
+        : Colors.green.withOpacity(0.3);
     final regularBorder = isDark ? Colors.grey[800]! : Colors.grey[200]!;
 
     return Container(
@@ -51,7 +56,9 @@ class SolutionTile extends ConsumerWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: isDark ? Colors.black.withOpacity(0.15) : Colors.black.withOpacity(0.02),
+            color: isDark
+                ? Colors.black.withOpacity(0.15)
+                : Colors.black.withOpacity(0.02),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -66,7 +73,8 @@ class SolutionTile extends ConsumerWidget {
               CircleAvatar(
                 radius: 16,
                 backgroundImage: AssetImage(
-                  (solution.authorAvatarUrl != null && solution.authorAvatarUrl!.isNotEmpty)
+                  (solution.authorAvatarUrl != null &&
+                          solution.authorAvatarUrl!.isNotEmpty)
                       ? solution.authorAvatarUrl!
                       : 'assets/images/pikachu.png',
                 ),
@@ -86,15 +94,22 @@ class SolutionTile extends ConsumerWidget {
                             style: GoogleFonts.outfit(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
-                              color: isDark ? Colors.grey[200] : Colors.grey[800],
+                              color: isDark
+                                  ? Colors.grey[200]
+                                  : Colors.grey[800],
                             ),
                           ),
                         ),
                         const SizedBox(width: 4),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 4,
+                            vertical: 1,
+                          ),
                           decoration: BoxDecoration(
-                            color: isDark ? Colors.blue.withOpacity(0.15) : Colors.blue.withOpacity(0.1),
+                            color: isDark
+                                ? Colors.blue.withOpacity(0.15)
+                                : Colors.blue.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
@@ -109,14 +124,21 @@ class SolutionTile extends ConsumerWidget {
                         if (solution.isAccepted) ...[
                           const SizedBox(width: 6),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 1.5,
+                            ),
                             decoration: BoxDecoration(
                               color: Colors.green.withOpacity(0.15),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Row(
                               children: [
-                                const Icon(Icons.check, size: 10, color: Colors.green),
+                                const Icon(
+                                  Icons.check,
+                                  size: 10,
+                                  color: Colors.green,
+                                ),
                                 const SizedBox(width: 2),
                                 Text(
                                   'ACCEPTED',
@@ -130,7 +152,7 @@ class SolutionTile extends ConsumerWidget {
                               ],
                             ),
                           ),
-                        ]
+                        ],
                       ],
                     ),
                     Text(
@@ -144,10 +166,14 @@ class SolutionTile extends ConsumerWidget {
                   ],
                 ),
               ),
-              
+
               // Edit/Delete for Owner | Report for others
               PopupMenuButton<String>(
-                icon: const Icon(Icons.more_vert_rounded, size: 20, color: Colors.grey),
+                icon: const Icon(
+                  Icons.more_vert_rounded,
+                  size: 20,
+                  color: Colors.grey,
+                ),
                 onSelected: (value) {
                   if (value == 'edit') {
                     onEdit();
@@ -165,29 +191,62 @@ class SolutionTile extends ConsumerWidget {
                   if (isOwnSolution) ...[
                     PopupMenuItem(
                       value: 'edit',
-                      child: Row(children: [
-                        const Icon(Icons.edit_outlined, size: 16, color: Colors.grey),
-                        const SizedBox(width: 8),
-                        Text('Edit Solution', style: GoogleFonts.outfit(fontSize: 13)),
-                      ]),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.edit_outlined,
+                            size: 16,
+                            color: Colors.grey,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Edit Solution',
+                            style: GoogleFonts.outfit(fontSize: 13),
+                          ),
+                        ],
+                      ),
                     ),
                     PopupMenuItem(
                       value: 'delete',
-                      child: Row(children: [
-                        const Icon(Icons.delete_outline_rounded, size: 16, color: Colors.redAccent),
-                        const SizedBox(width: 8),
-                        Text('Delete', style: GoogleFonts.outfit(fontSize: 13, color: Colors.redAccent)),
-                      ]),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.delete_outline_rounded,
+                            size: 16,
+                            color: Colors.redAccent,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Delete',
+                            style: GoogleFonts.outfit(
+                              fontSize: 13,
+                              color: Colors.redAccent,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ] else
-                    PopupMenuItem(
-                      value: 'report',
-                      child: Row(children: [
-                        const Icon(Icons.flag_outlined, size: 16, color: Colors.redAccent),
+                  ],
+                  PopupMenuItem(
+                    value: 'report',
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.flag_outlined,
+                          size: 16,
+                          color: Colors.redAccent,
+                        ),
                         const SizedBox(width: 8),
-                        Text('Report', style: GoogleFonts.outfit(fontSize: 13, color: Colors.redAccent)),
-                      ]),
+                        Text(
+                          'Report',
+                          style: GoogleFonts.outfit(
+                            fontSize: 13,
+                            color: Colors.redAccent,
+                          ),
+                        ),
+                      ],
                     ),
+                  ),
                 ],
               ),
             ],
@@ -212,7 +271,10 @@ class SolutionTile extends ConsumerWidget {
           ],
 
           // Divider
-          Divider(height: 1, color: isDark ? Colors.grey[850] : Colors.grey[100]),
+          Divider(
+            height: 1,
+            color: isDark ? Colors.grey[850] : Colors.grey[100],
+          ),
           const SizedBox(height: 10),
 
           // Action row
@@ -224,21 +286,30 @@ class SolutionTile extends ConsumerWidget {
                   // Upvote Toggle Button
                   InkWell(
                     onTap: () {
-                      ref.read(userVotesProvider.notifier).toggleSolutionVote(solution.id, solution.postId);
+                      ref
+                          .read(userVotesProvider.notifier)
+                          .toggleSolutionVote(solution.id, solution.postId);
                     },
                     borderRadius: BorderRadius.circular(8),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 5,
+                      ),
                       decoration: BoxDecoration(
                         color: isUpvoted
-                            ? (isDark ? Colors.amber.withOpacity(0.15) : Colors.amber.withOpacity(0.1))
+                            ? (isDark
+                                  ? Colors.amber.withOpacity(0.15)
+                                  : Colors.amber.withOpacity(0.1))
                             : Colors.transparent,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Row(
                         children: [
                           Icon(
-                            isUpvoted ? Icons.arrow_upward_rounded : Icons.arrow_upward_outlined,
+                            isUpvoted
+                                ? Icons.arrow_upward_rounded
+                                : Icons.arrow_upward_outlined,
                             size: 16,
                             color: isUpvoted ? Colors.amber[600] : Colors.grey,
                           ),
@@ -248,7 +319,9 @@ class SolutionTile extends ConsumerWidget {
                             style: GoogleFonts.outfit(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
-                              color: isUpvoted ? Colors.amber[600] : Colors.grey,
+                              color: isUpvoted
+                                  ? Colors.amber[600]
+                                  : Colors.grey,
                             ),
                           ),
                         ],
@@ -262,7 +335,10 @@ class SolutionTile extends ConsumerWidget {
                     onTap: onCommentTap,
                     borderRadius: BorderRadius.circular(8),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 5,
+                      ),
                       child: Row(
                         children: [
                           const Icon(
@@ -291,11 +367,18 @@ class SolutionTile extends ConsumerWidget {
                 TextButton.icon(
                   onPressed: onToggleAccept,
                   style: TextButton.styleFrom(
-                    foregroundColor: solution.isAccepted ? Colors.grey : Colors.green,
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    foregroundColor: solution.isAccepted
+                        ? Colors.grey
+                        : Colors.green,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                   ),
                   icon: Icon(
-                    solution.isAccepted ? Icons.remove_circle_outline : Icons.check_circle_rounded,
+                    solution.isAccepted
+                        ? Icons.remove_circle_outline
+                        : Icons.check_circle_rounded,
                     size: 16,
                   ),
                   label: Text(

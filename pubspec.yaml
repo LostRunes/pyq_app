@@ -51,6 +51,12 @@ dependencies:
   mime: ^1.0.4
   path: ^1.8.3
   google_sign_in: ^6.2.1
+  file_picker: ^11.0.2
+  youtube_explode_dart: ^3.1.0
+  youtube_player_flutter: ^10.0.1
+  flutter_pdfview: ^1.4.4
+  path_provider: ^2.1.5
+  webview_flutter: ^4.8.0
 
 dev_dependencies:
   flutter_test:

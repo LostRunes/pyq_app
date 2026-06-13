@@ -7,7 +7,9 @@ import '../../data/services/skulk_db_service.dart';
 import '../../data/repositories/skulk_repository.dart';
 
 /// Raw Db Service Provider
-final skulkDbServiceProvider = Provider<SkulkDbService>((ref) => SkulkDbService());
+final skulkDbServiceProvider = Provider<SkulkDbService>(
+  (ref) => SkulkDbService(),
+);
 
 /// Repository Provider (depends on SupabaseService and SkulkDbService)
 final skulkRepositoryProvider = Provider<SkulkRepository>((ref) {
@@ -28,10 +30,11 @@ class SkulkFeedFilterNotifier extends Notifier<String> {
   set state(String value) => super.state = value;
 }
 
-final skulkFeedFilterProvider = NotifierProvider<SkulkFeedFilterNotifier, String>(
-  SkulkFeedFilterNotifier.new,
-  isAutoDispose: true,
-);
+final skulkFeedFilterProvider =
+    NotifierProvider<SkulkFeedFilterNotifier, String>(
+      SkulkFeedFilterNotifier.new,
+      isAutoDispose: true,
+    );
 
 /// Current search query string
 class SkulkFeedSearchNotifier extends Notifier<String> {
@@ -42,10 +45,11 @@ class SkulkFeedSearchNotifier extends Notifier<String> {
   set state(String value) => super.state = value;
 }
 
-final skulkFeedSearchProvider = NotifierProvider<SkulkFeedSearchNotifier, String>(
-  SkulkFeedSearchNotifier.new,
-  isAutoDispose: true,
-);
+final skulkFeedSearchProvider =
+    NotifierProvider<SkulkFeedSearchNotifier, String>(
+      SkulkFeedSearchNotifier.new,
+      isAutoDispose: true,
+    );
 
 /// Selected subject filter for Skulk feed
 class SkulkFeedSubjectNotifier extends Notifier<String?> {
@@ -56,10 +60,11 @@ class SkulkFeedSubjectNotifier extends Notifier<String?> {
   set state(String? value) => super.state = value;
 }
 
-final skulkFeedSubjectProvider = NotifierProvider<SkulkFeedSubjectNotifier, String?>(
-  SkulkFeedSubjectNotifier.new,
-  isAutoDispose: true,
-);
+final skulkFeedSubjectProvider =
+    NotifierProvider<SkulkFeedSubjectNotifier, String?>(
+      SkulkFeedSubjectNotifier.new,
+      isAutoDispose: true,
+    );
 
 /// Selected tag filter
 class SkulkFeedTagNotifier extends Notifier<String?> {
@@ -154,10 +159,43 @@ class SkulkFeedNotifier extends AsyncNotifier<List<Doubt>> {
       state = AsyncError(e, st);
     }
   }
+
+  Future<void> editDoubt({
+    required String doubtId,
+    required String title,
+    required String body,
+    required List<String> tags,
+  }) async {
+    final repo = ref.read(skulkRepositoryProvider);
+    final updated = await repo.editDoubt(
+      doubtId: doubtId,
+      title: title,
+      body: body,
+      tags: tags,
+    );
+    // Locally update state if loaded
+    if (state.hasValue) {
+      final list = state.value!;
+      state = AsyncData(
+        list.map((d) => d.id == doubtId ? updated : d).toList(),
+      );
+    }
+    ref.invalidate(doubtDetailProvider(doubtId));
+  }
+
+  Future<void> deleteDoubt(String doubtId) async {
+    final repo = ref.read(skulkRepositoryProvider);
+    await repo.deleteDoubt(doubtId);
+    // Locally update state if loaded
+    if (state.hasValue) {
+      final list = state.value!;
+      state = AsyncData(list.where((d) => d.id != doubtId).toList());
+    }
+    ref.invalidate(doubtDetailProvider(doubtId));
+  }
 }
 
-final skulkFeedProvider =
-    AsyncNotifierProvider<SkulkFeedNotifier, List<Doubt>>(
+final skulkFeedProvider = AsyncNotifierProvider<SkulkFeedNotifier, List<Doubt>>(
   SkulkFeedNotifier.new,
   isAutoDispose: true,
 );
@@ -232,13 +270,17 @@ class UserVotesNotifier extends AsyncNotifier<Map<String, bool>> {
   }
 }
 
-final userVotesProvider = AsyncNotifierProvider<UserVotesNotifier, Map<String, bool>>(
-  UserVotesNotifier.new,
-  isAutoDispose: true,
-);
+final userVotesProvider =
+    AsyncNotifierProvider<UserVotesNotifier, Map<String, bool>>(
+      UserVotesNotifier.new,
+      isAutoDispose: true,
+    );
 
 /// Single Doubt detail thread loader
-final doubtDetailProvider = FutureProvider.family<Doubt?, String>((ref, doubtId) async {
+final doubtDetailProvider = FutureProvider.family<Doubt?, String>((
+  ref,
+  doubtId,
+) async {
   final repo = ref.watch(skulkRepositoryProvider);
   return repo.getDoubtDetail(doubtId);
 }, isAutoDispose: true);
@@ -266,9 +308,16 @@ class SolutionsNotifier extends Notifier<List<Solution>> {
     await _loadSolutions();
   }
 
-  Future<void> addSolution(String body, {List<String> imageUrls = const []}) async {
+  Future<void> addSolution(
+    String body, {
+    List<String> imageUrls = const [],
+  }) async {
     final repo = ref.read(skulkRepositoryProvider);
-    final newSol = await repo.createSolution(postId: arg, body: body, imageUrls: imageUrls);
+    final newSol = await repo.createSolution(
+      postId: arg,
+      body: body,
+      imageUrls: imageUrls,
+    );
     state = [newSol, ...state];
     ref.invalidate(skulkFeedProvider);
     ref.invalidate(doubtDetailProvider(arg));
@@ -285,13 +334,15 @@ class SolutionsNotifier extends Notifier<List<Solution>> {
   Future<void> editSolution(String solutionId, String body) async {
     final repo = ref.read(skulkRepositoryProvider);
     final updated = await repo.editSolution(solutionId, body);
-    state = state.map((s) => s.id == solutionId ? s.copyWith(body: updated.body) : s).toList();
+    state = state
+        .map((s) => s.id == solutionId ? s.copyWith(body: updated.body) : s)
+        .toList();
   }
 
   Future<void> toggleAcceptSolution(String solutionId, bool isAccepted) async {
     final repo = ref.read(skulkRepositoryProvider);
     await repo.toggleSolutionAccepted(solutionId, arg, isAccepted);
-    
+
     // Refresh to reload accurate is_accepted values
     await _loadSolutions();
     ref.invalidate(skulkFeedProvider);
@@ -299,10 +350,11 @@ class SolutionsNotifier extends Notifier<List<Solution>> {
   }
 }
 
-final solutionsNotifierProvider = NotifierProvider.family<SolutionsNotifier, List<Solution>, String>(
-  SolutionsNotifier.new,
-  isAutoDispose: true,
-);
+final solutionsNotifierProvider =
+    NotifierProvider.family<SolutionsNotifier, List<Solution>, String>(
+      SolutionsNotifier.new,
+      isAutoDispose: true,
+    );
 
 /// Comments notifier family to manage one-level replies linked to a thread
 class CommentsNotifier extends Notifier<List<Comment>> {
@@ -325,14 +377,33 @@ class CommentsNotifier extends Notifier<List<Comment>> {
 
   Future<void> addComment(String body, {String? answerId}) async {
     final repo = ref.read(skulkRepositoryProvider);
-    final newComment = await repo.createComment(postId: arg, answerId: answerId, body: body);
+    final newComment = await repo.createComment(
+      postId: arg,
+      answerId: answerId,
+      body: body,
+    );
     state = [...state, newComment];
+    ref.invalidate(skulkFeedProvider);
+    ref.invalidate(doubtDetailProvider(arg));
+  }
+
+  Future<void> editComment(String commentId, String body) async {
+    final repo = ref.read(skulkRepositoryProvider);
+    final updated = await repo.editComment(commentId, body, arg);
+    state = state.map((c) => c.id == commentId ? updated : c).toList();
+  }
+
+  Future<void> deleteComment(String commentId) async {
+    final repo = ref.read(skulkRepositoryProvider);
+    await repo.deleteComment(commentId, arg);
+    state = state.where((c) => c.id != commentId).toList();
     ref.invalidate(skulkFeedProvider);
     ref.invalidate(doubtDetailProvider(arg));
   }
 }
 
-final commentsNotifierProvider = NotifierProvider.family<CommentsNotifier, List<Comment>, String>(
-  CommentsNotifier.new,
-  isAutoDispose: true,
-);
+final commentsNotifierProvider =
+    NotifierProvider.family<CommentsNotifier, List<Comment>, String>(
+      CommentsNotifier.new,
+      isAutoDispose: true,
+    );

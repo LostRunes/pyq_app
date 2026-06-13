@@ -8,28 +8,41 @@ import '../models/question_full.dart';
 import '../models/topic_with_questions.dart';
 
 class PdfService {
-  static final PdfColor primaryColor = PdfColor.fromHex('#D37D3E'); // App primary
+  static final PdfColor primaryColor = PdfColor.fromHex(
+    '#D37D3E',
+  ); // App primary
   static final PdfColor bgColor = PdfColor.fromHex('#FFFBF5'); // Soft off-white
   static final PdfColor secondaryColor = PdfColor.fromHex('#8BA682');
 
-  Future<Uint8List> generateTopicPdf(String topicName, List<QuestionFull> questions) async {
+  Future<Uint8List> generateTopicPdf(
+    String topicName,
+    List<QuestionFull> questions,
+  ) async {
     final pdf = pw.Document();
 
     // Parallelize pre-loading images for all questions
-    await Future.wait(questions.map((q) async {
-      q.loadedImages = await Future.wait(q.imageUrls.map((url) async {
-        try {
-          final response = await http.get(Uri.parse(url));
-          return response.statusCode == 200 ? response.bodyBytes : Uint8List(0);
-        } catch (e) {
-          return Uint8List(0);
-        }
-      }));
-    }));
+    await Future.wait(
+      questions.map((q) async {
+        q.loadedImages = await Future.wait(
+          q.imageUrls.map((url) async {
+            try {
+              final response = await http.get(Uri.parse(url));
+              return response.statusCode == 200
+                  ? response.bodyBytes
+                  : Uint8List(0);
+            } catch (e) {
+              return Uint8List(0);
+            }
+          }),
+        );
+      }),
+    );
 
     // Load NotoSans and Math fallback
     final fontData = await rootBundle.load("assets/fonts/NotoSans-Regular.ttf");
-    final mathFontData = await rootBundle.load("assets/fonts/NotoSansMath-Regular.ttf");
+    final mathFontData = await rootBundle.load(
+      "assets/fonts/NotoSansMath-Regular.ttf",
+    );
     final ttf = pw.Font.ttf(fontData);
     final mathTtf = pw.Font.ttf(mathFontData);
 
@@ -95,20 +108,26 @@ class PdfService {
                         ),
                       ),
                       pw.Container(
-                        padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const pw.EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         decoration: pw.BoxDecoration(
                           color: PdfColors.grey100,
                           borderRadius: pw.BorderRadius.circular(4),
                         ),
                         child: pw.Text(
                           q.difficulty.toUpperCase(),
-                          style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700),
+                          style: const pw.TextStyle(
+                            fontSize: 8,
+                            color: PdfColors.grey700,
+                          ),
                         ),
                       ),
                     ],
                   ),
                   pw.SizedBox(height: 8),
-                  
+
                   // Question Text
                   pw.Text(
                     q.text,
@@ -120,12 +139,20 @@ class PdfService {
                   if (q.pyqMeta.isNotEmpty)
                     pw.Wrap(
                       spacing: 10,
-                      children: q.pyqMeta.map((m) => pw.Text(
-                        '• ${m.examType} (${m.year}) - ${m.questionNumber}',
-                        style: pw.TextStyle(fontSize: 9, color: PdfColors.grey600, fontStyle: pw.FontStyle.italic),
-                      )).toList(),
+                      children: q.pyqMeta
+                          .map(
+                            (m) => pw.Text(
+                              '• ${m.examType} (${m.year}) - ${m.questionNumber}',
+                              style: pw.TextStyle(
+                                fontSize: 9,
+                                color: PdfColors.grey600,
+                                fontStyle: pw.FontStyle.italic,
+                              ),
+                            ),
+                          )
+                          .toList(),
                     ),
-                  
+
                   pw.SizedBox(height: 12),
 
                   // Images
@@ -155,7 +182,10 @@ class PdfService {
     return pdf.save();
   }
 
-  Future<Uint8List> generateSubjectPdf(String subjectName, List<TopicWithQuestions> data) async {
+  Future<Uint8List> generateSubjectPdf(
+    String subjectName,
+    List<TopicWithQuestions> data,
+  ) async {
     final pdf = pw.Document();
 
     // Parallelize pre-loading images for all topics and questions
@@ -163,21 +193,27 @@ class PdfService {
     for (var topic in data) {
       for (var q in topic.questions) {
         preloadFutures.add(() async {
-          q.loadedImages = await Future.wait(q.imageUrls.map((url) async {
-            try {
-              final response = await http.get(Uri.parse(url));
-              return response.statusCode == 200 ? response.bodyBytes : Uint8List(0);
-            } catch (e) {
-              return Uint8List(0);
-            }
-          }));
+          q.loadedImages = await Future.wait(
+            q.imageUrls.map((url) async {
+              try {
+                final response = await http.get(Uri.parse(url));
+                return response.statusCode == 200
+                    ? response.bodyBytes
+                    : Uint8List(0);
+              } catch (e) {
+                return Uint8List(0);
+              }
+            }),
+          );
         }());
       }
     }
     await Future.wait(preloadFutures);
 
     final fontData = await rootBundle.load("assets/fonts/NotoSans-Regular.ttf");
-    final mathFontData = await rootBundle.load("assets/fonts/NotoSansMath-Regular.ttf");
+    final mathFontData = await rootBundle.load(
+      "assets/fonts/NotoSansMath-Regular.ttf",
+    );
     final ttf = pw.Font.ttf(fontData);
     final mathTtf = pw.Font.ttf(mathFontData);
 
@@ -227,7 +263,10 @@ class PdfService {
               children: [
                 // Topic Header
                 pw.Container(
-                  padding: const pw.EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  padding: const pw.EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
                   decoration: pw.BoxDecoration(
                     color: PdfColor.fromHex("#F3E5D8"),
                     borderRadius: pw.BorderRadius.circular(8),
@@ -266,7 +305,10 @@ class PdfService {
                             ),
                             pw.Text(
                               q.difficulty.toUpperCase(),
-                              style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey500),
+                              style: const pw.TextStyle(
+                                fontSize: 8,
+                                color: PdfColors.grey500,
+                              ),
                             ),
                           ],
                         ),
@@ -281,10 +323,17 @@ class PdfService {
                         if (q.pyqMeta.isNotEmpty)
                           pw.Wrap(
                             spacing: 8,
-                            children: q.pyqMeta.map((m) => pw.Text(
-                              '• ${m.examType} (${m.year}) - ${m.questionNumber}',
-                              style: pw.TextStyle(fontSize: 8, color: PdfColors.grey600),
-                            )).toList(),
+                            children: q.pyqMeta
+                                .map(
+                                  (m) => pw.Text(
+                                    '• ${m.examType} (${m.year}) - ${m.questionNumber}',
+                                    style: pw.TextStyle(
+                                      fontSize: 8,
+                                      color: PdfColors.grey600,
+                                    ),
+                                  ),
+                                )
+                                .toList(),
                           ),
 
                         // Images
@@ -294,7 +343,9 @@ class PdfService {
                             padding: const pw.EdgeInsets.only(top: 10),
                             child: pw.Center(
                               child: pw.Container(
-                                constraints: const pw.BoxConstraints(maxHeight: 250),
+                                constraints: const pw.BoxConstraints(
+                                  maxHeight: 250,
+                                ),
                                 child: pw.Image(pw.MemoryImage(bytes)),
                               ),
                             ),

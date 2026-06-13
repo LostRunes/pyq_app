@@ -6,7 +6,7 @@ class RoomMessage {
   final DateTime createdAt;
   final DateTime? editedAt;
   final DateTime? deletedAt;
-  
+
   // Snapshot fields to avoid active profile joins
   final String? senderUsername;
   final String? senderDisplayName;
@@ -32,8 +32,12 @@ class RoomMessage {
       userId: json['user_id'] as String,
       message: json['message'] as String,
       createdAt: DateTime.parse(json['created_at'] as String),
-      editedAt: json['edited_at'] != null ? DateTime.parse(json['edited_at'] as String) : null,
-      deletedAt: json['deleted_at'] != null ? DateTime.parse(json['deleted_at'] as String) : null,
+      editedAt: json['edited_at'] != null
+          ? DateTime.parse(json['edited_at'] as String)
+          : null,
+      deletedAt: json['deleted_at'] != null
+          ? DateTime.parse(json['deleted_at'] as String)
+          : null,
       senderUsername: json['sender_username'] as String?,
       senderDisplayName: json['sender_display_name'] as String?,
       senderAvatarUrl: json['sender_avatar_url'] as String?,
