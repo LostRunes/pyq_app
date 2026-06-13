@@ -75,9 +75,9 @@ class _ReportBottomSheetState extends State<ReportBottomSheet> {
       if (mounted) Navigator.pop(context);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to submit report: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to submit report: $e')));
       }
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
@@ -119,7 +119,11 @@ class _ReportBottomSheetState extends State<ReportBottomSheet> {
 
           if (_submitted) ...[
             const SizedBox(height: 16),
-            const Icon(Icons.check_circle_rounded, color: Colors.green, size: 48),
+            const Icon(
+              Icons.check_circle_rounded,
+              color: Colors.green,
+              size: 48,
+            ),
             const SizedBox(height: 12),
             Text(
               'Report submitted',
@@ -138,7 +142,11 @@ class _ReportBottomSheetState extends State<ReportBottomSheet> {
           ] else ...[
             Row(
               children: [
-                const Icon(Icons.flag_outlined, color: Colors.redAccent, size: 22),
+                const Icon(
+                  Icons.flag_outlined,
+                  color: Colors.redAccent,
+                  size: 22,
+                ),
                 const SizedBox(width: 8),
                 Text(
                   'Report ${widget.target.name}',
@@ -165,14 +173,19 @@ class _ReportBottomSheetState extends State<ReportBottomSheet> {
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 150),
                   margin: const EdgeInsets.only(bottom: 8),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 12,
+                  ),
                   decoration: BoxDecoration(
                     color: isSelected
                         ? Colors.redAccent.withOpacity(isDark ? 0.15 : 0.08)
                         : (isDark ? const Color(0xFF2A2A2A) : Colors.grey[50]),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: isSelected ? Colors.redAccent.withOpacity(0.5) : borderCol,
+                      color: isSelected
+                          ? Colors.redAccent.withOpacity(0.5)
+                          : borderCol,
                       width: isSelected ? 1.5 : 1,
                     ),
                   ),
@@ -183,16 +196,23 @@ class _ReportBottomSheetState extends State<ReportBottomSheet> {
                           r.$2,
                           style: GoogleFonts.outfit(
                             fontSize: 14,
-                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                            fontWeight: isSelected
+                                ? FontWeight.w600
+                                : FontWeight.w400,
                             color: isSelected
                                 ? Colors.redAccent
-                                : (isDark ? Colors.grey[300] : Colors.grey[800]),
+                                : (isDark
+                                      ? Colors.grey[300]
+                                      : Colors.grey[800]),
                           ),
                         ),
                       ),
                       if (isSelected)
-                        const Icon(Icons.check_circle_rounded,
-                            color: Colors.redAccent, size: 18),
+                        const Icon(
+                          Icons.check_circle_rounded,
+                          color: Colors.redAccent,
+                          size: 18,
+                        ),
                     ],
                   ),
                 ),

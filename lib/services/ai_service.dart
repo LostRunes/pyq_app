@@ -11,7 +11,9 @@ class AiService {
       return await _callGemini(_primaryModel, question);
     } catch (e) {
       print('AI Solver failed: $e');
-      throw Exception('Could not reach the AI solver. Please check your connection.');
+      throw Exception(
+        'Could not reach the AI solver. Please check your connection.',
+      );
     }
   }
 
@@ -22,15 +24,17 @@ class AiService {
 
     print('Calling Gemini ($model)...');
 
-    final response = await http.post(
-      url,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'contents': [
-          {
-            'parts': [
+    final response = await http
+        .post(
+          url,
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'contents': [
               {
-                'text': """
+                'parts': [
+                  {
+                    'text':
+                        """
 Solve this engineering exam question step-by-step.
 
 Format the answer using clean markdown:
@@ -41,13 +45,14 @@ Format the answer using clean markdown:
 
 Question:
 $question
-"""
-              }
-            ]
-          }
-        ]
-      }),
-    ).timeout(const Duration(seconds: 15));
+""",
+                  },
+                ],
+              },
+            ],
+          }),
+        )
+        .timeout(const Duration(seconds: 15));
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);

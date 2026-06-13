@@ -6,7 +6,7 @@ class StudyTogetherRepository {
   final StudyTogetherService _service;
 
   StudyTogetherRepository({required StudyTogetherService service})
-      : _service = service;
+    : _service = service;
 
   /// Fetches non-archived study rooms ordered by active state
   Future<List<StudyRoom>> getActiveRooms() async {

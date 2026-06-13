@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 
 String optimizedImage(String url, {int width = 800}) {
-  return url.replaceFirst(
-    '/upload/',
-    '/upload/w_$width,q_auto,f_webp/',
-  );
+  return url.replaceFirst('/upload/', '/upload/w_$width,q_auto,f_webp/');
 }
 
 class CloudinaryImageGallery extends StatelessWidget {
@@ -52,7 +49,11 @@ class CloudinaryImageGallery extends StatelessWidget {
                         top: 40,
                         right: 20,
                         child: IconButton(
-                          icon: const Icon(Icons.close, color: Colors.white, size: 30),
+                          icon: const Icon(
+                            Icons.close,
+                            color: Colors.white,
+                            size: 30,
+                          ),
                           onPressed: () => Navigator.pop(context),
                         ),
                       ),
@@ -71,11 +72,17 @@ class CloudinaryImageGallery extends StatelessWidget {
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(16),
                 child: Image.network(
-                  optimizedImage(imageUrl, width: 800), // Automatically optimize!
+                  optimizedImage(
+                    imageUrl,
+                    width: 800,
+                  ), // Automatically optimize!
                   fit: BoxFit.cover,
                   errorBuilder: (context, error, stackTrace) => Container(
                     color: isDark ? Colors.grey[800] : Colors.grey[200],
-                    child: const Icon(Icons.broken_image_outlined, color: Colors.grey),
+                    child: const Icon(
+                      Icons.broken_image_outlined,
+                      color: Colors.grey,
+                    ),
                   ),
                 ),
               ),

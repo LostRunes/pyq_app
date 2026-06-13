@@ -8,7 +8,8 @@ import 'report_bottom_sheet.dart';
 
 class CommentSection extends ConsumerStatefulWidget {
   final String doubtId;
-  final String? answerId; // If null, this is for the main doubt post. Otherwise, for the answer.
+  final String?
+  answerId; // If null, this is for the main doubt post. Otherwise, for the answer.
   final String title;
 
   const CommentSection({
@@ -19,7 +20,12 @@ class CommentSection extends ConsumerStatefulWidget {
   });
 
   /// Opens the CommentSection as a cozy sliding bottom sheet
-  static void show(BuildContext context, String doubtId, String? answerId, String title) {
+  static void show(
+    BuildContext context,
+    String doubtId,
+    String? answerId,
+    String title,
+  ) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -28,7 +34,11 @@ class CommentSection extends ConsumerStatefulWidget {
         padding: EdgeInsets.only(
           bottom: MediaQuery.of(context).viewInsets.bottom,
         ),
-        child: CommentSection(doubtId: doubtId, answerId: answerId, title: title),
+        child: CommentSection(
+          doubtId: doubtId,
+          answerId: answerId,
+          title: title,
+        ),
       ),
     );
   }
@@ -62,9 +72,9 @@ class _CommentSectionState extends ConsumerState<CommentSection> {
       _commentController.clear();
       FocusScope.of(context).unfocus();
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to publish comment: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to publish comment: $e')));
     } finally {
       if (mounted) {
         setState(() {
@@ -80,8 +90,13 @@ class _CommentSectionState extends ConsumerState<CommentSection> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Text('Edit Comment', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Text(
+            'Edit Comment',
+            style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+          ),
           content: TextField(
             controller: editController,
             maxLines: null,
@@ -89,13 +104,18 @@ class _CommentSectionState extends ConsumerState<CommentSection> {
             style: GoogleFonts.outfit(fontSize: 14),
             decoration: InputDecoration(
               hintText: 'Edit your comment...',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text('Cancel', style: GoogleFonts.outfit(color: Colors.grey)),
+              child: Text(
+                'Cancel',
+                style: GoogleFonts.outfit(color: Colors.grey),
+              ),
             ),
             ElevatedButton(
               onPressed: () async {
@@ -109,9 +129,17 @@ class _CommentSectionState extends ConsumerState<CommentSection> {
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Theme.of(context).colorScheme.primary,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
-              child: Text('Save', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold)),
+              child: Text(
+                'Save',
+                style: GoogleFonts.outfit(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
           ],
         );
@@ -219,8 +247,10 @@ class _CommentSectionState extends ConsumerState<CommentSection> {
                     separatorBuilder: (_, __) => const SizedBox(height: 16),
                     itemBuilder: (context, index) {
                       final c = comments[index];
-                      final currentUserId = Supabase.instance.client.auth.currentUser?.id;
-                      final isOwnComment = currentUserId != null && currentUserId == c.userId;
+                      final currentUserId =
+                          Supabase.instance.client.auth.currentUser?.id;
+                      final isOwnComment =
+                          currentUserId != null && currentUserId == c.userId;
 
                       return Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -228,7 +258,8 @@ class _CommentSectionState extends ConsumerState<CommentSection> {
                           CircleAvatar(
                             radius: 14,
                             backgroundImage: AssetImage(
-                              (c.authorAvatarUrl != null && c.authorAvatarUrl!.isNotEmpty)
+                              (c.authorAvatarUrl != null &&
+                                      c.authorAvatarUrl!.isNotEmpty)
                                   ? c.authorAvatarUrl!
                                   : 'assets/images/pikachu.png',
                             ),
@@ -248,7 +279,9 @@ class _CommentSectionState extends ConsumerState<CommentSection> {
                                         style: GoogleFonts.outfit(
                                           fontSize: 12,
                                           fontWeight: FontWeight.w600,
-                                          color: isDark ? Colors.grey[200] : Colors.grey[800],
+                                          color: isDark
+                                              ? Colors.grey[200]
+                                              : Colors.grey[800],
                                         ),
                                       ),
                                     ),
@@ -269,14 +302,20 @@ class _CommentSectionState extends ConsumerState<CommentSection> {
                                   style: GoogleFonts.outfit(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w400,
-                                    color: isDark ? Colors.grey[300] : Colors.grey[700],
+                                    color: isDark
+                                        ? Colors.grey[300]
+                                        : Colors.grey[700],
                                   ),
                                 ),
                               ],
                             ),
                           ),
                           PopupMenuButton<String>(
-                            icon: const Icon(Icons.more_vert_rounded, size: 16, color: Colors.grey),
+                            icon: const Icon(
+                              Icons.more_vert_rounded,
+                              size: 16,
+                              color: Colors.grey,
+                            ),
                             padding: EdgeInsets.zero,
                             constraints: const BoxConstraints(),
                             onSelected: (value) async {
@@ -286,24 +325,50 @@ class _CommentSectionState extends ConsumerState<CommentSection> {
                                 final confirm = await showDialog<bool>(
                                   context: context,
                                   builder: (context) => AlertDialog(
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                    title: Text('Delete Comment', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-                                    content: Text('Are you sure you want to delete this comment?', style: GoogleFonts.outfit()),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    title: Text(
+                                      'Delete Comment',
+                                      style: GoogleFonts.outfit(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    content: Text(
+                                      'Are you sure you want to delete this comment?',
+                                      style: GoogleFonts.outfit(),
+                                    ),
                                     actions: [
                                       TextButton(
-                                        onPressed: () => Navigator.pop(context, false),
-                                        child: Text('Cancel', style: GoogleFonts.outfit(color: Colors.grey)),
+                                        onPressed: () =>
+                                            Navigator.pop(context, false),
+                                        child: Text(
+                                          'Cancel',
+                                          style: GoogleFonts.outfit(
+                                            color: Colors.grey,
+                                          ),
+                                        ),
                                       ),
                                       TextButton(
-                                        onPressed: () => Navigator.pop(context, true),
-                                        child: Text('Delete', style: GoogleFonts.outfit(color: Colors.redAccent)),
+                                        onPressed: () =>
+                                            Navigator.pop(context, true),
+                                        child: Text(
+                                          'Delete',
+                                          style: GoogleFonts.outfit(
+                                            color: Colors.redAccent,
+                                          ),
+                                        ),
                                       ),
                                     ],
                                   ),
                                 );
                                 if (confirm == true) {
                                   await ref
-                                      .read(commentsNotifierProvider(widget.doubtId).notifier)
+                                      .read(
+                                        commentsNotifierProvider(
+                                          widget.doubtId,
+                                        ).notifier,
+                                      )
                                       .deleteComment(c.id);
                                 }
                               } else if (value == 'report') {
@@ -318,28 +383,61 @@ class _CommentSectionState extends ConsumerState<CommentSection> {
                               if (isOwnComment) ...[
                                 PopupMenuItem(
                                   value: 'edit',
-                                  child: Row(children: [
-                                    const Icon(Icons.edit_outlined, size: 14, color: Colors.grey),
-                                    const SizedBox(width: 8),
-                                    Text('Edit', style: GoogleFonts.outfit(fontSize: 12)),
-                                  ]),
+                                  child: Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.edit_outlined,
+                                        size: 14,
+                                        color: Colors.grey,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'Edit',
+                                        style: GoogleFonts.outfit(fontSize: 12),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                                 PopupMenuItem(
                                   value: 'delete',
-                                  child: Row(children: [
-                                    const Icon(Icons.delete_outline_rounded, size: 14, color: Colors.redAccent),
-                                    const SizedBox(width: 8),
-                                    Text('Delete', style: GoogleFonts.outfit(fontSize: 12, color: Colors.redAccent)),
-                                  ]),
+                                  child: Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.delete_outline_rounded,
+                                        size: 14,
+                                        color: Colors.redAccent,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'Delete',
+                                        style: GoogleFonts.outfit(
+                                          fontSize: 12,
+                                          color: Colors.redAccent,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ],
                               PopupMenuItem(
                                 value: 'report',
-                                child: Row(children: [
-                                  const Icon(Icons.flag_outlined, size: 14, color: Colors.redAccent),
-                                  const SizedBox(width: 8),
-                                  Text('Report', style: GoogleFonts.outfit(fontSize: 12, color: Colors.redAccent)),
-                                ]),
+                                child: Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.flag_outlined,
+                                      size: 14,
+                                      color: Colors.redAccent,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Report',
+                                      style: GoogleFonts.outfit(
+                                        fontSize: 12,
+                                        color: Colors.redAccent,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ],
                           ),
@@ -360,7 +458,9 @@ class _CommentSectionState extends ConsumerState<CommentSection> {
                   Expanded(
                     child: Container(
                       decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF2A2A2A) : Colors.grey[100],
+                        color: isDark
+                            ? const Color(0xFF2A2A2A)
+                            : Colors.grey[100],
                         borderRadius: BorderRadius.circular(20),
                       ),
                       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -371,9 +471,14 @@ class _CommentSectionState extends ConsumerState<CommentSection> {
                         style: GoogleFonts.outfit(fontSize: 13),
                         decoration: InputDecoration(
                           hintText: 'Add a helpful comment...',
-                          hintStyle: GoogleFonts.outfit(fontSize: 13, color: Colors.grey),
+                          hintStyle: GoogleFonts.outfit(
+                            fontSize: 13,
+                            color: Colors.grey,
+                          ),
                           border: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 10,
+                          ),
                         ),
                       ),
                     ),
@@ -390,7 +495,9 @@ class _CommentSectionState extends ConsumerState<CommentSection> {
                               height: 16,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation(Colors.white),
+                                valueColor: AlwaysStoppedAnimation(
+                                  Colors.white,
+                                ),
                               ),
                             )
                           : const Icon(

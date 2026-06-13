@@ -22,14 +22,22 @@ class Subject {
   });
 
   factory Subject.fromJson(Map<String, dynamic> json) => Subject(
-        id: json['id'] as String,
-        name: json['name'] as String,
-        code: json['code'] as String,
-        pyqDriveLink: json['pyq_drive_link'] as String?,
-        notesDriveLink: json['notes_drive_link'] as String?,
-        courseOutcomeLink: json['course_outcome_link'] as String?,
-        priority: json['priority'] as int?,
-        subjectCredit: json['subject_credit'] as int?,
-        subjectType: json['subject_type'] as String?,
-      );
+    id: json['id'] as String,
+    name: json['name'] as String,
+    code: json['code'] as String,
+    pyqDriveLink: json['pyq_drive_link'] as String?,
+    notesDriveLink: json['notes_drive_link'] as String?,
+    courseOutcomeLink: json['course_outcome_link'] as String?,
+    priority: json['priority'] as int?,
+    subjectCredit: json['subject_credit'] as int?,
+    subjectType: json['subject_type'] as String?,
+  );
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is Subject && runtimeType == other.runtimeType && id == other.id;
+
+  @override
+  int get hashCode => id.hashCode;
 }

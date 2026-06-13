@@ -10,6 +10,7 @@ import '../models/subject.dart';
 import '../services/drive_service.dart';
 import '../utils/drive_utils.dart';
 import '../features/skulk/presentation/screens/skulk_feed_screen.dart';
+import '../features/skulk/presentation/providers/skulk_providers.dart';
 
 class SubjectListScreen extends ConsumerStatefulWidget {
   final String branchId;
@@ -30,6 +31,10 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
   late String _currentBranchId;
   int _currentIndex = 0; // 0: Subjects, 1: Syllabus, 2: Dashboard, 3: Skulk
   int? _selectedSyllabusSemester; // null means 'All Semesters'
+
+  // Skulk Feed Header Search State
+  bool _isSearching = false;
+  final TextEditingController _skulkSearchController = TextEditingController();
 
   // For dummy upload notes form
   int? _uploadSemester;
@@ -75,6 +80,7 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
   void dispose() {
     _wobbleController.dispose();
     _pageController.dispose();
+    _skulkSearchController.dispose();
     super.dispose();
   }
 
@@ -95,31 +101,109 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        leadingWidth: 110,
-        leading: Row(
-          children: [
-            const SizedBox(width: 8),
-            IconButton(
-              icon: const Icon(Icons.notifications_none_rounded),
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('No new notifications. 🔔')),
-                );
-              },
-            ),
-            IconButton(
-              icon: const Icon(Icons.search_rounded),
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Search feature coming soon! 🔍'),
+        leadingWidth: _currentIndex == 3 ? 56 : 110,
+        leading: _currentIndex == 3
+            ? (_isSearching
+                  ? IconButton(
+                      icon: const Icon(Icons.arrow_back_rounded),
+                      onPressed: () {
+                        setState(() {
+                          _isSearching = false;
+                          _skulkSearchController.clear();
+                          ref.read(skulkFeedSearchProvider.notifier).state = '';
+                        });
+                      },
+                    )
+                  : const Padding(
+                      padding: EdgeInsets.only(left: 8.0),
+                      child: NotificationBell(),
+                    ))
+            : Row(
+                children: [
+                  const SizedBox(width: 8),
+                  IconButton(
+                    icon: const Icon(Icons.notifications_none_rounded),
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('No new notifications. 🔔'),
+                        ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
-          ],
-        ),
+                  IconButton(
+                    icon: const Icon(Icons.search_rounded),
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Search feature coming soon! 🔍'),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+        title: _currentIndex == 3
+            ? (_isSearching
+                  ? TextField(
+                      controller: _skulkSearchController,
+                      autofocus: true,
+                      style: GoogleFonts.outfit(fontSize: 14),
+                      decoration: InputDecoration(
+                        hintText: 'Search doubts, title or tags...',
+                        hintStyle: GoogleFonts.outfit(
+                          fontSize: 14,
+                          color: Colors.grey,
+                        ),
+                        border: InputBorder.none,
+                      ),
+                      onChanged: (val) {
+                        ref.read(skulkFeedSearchProvider.notifier).state = val;
+                      },
+                    )
+                  : Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Skulk',
+                          style: GoogleFonts.outfit(
+                            fontWeight: FontWeight.w900,
+                            fontSize: 20,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Image.asset(
+                          'assets/images/lil_fox.png',
+                          width: 32,
+                          height: 32,
+                          fit: BoxFit.contain,
+                        ),
+                      ],
+                    ))
+            : null,
+        centerTitle: _currentIndex == 3,
         actions: [
+          if (_currentIndex == 3) ...[
+            if (_isSearching)
+              IconButton(
+                icon: const Icon(Icons.close_rounded),
+                onPressed: () {
+                  setState(() {
+                    _skulkSearchController.clear();
+                    ref.read(skulkFeedSearchProvider.notifier).state = '';
+                  });
+                },
+              )
+            else
+              IconButton(
+                icon: const Icon(Icons.search_rounded),
+                onPressed: () {
+                  setState(() {
+                    _isSearching = true;
+                  });
+                },
+              ),
+          ],
           PopupMenuButton<String>(
             offset: const Offset(0, 48),
             shape: RoundedRectangleBorder(
@@ -134,11 +218,30 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
                   width: 2,
                 ),
               ),
-              child: const CircleAvatar(
-                radius: 16,
-                backgroundImage: AssetImage('assets/images/pikachu.png'),
-                backgroundColor: Colors.transparent,
-              ),
+              child: ref
+                  .watch(userProfileProvider)
+                  .when(
+                    data: (profile) {
+                      final avatarUrl =
+                          profile?['avatar_url']?.toString() ??
+                          'assets/images/pikachu.png';
+                      return CircleAvatar(
+                        radius: 16,
+                        backgroundImage: AssetImage(avatarUrl),
+                        backgroundColor: Colors.transparent,
+                      );
+                    },
+                    loading: () => const CircleAvatar(
+                      radius: 16,
+                      backgroundImage: AssetImage('assets/images/pikachu.png'),
+                      backgroundColor: Colors.transparent,
+                    ),
+                    error: (_, __) => const CircleAvatar(
+                      radius: 16,
+                      backgroundImage: AssetImage('assets/images/pikachu.png'),
+                      backgroundColor: Colors.transparent,
+                    ),
+                  ),
             ),
             onSelected: (value) {
               if (value == 'profile') {
@@ -162,7 +265,10 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
                     const SizedBox(width: 12),
                     Text(
                       'Profile',
-                      style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13),
+                      style: GoogleFonts.outfit(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
                     ),
                   ],
                 ),
@@ -179,7 +285,10 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
                     const SizedBox(width: 12),
                     Text(
                       'Settings',
-                      style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13),
+                      style: GoogleFonts.outfit(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
                     ),
                   ],
                 ),
@@ -232,6 +341,11 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
             onPageChanged: (index) {
               setState(() {
                 _currentIndex = index;
+                if (index != 3) {
+                  _isSearching = false;
+                  _skulkSearchController.clear();
+                  ref.read(skulkFeedSearchProvider.notifier).state = '';
+                }
               });
             },
             children: [
@@ -381,6 +495,11 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
       onTap: () {
         setState(() {
           _currentIndex = index;
+          if (index != 3) {
+            _isSearching = false;
+            _skulkSearchController.clear();
+            ref.read(skulkFeedSearchProvider.notifier).state = '';
+          }
         });
         _pageController.animateToPage(
           index,
@@ -563,20 +682,30 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
                   children: [
                     Text(
                       'Code: ${subject.code}',
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600, color: Colors.grey),
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey,
+                      ),
                     ),
-                    if (subject.subjectCredit != null || subject.subjectType != null) ...[
+                    if (subject.subjectCredit != null ||
+                        subject.subjectType != null) ...[
                       const SizedBox(width: 8),
-                      Text('•', style: TextStyle(color: Colors.grey[400], fontSize: 12)),
+                      Text(
+                        '•',
+                        style: TextStyle(color: Colors.grey[400], fontSize: 12),
+                      ),
                       const SizedBox(width: 8),
                     ],
                     if (subject.subjectCredit != null) ...[
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.primary.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
@@ -592,7 +721,10 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
                     ],
                     if (subject.subjectType != null) ...[
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: subject.subjectType!.toLowerCase() == 'core'
                               ? Colors.redAccent.withOpacity(0.1)
@@ -764,13 +896,15 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
   Widget _buildDashboardPage(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    
+
     final AsyncValue<List<Subject>> subjectsAsync = _uploadSemester == null
         ? ref.watch(allSubjectsProvider)
-        : ref.watch(subjectsProvider((
-            branchId: _currentBranchId,
-            semester: _uploadSemester!,
-          )));
+        : ref.watch(
+            subjectsProvider((
+              branchId: _currentBranchId,
+              semester: _uploadSemester!,
+            )),
+          );
 
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -876,7 +1010,14 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
                       flex: 3,
                       child: subjectsAsync.when(
                         data: (subs) {
+                          final otherSubject = Subject(
+                            id: 'other',
+                            name: 'Other',
+                            code: 'OTHER',
+                          );
+
                           if (_uploadSubject != null &&
+                              _uploadSubject!.id != 'other' &&
                               !subs.any((s) => s.id == _uploadSubject!.id)) {
                             _uploadSubject = null;
                           }
@@ -898,22 +1039,35 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
                               color: theme.colorScheme.onSurface,
                               fontSize: 12,
                             ),
-                            items: subs
-                                .map(
-                                  (s) => DropdownMenuItem(
-                                    value: s,
-                                    child: Text(
-                                      s.name,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        color: isDark
-                                            ? Colors.white
-                                            : Colors.black87,
-                                      ),
+                            items: [
+                              DropdownMenuItem<Subject>(
+                                value: otherSubject,
+                                child: Text(
+                                  'Other',
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: isDark
+                                        ? Colors.white
+                                        : Colors.black87,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              ...subs.map(
+                                (s) => DropdownMenuItem(
+                                  value: s,
+                                  child: Text(
+                                    s.name,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      color: isDark
+                                          ? Colors.white
+                                          : Colors.black87,
                                     ),
                                   ),
-                                )
-                                .toList(),
+                                ),
+                              ),
+                            ],
                             onChanged: (sub) {
                               setState(() {
                                 _uploadSubject = sub;
@@ -958,31 +1112,30 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
                                 'xlsx',
                                 'png',
                                 'jpg',
-                                'jpeg'
+                                'jpeg',
                               ],
                             );
 
-                            if (result != null && result.files.single.path != null) {
+                            if (result != null &&
+                                result.files.single.path != null) {
                               final filePath = result.files.single.path!;
                               final filename = result.files.single.name;
-                              final fileBytes = await File(filePath).readAsBytes();
-                              final mimeType = lookupMimeType(filePath) ?? 'application/octet-stream';
+                              final fileBytes = await File(
+                                filePath,
+                              ).readAsBytes();
+                              final mimeType =
+                                  lookupMimeType(filePath) ??
+                                  'application/octet-stream';
 
                               setState(() {
                                 _isUploadingNotes = true;
                               });
 
-                              if (_uploadSubject!.notesDriveLink == null ||
-                                  _uploadSubject!.notesDriveLink!.isEmpty) {
-                                throw Exception("No Google Drive folder linked to this subject.");
-                              }
-
-                              final folderId = extractFolderId(_uploadSubject!.notesDriveLink!);
                               final fileId = await DriveService().uploadFile(
                                 filename: filename,
                                 mimeType: mimeType,
                                 fileBytes: fileBytes,
-                                parentFolderId: folderId,
+                                subjectName: _uploadSubject!.name,
                               );
 
                               if (mounted) {
@@ -997,7 +1150,7 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
                                         const SizedBox(width: 8),
                                         Expanded(
                                           child: Text(
-                                            'Notes uploaded to Google Drive! File ID: $fileId ✨',
+                                            'Notes uploaded to Google Drive!',
                                             style: GoogleFonts.outfit(
                                               fontWeight: FontWeight.bold,
                                             ),
@@ -1113,7 +1266,9 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
                             border: Border.all(
                               color: _calculatorTab == 0
                                   ? theme.colorScheme.primary
-                                  : theme.colorScheme.onSurface.withOpacity(0.1),
+                                  : theme.colorScheme.onSurface.withOpacity(
+                                      0.1,
+                                    ),
                             ),
                           ),
                           alignment: Alignment.center,
@@ -1123,7 +1278,9 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
                               fontWeight: FontWeight.bold,
                               color: _calculatorTab == 0
                                   ? theme.colorScheme.primary
-                                  : theme.colorScheme.onSurface.withOpacity(0.6),
+                                  : theme.colorScheme.onSurface.withOpacity(
+                                      0.6,
+                                    ),
                             ),
                           ),
                         ),
@@ -1147,7 +1304,9 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
                             border: Border.all(
                               color: _calculatorTab == 1
                                   ? theme.colorScheme.primary
-                                  : theme.colorScheme.onSurface.withOpacity(0.1),
+                                  : theme.colorScheme.onSurface.withOpacity(
+                                      0.1,
+                                    ),
                             ),
                           ),
                           alignment: Alignment.center,
@@ -1157,7 +1316,9 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
                               fontWeight: FontWeight.bold,
                               color: _calculatorTab == 1
                                   ? theme.colorScheme.primary
-                                  : theme.colorScheme.onSurface.withOpacity(0.6),
+                                  : theme.colorScheme.onSurface.withOpacity(
+                                      0.6,
+                                    ),
                             ),
                           ),
                         ),
@@ -1194,10 +1355,12 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
                                 fontSize: 13,
                               ),
                               items: [1.0, 2.0, 3.0, 4.0, 5.0]
-                                  .map((c) => DropdownMenuItem(
-                                        value: c,
-                                        child: Text('${c.toStringAsFixed(1)} Cr'),
-                                      ))
+                                  .map(
+                                    (c) => DropdownMenuItem(
+                                      value: c,
+                                      child: Text('${c.toStringAsFixed(1)} Cr'),
+                                    ),
+                                  )
                                   .toList(),
                               onChanged: (val) {
                                 setState(() {
@@ -1225,20 +1388,26 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
                                 color: theme.colorScheme.onSurface,
                                 fontSize: 13,
                               ),
-                              items: [
-                                {'label': 'EX / O (10)', 'val': 10.0},
-                                {'label': 'A (9)', 'val': 9.0},
-                                {'label': 'B (8)', 'val': 8.0},
-                                {'label': 'C (7)', 'val': 7.0},
-                                {'label': 'D (6)', 'val': 6.0},
-                                {'label': 'P / E (5)', 'val': 5.0},
-                                {'label': 'F (0)', 'val': 0.0},
-                              ]
-                                  .map((g) => DropdownMenuItem(
-                                        value: g['val'] as double,
-                                        child: Text(g['label'] as String, overflow: TextOverflow.ellipsis),
-                                      ))
-                                  .toList(),
+                              items:
+                                  [
+                                        {'label': 'O (10)', 'val': 10.0},
+                                        {'label': 'A (9)', 'val': 9.0},
+                                        {'label': 'B (8)', 'val': 8.0},
+                                        {'label': 'C (7)', 'val': 7.0},
+                                        {'label': 'D (6)', 'val': 6.0},
+                                        {'label': 'E (5)', 'val': 5.0},
+                                        {'label': 'F (0)', 'val': 0.0},
+                                      ]
+                                      .map(
+                                        (g) => DropdownMenuItem(
+                                          value: g['val'] as double,
+                                          child: Text(
+                                            g['label'] as String,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      )
+                                      .toList(),
                               onChanged: (val) {
                                 setState(() {
                                   course['gradePoint'] = val;
@@ -1249,7 +1418,10 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
                           if (_sgpaCourses.length > 1) ...[
                             const SizedBox(width: 4),
                             IconButton(
-                              icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent),
+                              icon: const Icon(
+                                Icons.delete_outline_rounded,
+                                color: Colors.redAccent,
+                              ),
                               onPressed: () {
                                 setState(() {
                                   _sgpaCourses.removeAt(index);
@@ -1268,13 +1440,18 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
                       TextButton.icon(
                         onPressed: () {
                           setState(() {
-                            _sgpaCourses.add({'credits': 3.0, 'gradePoint': 9.0});
+                            _sgpaCourses.add({
+                              'credits': 3.0,
+                              'gradePoint': 9.0,
+                            });
                           });
                         },
                         icon: const Icon(Icons.add_rounded),
                         label: Text(
                           'Add Course',
-                          style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+                          style: GoogleFonts.outfit(
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                       _buildSGPAResultCard(theme),
@@ -1308,10 +1485,12 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
                                 fontSize: 13,
                               ),
                               items: List.generate(8, (i) => i + 1)
-                                  .map((s) => DropdownMenuItem(
-                                        value: s,
-                                        child: Text('Sem $s'),
-                                      ))
+                                  .map(
+                                    (s) => DropdownMenuItem(
+                                      value: s,
+                                      child: Text('Sem $s'),
+                                    ),
+                                  )
                                   .toList(),
                               onChanged: (val) {
                                 setState(() {
@@ -1339,12 +1518,27 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
                                 color: theme.colorScheme.onSurface,
                                 fontSize: 13,
                               ),
-                              items: [12.0, 14.0, 16.0, 18.0, 20.0, 22.0, 24.0, 26.0, 28.0]
-                                  .map((c) => DropdownMenuItem(
-                                        value: c,
-                                        child: Text('${c.toStringAsFixed(0)} Cr'),
-                                      ))
-                                  .toList(),
+                              items:
+                                  [
+                                        12.0,
+                                        14.0,
+                                        16.0,
+                                        18.0,
+                                        20.0,
+                                        22.0,
+                                        24.0,
+                                        26.0,
+                                        28.0,
+                                      ]
+                                      .map(
+                                        (c) => DropdownMenuItem(
+                                          value: c,
+                                          child: Text(
+                                            '${c.toStringAsFixed(0)} Cr',
+                                          ),
+                                        ),
+                                      )
+                                      .toList(),
                               onChanged: (val) {
                                 setState(() {
                                   semester['credits'] = val;
@@ -1372,10 +1566,12 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
                                 fontSize: 13,
                               ),
                               items: List.generate(61, (i) => 4.0 + (i * 0.1))
-                                  .map((g) => DropdownMenuItem(
-                                        value: double.parse(g.toStringAsFixed(1)),
-                                        child: Text(g.toStringAsFixed(1)),
-                                      ))
+                                  .map(
+                                    (g) => DropdownMenuItem(
+                                      value: double.parse(g.toStringAsFixed(1)),
+                                      child: Text(g.toStringAsFixed(1)),
+                                    ),
+                                  )
                                   .toList(),
                               onChanged: (val) {
                                 setState(() {
@@ -1387,7 +1583,10 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
                           if (_cgpaSemesters.length > 1) ...[
                             const SizedBox(width: 4),
                             IconButton(
-                              icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent),
+                              icon: const Icon(
+                                Icons.delete_outline_rounded,
+                                color: Colors.redAccent,
+                              ),
                               onPressed: () {
                                 setState(() {
                                   _cgpaSemesters.removeAt(index);
@@ -1412,14 +1611,16 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
                             _cgpaSemesters.add({
                               'semester': nextSem > 8 ? 8 : nextSem,
                               'sgpa': 9.0,
-                              'credits': 20.0
+                              'credits': 20.0,
                             });
                           });
                         },
                         icon: const Icon(Icons.add_rounded),
                         label: Text(
                           'Add Semester',
-                          style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+                          style: GoogleFonts.outfit(
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                       _buildCGPAResultCard(theme),
@@ -1529,9 +1730,7 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(28),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
         title: Text(
           'Confirm Logout 😢',
           style: GoogleFonts.outfit(fontWeight: FontWeight.w900),
@@ -1563,10 +1762,7 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
                 final navigator = Navigator.of(context);
                 final messenger = ScaffoldMessenger.of(context);
                 await signOutCompletely();
-                navigator.pushNamedAndRemoveUntil(
-                  '/login',
-                  (route) => false,
-                );
+                navigator.pushNamedAndRemoveUntil('/login', (route) => false);
                 messenger.showSnackBar(
                   SnackBar(
                     content: Text(
@@ -1604,17 +1800,21 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
 
     return RefreshIndicator(
       onRefresh: () async {
-        final futures = displayedSemesters.map((sem) => ref.refresh(
-          subjectsProvider((
-            branchId: _currentBranchId,
-            semester: sem,
-          )).future,
-        ));
+        final futures = displayedSemesters.map(
+          (sem) => ref.refresh(
+            subjectsProvider((
+              branchId: _currentBranchId,
+              semester: sem,
+            )).future,
+          ),
+        );
         await Future.wait(futures);
       },
       child: ListView.builder(
         padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 16),
-        itemCount: 1 + displayedSemesters.length, // index 0 is header, rest are semesters
+        itemCount:
+            1 +
+            displayedSemesters.length, // index 0 is header, rest are semesters
         itemBuilder: (context, index) {
           if (index == 0) {
             return Padding(
@@ -1647,12 +1847,17 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
                   // Horizontal scrollable semester filter pills
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 8,
+                    ),
                     child: Row(
                       children: filterSemesters.map((sem) {
                         final isSelected = _selectedSyllabusSemester == sem;
-                        final label = sem == null ? 'All Semesters' : 'Semester $sem';
-  
+                        final label = sem == null
+                            ? 'All Semesters'
+                            : 'Semester $sem';
+
                         return Padding(
                           padding: const EdgeInsets.only(right: 10),
                           child: GestureDetector(
@@ -1670,31 +1875,36 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
                               decoration: BoxDecoration(
                                 color: isSelected
                                     ? (isDark
-                                        ? theme.colorScheme.primary
-                                        : const Color(0xFF7D4B26))
+                                          ? theme.colorScheme.primary
+                                          : const Color(0xFF7D4B26))
                                     : (isDark
-                                        ? theme.colorScheme.surface.withOpacity(0.4)
-                                        : const Color(0xFFFFF7ED)),
+                                          ? theme.colorScheme.surface
+                                                .withOpacity(0.4)
+                                          : const Color(0xFFFFF7ED)),
                                 borderRadius: BorderRadius.circular(20),
                                 border: Border.all(
                                   color: isSelected
                                       ? Colors.transparent
                                       : (isDark
-                                          ? theme.colorScheme.primary.withOpacity(0.15)
-                                          : const Color(0xFFF6DDB7)),
+                                            ? theme.colorScheme.primary
+                                                  .withOpacity(0.15)
+                                            : const Color(0xFFF6DDB7)),
                                   width: 1.2,
-                                  ),
-                                  boxShadow: isSelected
-                                      ? [
-                                          BoxShadow(
-                                            color: isDark
-                                                ? theme.colorScheme.primary.withOpacity(0.25)
-                                                : const Color(0xFF7D4B26).withOpacity(0.2),
-                                            blurRadius: 8,
-                                            offset: const Offset(0, 4),
-                                          ),
-                                        ]
-                                      : [],
+                                ),
+                                boxShadow: isSelected
+                                    ? [
+                                        BoxShadow(
+                                          color: isDark
+                                              ? theme.colorScheme.primary
+                                                    .withOpacity(0.25)
+                                              : const Color(
+                                                  0xFF7D4B26,
+                                                ).withOpacity(0.2),
+                                          blurRadius: 8,
+                                          offset: const Offset(0, 4),
+                                        ),
+                                      ]
+                                    : [],
                               ),
                               child: Text(
                                 label,
@@ -1703,11 +1913,11 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
                                   fontWeight: FontWeight.bold,
                                   color: isSelected
                                       ? (isDark
-                                          ? theme.colorScheme.onPrimary
-                                          : Colors.white)
+                                            ? theme.colorScheme.onPrimary
+                                            : Colors.white)
                                       : (isDark
-                                          ? Colors.white70
-                                          : const Color(0xFF7D4B26)),
+                                            ? Colors.white70
+                                            : const Color(0xFF7D4B26)),
                                 ),
                               ),
                             ),
@@ -1720,7 +1930,7 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
               ),
             );
           }
-  
+
           final sem = displayedSemesters[index - 1];
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1815,18 +2025,27 @@ class _SemesterSubjectsList extends ConsumerWidget {
                   children: [
                     Text(
                       'Code: ${subject.code}',
-                      style: GoogleFonts.outfit(fontSize: 12, color: Colors.grey),
+                      style: GoogleFonts.outfit(
+                        fontSize: 12,
+                        color: Colors.grey,
+                      ),
                     ),
-                    if (subject.subjectCredit != null || subject.subjectType != null) ...[
+                    if (subject.subjectCredit != null ||
+                        subject.subjectType != null) ...[
                       const SizedBox(height: 4),
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           if (subject.subjectCredit != null) ...[
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
                               decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.primary.withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(
@@ -1838,13 +2057,18 @@ class _SemesterSubjectsList extends ConsumerWidget {
                                 ),
                               ),
                             ),
-                            if (subject.subjectType != null) const SizedBox(width: 6),
+                            if (subject.subjectType != null)
+                              const SizedBox(width: 6),
                           ],
                           if (subject.subjectType != null) ...[
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
                               decoration: BoxDecoration(
-                                color: subject.subjectType!.toLowerCase() == 'core'
+                                color:
+                                    subject.subjectType!.toLowerCase() == 'core'
                                     ? Colors.redAccent.withOpacity(0.1)
                                     : Colors.green.withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(6),
@@ -1854,7 +2078,9 @@ class _SemesterSubjectsList extends ConsumerWidget {
                                 style: GoogleFonts.outfit(
                                   fontSize: 10,
                                   fontWeight: FontWeight.bold,
-                                  color: subject.subjectType!.toLowerCase() == 'core'
+                                  color:
+                                      subject.subjectType!.toLowerCase() ==
+                                          'core'
                                       ? Colors.redAccent
                                       : Colors.green[700],
                                 ),

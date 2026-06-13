@@ -14,10 +14,10 @@ class PyqSource {
   });
 
   factory PyqSource.fromJson(Map<String, dynamic> json) => PyqSource(
-        id: json['id']?.toString() ?? '',
-        year: json['year']?.toString() ?? '',
-        examType: json['exam_type'] ?? '',
-        season: json['season'] ?? '',
-        questionNumber: json['question_number']?.toString() ?? '',
-      );
+    id: json['id']?.toString() ?? '',
+    year: json['year']?.toString() ?? '',
+    examType: json['exam_type'] ?? '',
+    season: json['season'] ?? '',
+    questionNumber: json['question_number']?.toString() ?? '',
+  );
 }

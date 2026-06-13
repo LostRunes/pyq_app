@@ -113,7 +113,8 @@ class _YoutubeResourceScreenState extends State<YoutubeResourceScreen> {
       }
     } catch (e) {
       setState(() {
-        _errorMessage = "Failed to load metadata. You can still watch it directly on YouTube!";
+        _errorMessage =
+            "Failed to load metadata. You can still watch it directly on YouTube!";
         _resourceTitle = widget.title;
         if (_videoId != null) {
           _activeVideoId = _videoId;
@@ -198,7 +199,10 @@ class _YoutubeResourceScreenState extends State<YoutubeResourceScreen> {
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.open_in_new_rounded, color: Colors.redAccent),
+            icon: const Icon(
+              Icons.open_in_new_rounded,
+              color: Colors.redAccent,
+            ),
             tooltip: 'Open in YouTube App',
             onPressed: () => _redirectExternal(_url),
           ),
@@ -237,12 +241,17 @@ class _YoutubeResourceScreenState extends State<YoutubeResourceScreen> {
                     // Inline Player section
                     if (_activeVideoId != null && _playerController != null)
                       Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        margin: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(24),
                           boxShadow: [
                             BoxShadow(
-                              color: theme.colorScheme.primary.withOpacity(0.15),
+                              color: theme.colorScheme.primary.withOpacity(
+                                0.15,
+                              ),
                               blurRadius: 15,
                               offset: const Offset(0, 8),
                             ),
@@ -273,10 +282,17 @@ class _YoutubeResourceScreenState extends State<YoutubeResourceScreen> {
                             radius: 30,
                             backgroundColor: Colors.black54,
                             child: IconButton(
-                              icon: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 30),
+                              icon: const Icon(
+                                Icons.play_arrow_rounded,
+                                color: Colors.white,
+                                size: 30,
+                              ),
                               onPressed: () {
                                 if (_videoId != null) {
-                                  _playVideo(_videoId!, _resourceTitle ?? 'Video');
+                                  _playVideo(
+                                    _videoId!,
+                                    _resourceTitle ?? 'Video',
+                                  );
                                 }
                               },
                             ),
@@ -320,7 +336,9 @@ class _YoutubeResourceScreenState extends State<YoutubeResourceScreen> {
                               Icon(
                                 Icons.person_outline_rounded,
                                 size: 14,
-                                color: theme.colorScheme.onSurface.withOpacity(0.5),
+                                color: theme.colorScheme.onSurface.withOpacity(
+                                  0.5,
+                                ),
                               ),
                               const SizedBox(width: 4),
                               Text(
@@ -328,7 +346,8 @@ class _YoutubeResourceScreenState extends State<YoutubeResourceScreen> {
                                 style: GoogleFonts.outfit(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
-                                  color: theme.colorScheme.onSurface.withOpacity(0.6),
+                                  color: theme.colorScheme.onSurface
+                                      .withOpacity(0.6),
                                 ),
                               ),
                               if (_videoCount != null) ...[
@@ -336,7 +355,8 @@ class _YoutubeResourceScreenState extends State<YoutubeResourceScreen> {
                                 Icon(
                                   Icons.video_library_outlined,
                                   size: 14,
-                                  color: theme.colorScheme.onSurface.withOpacity(0.5),
+                                  color: theme.colorScheme.onSurface
+                                      .withOpacity(0.5),
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
@@ -344,7 +364,8 @@ class _YoutubeResourceScreenState extends State<YoutubeResourceScreen> {
                                   style: GoogleFonts.outfit(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
-                                    color: theme.colorScheme.onSurface.withOpacity(0.6),
+                                    color: theme.colorScheme.onSurface
+                                        .withOpacity(0.6),
                                   ),
                                 ),
                               ],
@@ -357,7 +378,10 @@ class _YoutubeResourceScreenState extends State<YoutubeResourceScreen> {
                     if (_errorMessage != null)
                       Container(
                         padding: const EdgeInsets.all(12),
-                        margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                        margin: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 8,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.redAccent.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(16),
@@ -377,7 +401,10 @@ class _YoutubeResourceScreenState extends State<YoutubeResourceScreen> {
                     Expanded(
                       child: _playlistId != null
                           ? ListView.builder(
-                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 8,
+                              ),
                               itemCount: _playlistVideos.length,
                               itemBuilder: (context, index) {
                                 final video = _playlistVideos[index];
@@ -387,52 +414,75 @@ class _YoutubeResourceScreenState extends State<YoutubeResourceScreen> {
                                   elevation: 0,
                                   margin: const EdgeInsets.only(bottom: 12),
                                   color: isActive
-                                      ? theme.colorScheme.primary.withOpacity(0.1)
+                                      ? theme.colorScheme.primary.withOpacity(
+                                          0.1,
+                                        )
                                       : theme.colorScheme.surface,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(20),
                                     side: BorderSide(
                                       color: isActive
                                           ? theme.colorScheme.primary
-                                          : theme.colorScheme.outlineVariant.withOpacity(0.3),
+                                          : theme.colorScheme.outlineVariant
+                                                .withOpacity(0.3),
                                       width: isActive ? 2 : 1,
                                     ),
                                   ),
                                   child: InkWell(
                                     borderRadius: BorderRadius.circular(20),
-                                    onTap: () => _playVideo(video.id, video.title),
+                                    onTap: () =>
+                                        _playVideo(video.id, video.title),
                                     child: Padding(
-                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                        vertical: 12,
+                                      ),
                                       child: Row(
                                         children: [
                                           Stack(
                                             alignment: Alignment.center,
                                             children: [
                                               ClipRRect(
-                                                borderRadius: BorderRadius.circular(12),
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
                                                 child: Image.network(
                                                   video.thumbnailUrl,
                                                   width: 80,
                                                   height: 60,
                                                   fit: BoxFit.cover,
-                                                  errorBuilder: (context, _, __) => Container(
-                                                    width: 80,
-                                                    height: 60,
-                                                    color: theme.colorScheme.secondary.withOpacity(0.1),
-                                                    child: const Icon(Icons.video_library_rounded),
-                                                  ),
+                                                  errorBuilder:
+                                                      (
+                                                        context,
+                                                        _,
+                                                        __,
+                                                      ) => Container(
+                                                        width: 80,
+                                                        height: 60,
+                                                        color: theme
+                                                            .colorScheme
+                                                            .secondary
+                                                            .withOpacity(0.1),
+                                                        child: const Icon(
+                                                          Icons
+                                                              .video_library_rounded,
+                                                        ),
+                                                      ),
                                                 ),
                                               ),
                                               Container(
                                                 width: 80,
                                                 height: 60,
                                                 decoration: BoxDecoration(
-                                                  color: Colors.black.withOpacity(0.3),
-                                                  borderRadius: BorderRadius.circular(12),
+                                                  color: Colors.black
+                                                      .withOpacity(0.3),
+                                                  borderRadius:
+                                                      BorderRadius.circular(12),
                                                 ),
                                               ),
                                               Icon(
-                                                isActive ? Icons.volume_up_rounded : Icons.play_arrow_rounded,
+                                                isActive
+                                                    ? Icons.volume_up_rounded
+                                                    : Icons.play_arrow_rounded,
                                                 color: Colors.white,
                                                 size: 24,
                                               ),
@@ -441,17 +491,21 @@ class _YoutubeResourceScreenState extends State<YoutubeResourceScreen> {
                                           const SizedBox(width: 16),
                                           Expanded(
                                             child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
                                               children: [
                                                 Text(
                                                   video.title,
                                                   style: GoogleFonts.outfit(
                                                     fontSize: 14,
                                                     fontWeight: FontWeight.bold,
-                                                    color: theme.colorScheme.onSurface,
+                                                    color: theme
+                                                        .colorScheme
+                                                        .onSurface,
                                                   ),
                                                   maxLines: 2,
-                                                  overflow: TextOverflow.ellipsis,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
                                                 ),
                                                 const SizedBox(height: 4),
                                                 Row(
@@ -460,8 +514,11 @@ class _YoutubeResourceScreenState extends State<YoutubeResourceScreen> {
                                                       'Lesson ${index + 1}',
                                                       style: GoogleFonts.outfit(
                                                         fontSize: 11,
-                                                        fontWeight: FontWeight.bold,
-                                                        color: theme.colorScheme.primary,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        color: theme
+                                                            .colorScheme
+                                                            .primary,
                                                       ),
                                                     ),
                                                     const SizedBox(width: 8),
@@ -469,8 +526,12 @@ class _YoutubeResourceScreenState extends State<YoutubeResourceScreen> {
                                                       '•   ${_formatDuration(video.duration)}',
                                                       style: GoogleFonts.outfit(
                                                         fontSize: 11,
-                                                        color: theme.colorScheme.onSurface.withOpacity(0.5),
-                                                        fontWeight: FontWeight.w600,
+                                                        color: theme
+                                                            .colorScheme
+                                                            .onSurface
+                                                            .withOpacity(0.5),
+                                                        fontWeight:
+                                                            FontWeight.w600,
                                                       ),
                                                     ),
                                                   ],
@@ -483,7 +544,8 @@ class _YoutubeResourceScreenState extends State<YoutubeResourceScreen> {
                                             icon: Icon(
                                               Icons.launch_rounded,
                                               size: 18,
-                                              color: theme.colorScheme.onSurface.withOpacity(0.4),
+                                              color: theme.colorScheme.onSurface
+                                                  .withOpacity(0.4),
                                             ),
                                             onPressed: () => _redirectExternal(
                                               'https://www.youtube.com/watch?v=${video.id}',
@@ -497,7 +559,10 @@ class _YoutubeResourceScreenState extends State<YoutubeResourceScreen> {
                               },
                             )
                           : SingleChildScrollView(
-                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 16,
+                              ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
@@ -511,11 +576,13 @@ class _YoutubeResourceScreenState extends State<YoutubeResourceScreen> {
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
-                                    _description ?? 'No description available for this video.',
+                                    _description ??
+                                        'No description available for this video.',
                                     style: GoogleFonts.outfit(
                                       fontSize: 13,
                                       height: 1.6,
-                                      color: theme.colorScheme.onSurface.withOpacity(0.7),
+                                      color: theme.colorScheme.onSurface
+                                          .withOpacity(0.7),
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),
@@ -524,14 +591,20 @@ class _YoutubeResourceScreenState extends State<YoutubeResourceScreen> {
                                     icon: const Icon(Icons.share_rounded),
                                     label: const Text('Share Video Link'),
                                     onPressed: () {
-                                      ScaffoldMessenger.of(context).showSnackBar(
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
                                         SnackBar(
-                                          content: Text('Video URL copied to clipboard: $_url'),
+                                          content: Text(
+                                            'Video URL copied to clipboard: $_url',
+                                          ),
                                         ),
                                       );
                                     },
                                     style: ElevatedButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(vertical: 16),
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 16,
+                                      ),
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(16),
                                       ),
