@@ -11,6 +11,8 @@ import '../services/pdf_service.dart';
 import '../widgets/loading_overlay.dart';
 import '../services/drive_service.dart';
 import '../utils/drive_utils.dart';
+import 'pdf_viewer_screen.dart';
+import 'image_viewer_screen.dart';
 
 class SubjectDashboardScreen extends ConsumerStatefulWidget {
   final Subject subject;
@@ -64,6 +66,7 @@ class _SubjectDashboardScreenState
           icon: Icons.description_outlined,
           link: widget.subject.courseOutcomeLink,
           imagePath: 'assets/images/lil_fox.png',
+          subjectName: widget.subject.name,
         ),
       _ProgressTab(subjectId: widget.subject.id),
     ];
@@ -74,7 +77,41 @@ class _SubjectDashboardScreenState
       length: tabs.length,
       child: Scaffold(
         extendBodyBehindAppBar: true,
-        appBar: AppBar(automaticallyImplyLeading: true),
+        appBar: AppBar(
+          automaticallyImplyLeading: true,
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          title: Text(
+            widget.subject.name,
+            style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+          ),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.description_outlined),
+              tooltip: 'Course Handout',
+              onPressed:
+                  (widget.subject.courseOutcomeLink != null &&
+                      widget.subject.courseOutcomeLink!.isNotEmpty)
+                  ? () {
+                      openCourseHandout(
+                        context,
+                        widget.subject.courseOutcomeLink!,
+                        widget.subject.name,
+                      );
+                    }
+                  : () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'No course handout linked for this subject.',
+                          ),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    },
+            ),
+          ],
+        ),
         body: Container(
           width: double.infinity,
           height: double.infinity,
@@ -94,17 +131,7 @@ class _SubjectDashboardScreenState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
-                  child: Text(
-                    widget.subject.name,
-                    style: GoogleFonts.outfit(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w900,
-                      color: theme.colorScheme.onSurface,
-                    ),
-                  ),
-                ),
+                const SizedBox(height: 8),
                 TabBar(
                   isScrollable: true,
                   tabAlignment: TabAlignment.start,
@@ -154,6 +181,7 @@ class _LinkTab extends StatelessWidget {
   final IconData icon;
   final String? link;
   final String imagePath;
+  final String subjectName;
 
   const _LinkTab({
     required this.title,
@@ -162,6 +190,7 @@ class _LinkTab extends StatelessWidget {
     required this.icon,
     this.link,
     required this.imagePath,
+    required this.subjectName,
   });
 
   @override
@@ -200,19 +229,8 @@ class _LinkTab extends StatelessWidget {
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   onPressed: (link != null && link!.isNotEmpty)
-                      ? () async {
-                          final messenger = ScaffoldMessenger.of(context);
-                          final Uri url = Uri.parse(link!);
-                          if (!await launchUrl(
-                            url,
-                            mode: LaunchMode.externalApplication,
-                          )) {
-                            messenger.showSnackBar(
-                              const SnackBar(
-                                content: Text('Could not open the link.'),
-                              ),
-                            );
-                          }
+                      ? () {
+                          openCourseHandout(context, link!, subjectName);
                         }
                       : null,
                   icon: Icon(icon),
@@ -270,9 +288,43 @@ class _DriveExplorerTabState extends ConsumerState<_DriveExplorerTab> {
         ),
       );
     } else {
-      final url = item["webViewLink"];
-      if (url != null && url.isNotEmpty) {
-        await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+      final fileId = item["id"] as String? ?? '';
+      final name = item["name"] as String? ?? 'File';
+      final mimeType = item["mimeType"] as String? ?? '';
+      final webViewLink = item["webViewLink"] as String? ?? '';
+
+      if (mimeType.contains("pdf") && fileId.isNotEmpty) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => PdfViewerScreen(
+              pdfUrl: "https://drive.google.com/uc?export=download&id=$fileId",
+              title: name,
+              webViewLink: webViewLink,
+            ),
+          ),
+        );
+      } else if (mimeType.startsWith("image/") && fileId.isNotEmpty) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ImageViewerScreen(
+              imageUrl: "https://drive.google.com/uc?export=view&id=$fileId",
+              title: name,
+              webViewLink: webViewLink,
+            ),
+          ),
+        );
+      } else {
+        if (webViewLink.isNotEmpty) {
+          final messenger = ScaffoldMessenger.of(context);
+          final Uri url = Uri.parse(webViewLink);
+          if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+            messenger.showSnackBar(
+              const SnackBar(content: Text('Could not open the file link.')),
+            );
+          }
+        }
       }
     }
   }
@@ -377,21 +429,61 @@ class _DriveExplorerTabState extends ConsumerState<_DriveExplorerTab> {
                     horizontal: 20,
                     vertical: 8,
                   ),
-                  leading: Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: (isFolder ? Colors.amber : Colors.blue)
-                          .withOpacity(0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      isFolder
-                          ? Icons.folder_rounded
-                          : Icons.description_rounded,
-                      color: isFolder ? Colors.amber[700] : Colors.blue[700],
-                      size: 24,
-                    ),
-                  ),
+                  leading: (() {
+                    final mimeType = item["mimeType"] as String? ?? '';
+                    final thumbnail = item["thumbnailLink"] as String?;
+                    IconData leadingIcon = Icons.description_rounded;
+                    Color iconColor = Colors.blue;
+
+                    if (isFolder) {
+                      leadingIcon = Icons.folder_rounded;
+                      iconColor = Colors.amber;
+                    } else if (mimeType.contains("pdf")) {
+                      leadingIcon = Icons.picture_as_pdf_rounded;
+                      iconColor = Colors.redAccent;
+                    } else if (mimeType.startsWith("image/")) {
+                      leadingIcon = Icons.image_rounded;
+                      iconColor = Colors.teal;
+                    } else if (mimeType.contains("word") ||
+                        mimeType.contains("document")) {
+                      leadingIcon = Icons.article_rounded;
+                      iconColor = Colors.blue;
+                    } else if (mimeType.contains("spreadsheet") ||
+                        mimeType.contains("excel") ||
+                        mimeType.contains("sheet")) {
+                      leadingIcon = Icons.table_chart_rounded;
+                      iconColor = Colors.green;
+                    } else if (mimeType.contains("presentation") ||
+                        mimeType.contains("powerpoint")) {
+                      leadingIcon = Icons.slideshow_rounded;
+                      iconColor = Colors.orange;
+                    }
+
+                    if (thumbnail != null && !isFolder) {
+                      return Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: theme.colorScheme.outlineVariant.withOpacity(
+                              0.3,
+                            ),
+                            width: 1,
+                          ),
+                        ),
+                        clipBehavior: Clip.antiAlias,
+                        child: Image.network(
+                          thumbnail,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) =>
+                              _buildFallbackIcon(leadingIcon, iconColor),
+                        ),
+                      );
+                    }
+
+                    return _buildFallbackIcon(leadingIcon, iconColor);
+                  })(),
                   title: Text(
                     item["name"] ?? "Unnamed Item",
                     style: GoogleFonts.outfit(
@@ -499,6 +591,17 @@ class _DriveExplorerTabState extends ConsumerState<_DriveExplorerTab> {
             )
           : null,
       child: content,
+    );
+  }
+
+  Widget _buildFallbackIcon(IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        shape: BoxShape.circle,
+      ),
+      child: Icon(icon, color: color, size: 24),
     );
   }
 }
@@ -861,4 +964,45 @@ class _ProgressTab extends ConsumerWidget {
       ),
     );
   }
+}
+
+void openCourseHandout(BuildContext context, String url, String title) {
+  if (url.contains("drive.google.com")) {
+    String? id;
+    final fileIdRegExp = RegExp(r'/file/d/([^/]+)');
+    final match = fileIdRegExp.firstMatch(url);
+    if (match != null && match.groupCount >= 1) {
+      id = match.group(1);
+    } else {
+      final idRegExp = RegExp(r'[?&]id=([^&]+)');
+      final matchId = idRegExp.firstMatch(url);
+      if (matchId != null && matchId.groupCount >= 1) {
+        id = matchId.group(1);
+      }
+    }
+    if (id != null) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => PdfViewerScreen(
+            pdfUrl: "https://drive.google.com/uc?export=download&id=$id",
+            title: title,
+            webViewLink: url,
+          ),
+        ),
+      );
+      return;
+    }
+  }
+
+  // Fallback to launching externally if it's a non-drive link or fails to extract id
+  launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication).catchError((
+    e,
+  ) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not open handout link: $e')),
+      );
+    }
+  });
 }

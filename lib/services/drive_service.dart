@@ -15,7 +15,7 @@ class DriveService {
         "https://www.googleapis.com/drive/v3/files"
         "?q='$folderId'+in+parents+and+trashed=false"
         "&key=$apiKey"
-        "&fields=files(id,name,mimeType,webViewLink)";
+        "&fields=files(id,name,mimeType,webViewLink,iconLink,thumbnailLink)";
 
     final response = await http.get(Uri.parse(url));
 
