@@ -1,11 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../models/question.dart';
-import '../models/pyq_source.dart';
-import '../models/image_item.dart';
-import '../services/supabase_service.dart';
-
 import '../core/providers.dart';
 import '../widgets/solution_sheet.dart';
 

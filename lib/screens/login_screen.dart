@@ -156,7 +156,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         if (mounted) {
           Navigator.pushReplacementNamed(
             context,
-            '/subjects',
+            '/main_navigation',
             arguments: {'branchId': branchId, 'semester': semester},
           );
         }
