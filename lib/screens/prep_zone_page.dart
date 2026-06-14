@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../core/providers.dart';
 
-class PrepZonePage extends StatelessWidget {
+class PrepZonePage extends ConsumerWidget {
   const PrepZonePage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final searchQuery = ref.watch(prepZoneSearchProvider);
 
     final prepItems = [
       {
@@ -15,15 +18,34 @@ class PrepZonePage extends StatelessWidget {
         'icon': Icons.code_rounded,
         'route': '/algo_code',
         'color': const Color(0xFF6366F1), // Indigo
+        'isComingSoon': false,
       },
+      /*
       {
         'title': 'GATE Prep',
         'desc': 'Syllabus, weightage & mock tests',
         'icon': Icons.psychology_rounded,
         'route': '/gate_prep',
         'color': const Color(0xFFEC4899), // Pink/Rose
+        'isComingSoon': false,
+      },
+      */
+      {
+        'title': 'Coming Soon',
+        'desc': 'More prep tools under development',
+        'icon': Icons.hourglass_empty_rounded,
+        'route': '',
+        'color': Colors.grey,
+        'isComingSoon': true,
       },
     ];
+
+    final filteredItems = prepItems.where((item) {
+      if (searchQuery.isEmpty) return true;
+      final q = searchQuery.toLowerCase();
+      return (item['title'] as String).toLowerCase().contains(q) ||
+          (item['desc'] as String).toLowerCase().contains(q);
+    }).toList();
 
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
@@ -47,23 +69,39 @@ class PrepZonePage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 32),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: prepItems.length,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              childAspectRatio: 0.85,
-            ),
-            itemBuilder: (context, index) {
-              final item = prepItems[index];
-              final Color itemColor = item['color'] as Color;
+          filteredItems.isEmpty
+              ? Container(
+                  padding: const EdgeInsets.symmetric(vertical: 60),
+                  alignment: Alignment.center,
+                  child: Text(
+                    'No matching prep tools found 🔍',
+                    style: GoogleFonts.outfit(
+                      color: Colors.grey,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                )
+              : GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: filteredItems.length,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                    childAspectRatio: 0.85,
+                  ),
+                  itemBuilder: (context, index) {
+                    final item = filteredItems[index];
+                    final Color itemColor = item['color'] as Color;
+                    final bool isComingSoon = item['isComingSoon'] as bool? ?? false;
               return InkWell(
-                onTap: () {
-                  Navigator.pushNamed(context, item['route'] as String);
-                },
+                onTap: isComingSoon
+                    ? null
+                    : () {
+                        Navigator.pushNamed(context, item['route'] as String);
+                      },
                 borderRadius: BorderRadius.circular(28),
                 child: Container(
                   padding: const EdgeInsets.all(16),

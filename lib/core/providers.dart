@@ -272,3 +272,37 @@ final userProfileProvider = FutureProvider<Map<String, dynamic>?>((ref) async {
       .eq('id', user.id)
       .maybeSingle();
 });
+
+class SubjectsSearchNotifier extends Notifier<String> {
+  @override
+  String build() => '';
+
+  @override
+  set state(String value) => super.state = value;
+}
+final subjectsSearchProvider = NotifierProvider<SubjectsSearchNotifier, String>(
+  SubjectsSearchNotifier.new,
+);
+
+class PrepZoneSearchNotifier extends Notifier<String> {
+  @override
+  String build() => '';
+
+  @override
+  set state(String value) => super.state = value;
+}
+final prepZoneSearchProvider = NotifierProvider<PrepZoneSearchNotifier, String>(
+  PrepZoneSearchNotifier.new,
+);
+
+class UtilitiesSearchNotifier extends Notifier<String> {
+  @override
+  String build() => '';
+
+  @override
+  set state(String value) => super.state = value;
+}
+final utilitiesSearchProvider = NotifierProvider<UtilitiesSearchNotifier, String>(
+  UtilitiesSearchNotifier.new,
+);
+
