@@ -199,6 +199,9 @@ class _StudyTogetherScreenState extends ConsumerState<StudyTogetherScreen> {
                                                 color: Colors.grey,
                                               ),
                                               border: InputBorder.none,
+                                              enabledBorder: InputBorder.none,
+                                              focusedBorder: InputBorder.none,
+                                              filled: false,
                                               contentPadding:
                                                   const EdgeInsets.symmetric(
                                                     vertical: 10,
