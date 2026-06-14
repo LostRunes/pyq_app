@@ -3,7 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'theme/app_theme.dart';
 import 'screens/branch_year_selection_screen.dart';
-import 'screens/subject_list_screen.dart';
+import 'screens/main_navigation_screen.dart';
 import 'screens/topic_list_screen.dart';
 import 'screens/question_list_screen.dart';
 import 'screens/question_detail_screen.dart';
@@ -73,11 +73,11 @@ class PyqApp extends ConsumerWidget {
           );
         },
         '/selection': (context) => const BranchYearSelectionScreen(),
-        '/subjects': (context) {
+        '/main_navigation': (context) {
           final args =
               ModalRoute.of(context)!.settings.arguments
                   as Map<String, dynamic>;
-          return SubjectListScreen(
+          return MainNavigationScreen(
             branchId: args['branchId'],
             semester: args['semester'],
           );
