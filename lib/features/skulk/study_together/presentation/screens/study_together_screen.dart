@@ -26,6 +26,284 @@ class _StudyTogetherScreenState extends ConsumerState<StudyTogetherScreen> {
     super.dispose();
   }
 
+  void _showCreateOrJoinDialog(BuildContext context) {
+    final theme = Theme.of(context);
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          title: Text(
+            'Personal Room Options',
+            style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.add_box_rounded, color: Colors.blue),
+                title: Text('Create Personal Room', style: GoogleFonts.outfit(fontWeight: FontWeight.w600)),
+                subtitle: Text('Start a chat or voice room', style: GoogleFonts.outfit(fontSize: 12)),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showCreateRoomBottomSheet(context);
+                },
+              ),
+              const Divider(),
+              ListTile(
+                leading: const Icon(Icons.group_add_rounded, color: Colors.green),
+                title: Text('Join Room by Code', style: GoogleFonts.outfit(fontWeight: FontWeight.w600)),
+                subtitle: Text('Enter 6-char code shared with you', style: GoogleFonts.outfit(fontSize: 12)),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showJoinRoomDialog(context);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showJoinRoomDialog(BuildContext context) {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          title: Text('Join Room', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+          content: TextField(
+            controller: controller,
+            textCapitalization: TextCapitalization.characters,
+            decoration: InputDecoration(
+              hintText: 'Enter 6-Character Code',
+              hintStyle: GoogleFonts.outfit(),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancel', style: GoogleFonts.outfit()),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final code = controller.text.trim();
+                if (code.length != 6) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Room code must be exactly 6 characters')),
+                  );
+                  return;
+                }
+                Navigator.pop(context);
+                try {
+                  final room = await ref.read(roomOperationsProvider).findRoomByCode(code);
+                  if (room == null) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Room not found or archived')),
+                      );
+                    }
+                    return;
+                  }
+                  await ref.read(joinedRoomIdsProvider.notifier).addRoom(room.id);
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Successfully joined room: ${room.name}')),
+                    );
+                    Navigator.pushNamed(
+                      context,
+                      '/study-together/chat',
+                      arguments: room,
+                    );
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Error joining room: $e')),
+                    );
+                  }
+                }
+              },
+              child: Text('Join', style: GoogleFonts.outfit()),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showCreateRoomBottomSheet(BuildContext context) {
+    final nameController = TextEditingController();
+    final descController = TextEditingController();
+    bool isVoiceEnabled = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+                top: 24,
+                left: 24,
+                right: 24,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'Create Personal Room',
+                    style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: nameController,
+                    decoration: InputDecoration(
+                      labelText: 'Room Name',
+                      labelStyle: GoogleFonts.outfit(),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: descController,
+                    decoration: InputDecoration(
+                      labelText: 'Description',
+                      labelStyle: GoogleFonts.outfit(),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SwitchListTile(
+                    title: Text('Enable Voice Room', style: GoogleFonts.outfit(fontWeight: FontWeight.w600)),
+                    subtitle: Text('Users can join both voice and text chat', style: GoogleFonts.outfit(fontSize: 12)),
+                    value: isVoiceEnabled,
+                    onChanged: (val) {
+                      setModalState(() {
+                        isVoiceEnabled = val;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () async {
+                      final name = nameController.text.trim();
+                      if (name.isEmpty) return;
+                      Navigator.pop(context);
+                      try {
+                        final newRoom = await ref.read(roomOperationsProvider).createPersonalRoom(
+                          name: name,
+                          description: descController.text.trim(),
+                          isVoiceEnabled: isVoiceEnabled,
+                        );
+                        await ref.read(joinedRoomIdsProvider.notifier).addRoom(newRoom.id);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Room created! Code: ${newRoom.subjectId}'),
+                              action: SnackBarAction(
+                                label: 'Open',
+                                onPressed: () {
+                                  Navigator.pushNamed(
+                                    context,
+                                    '/study-together/chat',
+                                    arguments: newRoom,
+                                  );
+                                },
+                              ),
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Failed to create room: $e')),
+                          );
+                        }
+                      }
+                    },
+                    child: Text('Create', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showAddSubjectRoomDialog(BuildContext context) {
+    final allRoomsAsync = ref.read(studyRoomsProvider);
+    final joinedNotifier = ref.read(joinedRoomIdsProvider.notifier);
+    final joinedIds = ref.read(joinedRoomIdsProvider);
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          title: Text('Add Subject Rooms', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+          content: SizedBox(
+            width: double.maxFinite,
+            height: 300,
+            child: allRoomsAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (err, _) => Center(child: Text('Error: $err')),
+              data: (allRooms) {
+                final subjects = allRooms.where((r) => r.type == 'subject').toList();
+                return StatefulBuilder(
+                  builder: (context, setInnerState) {
+                    return ListView.builder(
+                      itemCount: subjects.length,
+                      itemBuilder: (context, index) {
+                        final room = subjects[index];
+                        final isAdded = joinedIds.contains(room.id);
+                        return ListTile(
+                          title: Text(room.name, style: GoogleFonts.outfit(fontWeight: FontWeight.w600)),
+                          subtitle: Text(room.subjectId ?? '', style: GoogleFonts.outfit(fontSize: 12)),
+                          trailing: IconButton(
+                            icon: Icon(
+                              isAdded ? Icons.check_circle : Icons.add_circle_outline_rounded,
+                              color: isAdded ? Colors.green : Colors.blue,
+                            ),
+                            onPressed: () async {
+                              if (isAdded) {
+                                await joinedNotifier.removeRoom(room.id);
+                              } else {
+                                await joinedNotifier.addRoom(room.id);
+                              }
+                              setInnerState(() {});
+                            },
+                          ),
+                        );
+                      },
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Done', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -45,7 +323,7 @@ class _StudyTogetherScreenState extends ConsumerState<StudyTogetherScreen> {
             : const Color.fromARGB(255, 250, 217, 191),
         elevation: 0.5,
         title: Text(
-          'Study Together 🎓',
+          'Study Together',
           style: GoogleFonts.outfit(
             fontWeight: FontWeight.bold,
             fontSize: 20,
@@ -55,9 +333,17 @@ class _StudyTogetherScreenState extends ConsumerState<StudyTogetherScreen> {
         iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black87),
         actions: [
           IconButton(
-            icon: const Icon(Icons.search_rounded),
+            icon: const Icon(Icons.add_circle_outline_rounded),
+            tooltip: 'Create or Join Room',
             onPressed: () {
-              // Search feature placeholder for general screen
+              _showCreateOrJoinDialog(context);
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.search_rounded),
+            tooltip: 'Search Subject Rooms',
+            onPressed: () {
+              _showAddSubjectRoomDialog(context);
             },
           ),
         ],
@@ -100,15 +386,25 @@ class _StudyTogetherScreenState extends ConsumerState<StudyTogetherScreen> {
                     children: [
                       Padding(
                         padding: const EdgeInsets.only(left: 4, bottom: 12),
-                        child: Text(
-                          '🔥 Active Study Lobbies',
-                          style: GoogleFonts.outfit(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w800,
-                            color: isDark
-                                ? Colors.orangeAccent
-                                : Colors.orange[800],
-                          ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.local_fire_department_rounded,
+                              size: 18,
+                              color: isDark ? Colors.orangeAccent : Colors.orange[800],
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Active Study Lobbies',
+                              style: GoogleFonts.outfit(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                                color: isDark
+                                    ? Colors.orangeAccent
+                                    : Colors.orange[800],
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                       SizedBox(
@@ -225,7 +521,7 @@ class _StudyTogetherScreenState extends ConsumerState<StudyTogetherScreen> {
                                       },
                                     ),
                                   ],
-                                )
+                                  )
                               : Row(
                                   key: const ValueKey('search_inactive'),
                                   mainAxisAlignment:
@@ -233,15 +529,27 @@ class _StudyTogetherScreenState extends ConsumerState<StudyTogetherScreen> {
                                   children: [
                                     Padding(
                                       padding: const EdgeInsets.only(left: 4),
-                                      child: Text(
-                                        '📘 Subject Rooms',
-                                        style: GoogleFonts.outfit(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w800,
-                                          color: isDark
-                                              ? Colors.grey[400]
-                                              : Colors.grey[700],
-                                        ),
+                                      child: Row(
+                                        children: [
+                                          Icon(
+                                            Icons.library_books_rounded,
+                                            size: 18,
+                                            color: isDark
+                                                ? Colors.grey[400]
+                                                : Colors.grey[700],
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Text(
+                                            'Subject Rooms',
+                                            style: GoogleFonts.outfit(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w800,
+                                              color: isDark
+                                                  ? Colors.grey[400]
+                                                  : Colors.grey[700],
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
                                     IconButton(
@@ -309,13 +617,23 @@ class _StudyTogetherScreenState extends ConsumerState<StudyTogetherScreen> {
                     children: [
                       Padding(
                         padding: const EdgeInsets.only(left: 4, bottom: 12),
-                        child: Text(
-                          '☕ Community Spaces',
-                          style: GoogleFonts.outfit(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w800,
-                            color: isDark ? Colors.grey[400] : Colors.grey[700],
-                          ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.forum_rounded,
+                              size: 18,
+                              color: isDark ? Colors.grey[400] : Colors.grey[700],
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Community Spaces',
+                              style: GoogleFonts.outfit(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                                color: isDark ? Colors.grey[400] : Colors.grey[700],
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                       ListView.builder(
