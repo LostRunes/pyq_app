@@ -39,7 +39,9 @@ class Solution {
     final rawImageUrls = json['image_urls'];
     List<String> parsedImageUrls = [];
     if (rawImageUrls is List) {
-      parsedImageUrls = List<String>.from(rawImageUrls.map((e) => e.toString()));
+      parsedImageUrls = List<String>.from(
+        rawImageUrls.map((e) => e.toString()),
+      );
     }
 
     return Solution(
@@ -50,10 +52,13 @@ class Solution {
       upvotesCount: json['upvotes_count'] as int? ?? 0,
       isBest: json['is_best'] as bool? ?? false,
       isAccepted: json['is_accepted'] as bool? ?? false,
-      createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : DateTime.now(),
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'])
+          : DateTime.now(),
       imageUrls: parsedImageUrls,
       authorUsername: authorMap['username']?.toString() ?? 'anonymous',
-      authorDisplayName: authorMap['display_name']?.toString() ?? 'Anonymous Student',
+      authorDisplayName:
+          authorMap['display_name']?.toString() ?? 'Anonymous Student',
       authorAvatarUrl: authorMap['avatar_url']?.toString(),
       authorReputation: authorMap['reputation'] as int? ?? 0,
     );

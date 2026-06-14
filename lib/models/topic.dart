@@ -14,10 +14,10 @@ class Topic {
   });
 
   factory Topic.fromJson(Map<String, dynamic> json) => Topic(
-        id: json['id'] as String,
-        subjectId: json['subject_id'] as String,
-        name: json['name'] as String,
-        summary: json['summary'] as String?,
-        importanceScore: 0.0,
-      );
+    id: json['id'] as String,
+    subjectId: json['subject_id'] as String,
+    name: json['name'] as String,
+    summary: json['summary'] as String?,
+    importanceScore: 0.0,
+  );
 }

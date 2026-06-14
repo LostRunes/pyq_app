@@ -25,11 +25,7 @@ class _BranchYearSelectionScreenState
 
     return Scaffold(
       extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        actions: const [
-          ThemeToggleButton(),
-        ],
-      ),
+      appBar: AppBar(actions: const [ThemeToggleButton()]),
       body: Container(
         width: double.infinity,
         height: double.infinity,
@@ -72,9 +68,9 @@ class _BranchYearSelectionScreenState
                 Text(
                   'Welcome back! ✨',
                   textAlign: TextAlign.center,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.displaySmall?.copyWith(fontWeight: FontWeight.w900),
+                  style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 Text(
@@ -101,7 +97,9 @@ class _BranchYearSelectionScreenState
                                 child: Text(
                                   b.name,
                                   style: TextStyle(
-                                    color: isDark ? Colors.white : Colors.black87,
+                                    color: isDark
+                                        ? Colors.white
+                                        : Colors.black87,
                                   ),
                                 ),
                               ),
@@ -117,7 +115,8 @@ class _BranchYearSelectionScreenState
                         ),
                       ),
                     ),
-                    loading: () => const Center(child: LinearProgressIndicator()),
+                    loading: () =>
+                        const Center(child: LinearProgressIndicator()),
                     error: (e, _) => Text('Error: $e'),
                   ),
                 ),
@@ -143,7 +142,8 @@ class _BranchYearSelectionScreenState
                             ),
                           )
                           .toList(),
-                      onChanged: (sem) => setState(() => selectedSemester = sem),
+                      onChanged: (sem) =>
+                          setState(() => selectedSemester = sem),
                       decoration: const InputDecoration(
                         hintText: 'Select semester',
                         border: InputBorder.none,
@@ -158,16 +158,25 @@ class _BranchYearSelectionScreenState
                   height: 48,
                 ), // Replaced Spacer with fixed height for scrollability
                 ElevatedButton(
-                  onPressed: (selectedBranch != null && selectedSemester != null)
-                      ? () {
-                          Navigator.pushNamed(
-                            context,
-                            '/subjects',
-                            arguments: {
-                              'branchId': selectedBranch!.id,
-                              'semester': selectedSemester,
-                            },
-                          );
+                  onPressed:
+                      (selectedBranch != null && selectedSemester != null)
+                      ? () async {
+                          await ref
+                              .read(selectedBranchIdProvider.notifier)
+                              .setBranchId(selectedBranch!.id);
+                          await ref
+                              .read(selectedSemesterProvider.notifier)
+                              .setSemester(selectedSemester!);
+                          if (mounted) {
+                            Navigator.pushReplacementNamed(
+                              context,
+                              '/main_navigation',
+                              arguments: {
+                                'branchId': selectedBranch!.id,
+                                'semester': selectedSemester,
+                              },
+                            );
+                          }
                         }
                       : null,
                   child: const Text('Continue'),

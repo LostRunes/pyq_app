@@ -27,9 +27,9 @@ class _SolutionSheetState extends ConsumerState<SolutionSheet> {
   Future<void> fetchAnswer() async {
     try {
       final aiService = ref.read(aiServiceProvider);
-      final res = await aiService.solveQuestion(widget.question).timeout(
-        const Duration(seconds: 25),
-      );
+      final res = await aiService
+          .solveQuestion(widget.question)
+          .timeout(const Duration(seconds: 25));
 
       if (mounted) {
         setState(() {
@@ -40,8 +40,8 @@ class _SolutionSheetState extends ConsumerState<SolutionSheet> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          error = e.toString().contains('Timeout') 
-              ? "The AI is taking too long. Please try again! ⏳" 
+          error = e.toString().contains('Timeout')
+              ? "The AI is taking too long. Please try again! ⏳"
               : "Oops! Something went wrong while solving. 🛠️";
           loading = false;
         });
@@ -96,7 +96,7 @@ class _SolutionSheetState extends ConsumerState<SolutionSheet> {
           const SizedBox(height: 24),
           const Divider(),
           const SizedBox(height: 16),
-          
+
           // Content
           Flexible(
             child: loading
@@ -117,51 +117,53 @@ class _SolutionSheetState extends ConsumerState<SolutionSheet> {
                     ),
                   )
                 : error != null
-                    ? Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              error!,
-                              textAlign: TextAlign.center,
-                              style: GoogleFonts.outfit(fontWeight: FontWeight.w500),
-                            ),
-                            const SizedBox(height: 20),
-                            ElevatedButton(
-                              onPressed: () {
-                                setState(() {
-                                  loading = true;
-                                  error = null;
-                                });
-                                fetchAnswer();
-                              },
-                              child: const Text('Try Again'),
-                            ),
-                          ],
-                        ),
-                      )
-                    : SingleChildScrollView(
-                        physics: const BouncingScrollPhysics(),
-                        child: MarkdownBody(
-                          data: answer ?? "",
-                          styleSheet: MarkdownStyleSheet(
-                            h2: GoogleFonts.outfit(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w900,
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
-                            p: GoogleFonts.outfit(
-                              fontSize: 15,
-                              height: 1.6,
-                              fontWeight: FontWeight.w500,
-                            ),
-                            listBullet: GoogleFonts.outfit(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w900,
-                            ),
+                ? Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          error!,
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.outfit(
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
+                        const SizedBox(height: 20),
+                        ElevatedButton(
+                          onPressed: () {
+                            setState(() {
+                              loading = true;
+                              error = null;
+                            });
+                            fetchAnswer();
+                          },
+                          child: const Text('Try Again'),
+                        ),
+                      ],
+                    ),
+                  )
+                : SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    child: MarkdownBody(
+                      data: answer ?? "",
+                      styleSheet: MarkdownStyleSheet(
+                        h2: GoogleFonts.outfit(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                        p: GoogleFonts.outfit(
+                          fontSize: 15,
+                          height: 1.6,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        listBullet: GoogleFonts.outfit(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w900,
+                        ),
                       ),
+                    ),
+                  ),
           ),
         ],
       ),
