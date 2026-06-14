@@ -10,11 +10,7 @@ class DoubtCard extends ConsumerWidget {
   final Doubt doubt;
   final VoidCallback onTap;
 
-  const DoubtCard({
-    super.key,
-    required this.doubt,
-    required this.onTap,
-  });
+  const DoubtCard({super.key, required this.doubt, required this.onTap});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -37,7 +33,9 @@ class DoubtCard extends ConsumerWidget {
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: doubt.isSolved
-                ? (isDark ? Colors.green.withOpacity(0.4) : Colors.green.withOpacity(0.3))
+                ? (isDark
+                      ? Colors.green.withOpacity(0.4)
+                      : Colors.green.withOpacity(0.3))
                 : cardBorder,
             width: doubt.isSolved ? 1.5 : 1,
           ),
@@ -45,7 +43,9 @@ class DoubtCard extends ConsumerWidget {
             BoxShadow(
               color: doubt.isSolved
                   ? Colors.green.withOpacity(0.04)
-                  : (isDark ? Colors.black.withOpacity(0.2) : Colors.black.withOpacity(0.03)),
+                  : (isDark
+                        ? Colors.black.withOpacity(0.2)
+                        : Colors.black.withOpacity(0.03)),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -62,7 +62,8 @@ class DoubtCard extends ConsumerWidget {
                   radius: 18,
                   backgroundColor: Colors.transparent,
                   backgroundImage: AssetImage(
-                    (doubt.authorAvatarUrl != null && doubt.authorAvatarUrl!.isNotEmpty)
+                    (doubt.authorAvatarUrl != null &&
+                            doubt.authorAvatarUrl!.isNotEmpty)
                         ? doubt.authorAvatarUrl!
                         : 'assets/images/pikachu.png',
                   ),
@@ -82,15 +83,22 @@ class DoubtCard extends ConsumerWidget {
                               style: GoogleFonts.outfit(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
-                                color: isDark ? Colors.grey[200] : Colors.grey[800],
+                                color: isDark
+                                    ? Colors.grey[200]
+                                    : Colors.grey[800],
                               ),
                             ),
                           ),
                           const SizedBox(width: 4),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 5,
+                              vertical: 1.5,
+                            ),
                             decoration: BoxDecoration(
-                              color: isDark ? Colors.blue.withOpacity(0.15) : Colors.blue.withOpacity(0.1),
+                              color: isDark
+                                  ? Colors.blue.withOpacity(0.15)
+                                  : Colors.blue.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
@@ -117,16 +125,25 @@ class DoubtCard extends ConsumerWidget {
                 ),
                 if (doubt.isSolved)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
-                      color: isDark ? Colors.green.withOpacity(0.15) : Colors.green.withOpacity(0.1),
+                      color: isDark
+                          ? Colors.green.withOpacity(0.15)
+                          : Colors.green.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(color: Colors.green.withOpacity(0.3)),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.check_circle_rounded, size: 12, color: Colors.green),
+                        const Icon(
+                          Icons.check_circle_rounded,
+                          size: 12,
+                          color: Colors.green,
+                        ),
                         const SizedBox(width: 4),
                         Text(
                           'Solved',
@@ -141,16 +158,17 @@ class DoubtCard extends ConsumerWidget {
                   ),
                 // ⋮ Report menu
                 PopupMenuButton<String>(
-                  icon: Icon(Icons.more_vert_rounded, size: 18,
-                      color: isDark ? Colors.grey[600] : Colors.grey[400]),
+                  icon: Icon(
+                    Icons.more_vert_rounded,
+                    size: 18,
+                    color: isDark ? Colors.grey[600] : Colors.grey[400],
+                  ),
                   onSelected: (value) async {
                     if (value == 'edit') {
                       Navigator.pushNamed(
                         context,
                         '/skulk_create',
-                        arguments: {
-                          'doubtToEdit': doubt,
-                        },
+                        arguments: {'doubtToEdit': doubt},
                       );
                     } else if (value == 'delete') {
                       final confirm = await showDialog<bool>(
@@ -159,25 +177,45 @@ class DoubtCard extends ConsumerWidget {
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
                           ),
-                          title: Text('Delete Doubt', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-                          content: Text('Are you sure you want to delete this doubt?', style: GoogleFonts.outfit()),
+                          title: Text(
+                            'Delete Doubt',
+                            style: GoogleFonts.outfit(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          content: Text(
+                            'Are you sure you want to delete this doubt?',
+                            style: GoogleFonts.outfit(),
+                          ),
                           actions: [
                             TextButton(
                               onPressed: () => Navigator.pop(context, false),
-                              child: Text('Cancel', style: GoogleFonts.outfit(color: Colors.grey)),
+                              child: Text(
+                                'Cancel',
+                                style: GoogleFonts.outfit(color: Colors.grey),
+                              ),
                             ),
                             TextButton(
                               onPressed: () => Navigator.pop(context, true),
-                              child: Text('Delete', style: GoogleFonts.outfit(color: Colors.redAccent)),
+                              child: Text(
+                                'Delete',
+                                style: GoogleFonts.outfit(
+                                  color: Colors.redAccent,
+                                ),
+                              ),
                             ),
                           ],
                         ),
                       );
                       if (confirm == true) {
-                        await ref.read(skulkFeedProvider.notifier).deleteDoubt(doubt.id);
+                        await ref
+                            .read(skulkFeedProvider.notifier)
+                            .deleteDoubt(doubt.id);
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Doubt deleted successfully.')),
+                            const SnackBar(
+                              content: Text('Doubt deleted successfully.'),
+                            ),
                           );
                         }
                       }
@@ -195,9 +233,16 @@ class DoubtCard extends ConsumerWidget {
                         value: 'edit',
                         child: Row(
                           children: [
-                            const Icon(Icons.edit_outlined, size: 16, color: Colors.grey),
+                            const Icon(
+                              Icons.edit_outlined,
+                              size: 16,
+                              color: Colors.grey,
+                            ),
                             const SizedBox(width: 8),
-                            Text('Edit Doubt', style: GoogleFonts.outfit(fontSize: 13)),
+                            Text(
+                              'Edit Doubt',
+                              style: GoogleFonts.outfit(fontSize: 13),
+                            ),
                           ],
                         ),
                       ),
@@ -205,9 +250,19 @@ class DoubtCard extends ConsumerWidget {
                         value: 'delete',
                         child: Row(
                           children: [
-                            const Icon(Icons.delete_outline_rounded, size: 16, color: Colors.redAccent),
+                            const Icon(
+                              Icons.delete_outline_rounded,
+                              size: 16,
+                              color: Colors.redAccent,
+                            ),
                             const SizedBox(width: 8),
-                            Text('Delete', style: GoogleFonts.outfit(fontSize: 13, color: Colors.redAccent)),
+                            Text(
+                              'Delete',
+                              style: GoogleFonts.outfit(
+                                fontSize: 13,
+                                color: Colors.redAccent,
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -216,9 +271,19 @@ class DoubtCard extends ConsumerWidget {
                       value: 'report',
                       child: Row(
                         children: [
-                          const Icon(Icons.flag_outlined, size: 16, color: Colors.redAccent),
+                          const Icon(
+                            Icons.flag_outlined,
+                            size: 16,
+                            color: Colors.redAccent,
+                          ),
                           const SizedBox(width: 8),
-                          Text('Report', style: GoogleFonts.outfit(fontSize: 13, color: Colors.redAccent)),
+                          Text(
+                            'Report',
+                            style: GoogleFonts.outfit(
+                              fontSize: 13,
+                              color: Colors.redAccent,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -232,11 +297,18 @@ class DoubtCard extends ConsumerWidget {
             if (doubt.subjectName.isNotEmpty)
               Container(
                 margin: const EdgeInsets.only(bottom: 8),
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
-                  color: _subjectColor(doubt.subjectName).withOpacity(isDark ? 0.18 : 0.1),
+                  color: _subjectColor(
+                    doubt.subjectName,
+                  ).withOpacity(isDark ? 0.18 : 0.1),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: _subjectColor(doubt.subjectName).withOpacity(0.3)),
+                  border: Border.all(
+                    color: _subjectColor(doubt.subjectName).withOpacity(0.3),
+                  ),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -298,7 +370,10 @@ class DoubtCard extends ConsumerWidget {
                     height: 160,
                     width: double.infinity,
                     color: isDark ? Colors.grey[800] : Colors.grey[200],
-                    child: const Icon(Icons.broken_image_outlined, color: Colors.grey),
+                    child: const Icon(
+                      Icons.broken_image_outlined,
+                      color: Colors.grey,
+                    ),
                   ),
                 ),
               ),
@@ -316,9 +391,14 @@ class DoubtCard extends ConsumerWidget {
                   itemBuilder: (context, index) {
                     final tag = doubt.tags[index];
                     return Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF271B36) : Colors.grey[100],
+                        color: isDark
+                            ? const Color(0xFF271B36)
+                            : Colors.grey[100],
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(color: cardBorder),
                       ),
@@ -343,21 +423,30 @@ class DoubtCard extends ConsumerWidget {
                 // Upvote
                 InkWell(
                   onTap: () {
-                    ref.read(userVotesProvider.notifier).toggleDoubtVote(doubt.id);
+                    ref
+                        .read(userVotesProvider.notifier)
+                        .toggleDoubtVote(doubt.id);
                   },
                   borderRadius: BorderRadius.circular(10),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: isUpvoted
-                          ? (isDark ? Colors.amber.withOpacity(0.15) : Colors.amber.withOpacity(0.1))
+                          ? (isDark
+                                ? Colors.amber.withOpacity(0.15)
+                                : Colors.amber.withOpacity(0.1))
                           : Colors.transparent,
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Row(
                       children: [
                         Icon(
-                          isUpvoted ? Icons.arrow_upward_rounded : Icons.arrow_upward_outlined,
+                          isUpvoted
+                              ? Icons.arrow_upward_rounded
+                              : Icons.arrow_upward_outlined,
                           size: 16,
                           color: isUpvoted ? Colors.amber[600] : Colors.grey,
                         ),
@@ -384,7 +473,9 @@ class DoubtCard extends ConsumerWidget {
                           ? Icons.check_circle_rounded
                           : Icons.check_circle_outline_rounded,
                       size: 16,
-                      color: doubt.answersCount > 0 ? Colors.green : Colors.grey,
+                      color: doubt.answersCount > 0
+                          ? Colors.green
+                          : Colors.grey,
                     ),
                     const SizedBox(width: 4),
                     Text(
@@ -394,7 +485,9 @@ class DoubtCard extends ConsumerWidget {
                       style: GoogleFonts.outfit(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
-                        color: doubt.answersCount > 0 ? Colors.green : Colors.grey,
+                        color: doubt.answersCount > 0
+                            ? Colors.green
+                            : Colors.grey,
                       ),
                     ),
                   ],
@@ -404,7 +497,11 @@ class DoubtCard extends ConsumerWidget {
                 // Comments count
                 Row(
                   children: [
-                    const Icon(Icons.chat_bubble_outline_rounded, size: 14, color: Colors.grey),
+                    const Icon(
+                      Icons.chat_bubble_outline_rounded,
+                      size: 14,
+                      color: Colors.grey,
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       '${doubt.commentsCount}',
@@ -465,8 +562,5 @@ class DoubtCard extends ConsumerWidget {
 }
 
 String getThumbnailUrl(String url) {
-  return url.replaceFirst(
-    '/upload/',
-    '/upload/w_500,q_70,f_webp/',
-  );
+  return url.replaceFirst('/upload/', '/upload/w_500,q_70,f_webp/');
 }

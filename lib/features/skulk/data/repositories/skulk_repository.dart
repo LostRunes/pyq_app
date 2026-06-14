@@ -14,8 +14,8 @@ class SkulkRepository {
   SkulkRepository({
     required SkulkDbService dbService,
     required SupabaseService supabaseService,
-  })  : _dbService = dbService,
-        _supabaseService = supabaseService;
+  }) : _dbService = dbService,
+       _supabaseService = supabaseService;
 
   /// Ensures that all curriculum subjects are cached in memory for quick name mapping.
   /// Sources from Supabase 1 (the academic DB). subject_id in doubt_posts is stored
@@ -149,10 +149,13 @@ class SkulkRepository {
       body: body,
       imageUrls: imageUrls,
     );
-    
+
     // Fetch newly inserted answer with author profiles
     final solutions = await getSolutions(postId);
-    final solution = solutions.firstWhere((element) => element.id == raw['id'], orElse: () => Solution.fromJson(raw));
+    final solution = solutions.firstWhere(
+      (element) => element.id == raw['id'],
+      orElse: () => Solution.fromJson(raw),
+    );
 
     // Fire notification to doubt owner (non-blocking)
     _fireAnswerNotification(postId, solution);
@@ -193,7 +196,11 @@ class SkulkRepository {
   }
 
   /// Toggles a solution as accepted.
-  Future<void> toggleSolutionAccepted(String solutionId, String postId, bool accept) async {
+  Future<void> toggleSolutionAccepted(
+    String solutionId,
+    String postId,
+    bool accept,
+  ) async {
     await _dbService.toggleSolutionAccepted(solutionId, postId, accept);
   }
 
@@ -209,11 +216,18 @@ class SkulkRepository {
     String? answerId,
     required String body,
   }) async {
-    final raw = await _dbService.createComment(postId: postId, answerId: answerId, body: body);
-    
+    final raw = await _dbService.createComment(
+      postId: postId,
+      answerId: answerId,
+      body: body,
+    );
+
     // Fetch comments to ensure full profile join gets loaded
     final comments = await getComments(postId);
-    final comment = comments.firstWhere((element) => element.id == raw['id'], orElse: () => Comment.fromJson(raw));
+    final comment = comments.firstWhere(
+      (element) => element.id == raw['id'],
+      orElse: () => Comment.fromJson(raw),
+    );
 
     // Fire notification to doubt owner (non-blocking)
     _fireCommentNotification(postId, comment);
@@ -222,10 +236,17 @@ class SkulkRepository {
   }
 
   /// Edits an existing comment.
-  Future<Comment> editComment(String commentId, String body, String postId) async {
+  Future<Comment> editComment(
+    String commentId,
+    String body,
+    String postId,
+  ) async {
     final raw = await _dbService.editComment(commentId, body);
     final comments = await getComments(postId);
-    return comments.firstWhere((element) => element.id == raw['id'], orElse: () => Comment.fromJson(raw));
+    return comments.firstWhere(
+      (element) => element.id == raw['id'],
+      orElse: () => Comment.fromJson(raw),
+    );
   }
 
   /// Deletes an existing comment.
@@ -275,8 +296,7 @@ class SkulkRepository {
   Future<List<Map<String, dynamic>>> getNotifications() =>
       _dbService.fetchNotifications();
 
-  Future<int> getUnreadNotificationCount() =>
-      _dbService.fetchUnreadCount();
+  Future<int> getUnreadNotificationCount() => _dbService.fetchUnreadCount();
 
   Future<void> markAllNotificationsRead() =>
       _dbService.markAllNotificationsRead();

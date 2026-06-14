@@ -62,10 +62,12 @@ class _CreateDoubtScreenState extends ConsumerState<CreateDoubtScreen> {
     try {
       final response = await _picker.retrieveLostData();
       if (response.isEmpty) return;
-      
+
       if (response.files != null && response.files!.isNotEmpty) {
         final compressedFiles = await Future.wait(
-          response.files!.map((img) => ImageUtils.compressImage(File(img.path))),
+          response.files!.map(
+            (img) => ImageUtils.compressImage(File(img.path)),
+          ),
         );
         final validFiles = compressedFiles.whereType<File>().toList();
         if (validFiles.isNotEmpty) {
@@ -113,12 +115,18 @@ class _CreateDoubtScreenState extends ConsumerState<CreateDoubtScreen> {
       _selectedSubjectId = _doubtToEdit!.subjectId;
     }
 
-    if (_branchId == null || _branchId!.isEmpty || _semester == null || _semester == 0) {
+    if (_branchId == null ||
+        _branchId!.isEmpty ||
+        _semester == null ||
+        _semester == 0) {
       try {
         final session = Supabase.instance.client.auth.currentSession;
         if (session != null) {
           final email = session.user.email ?? '';
-          final kiitRegex = RegExp(r'^(\d+)@kiit\.ac\.in$', caseSensitive: false);
+          final kiitRegex = RegExp(
+            r'^(\d+)@kiit\.ac\.in$',
+            caseSensitive: false,
+          );
           final match = kiitRegex.firstMatch(email);
 
           if (match != null) {
@@ -130,7 +138,8 @@ class _CreateDoubtScreenState extends ConsumerState<CreateDoubtScreen> {
               final batch = student['batch']?.toString() ?? '';
               final section = student['section']?.toString() ?? '';
 
-              final fetchedBranchId = await studentService.getBranchIdFromSection(section);
+              final fetchedBranchId = await studentService
+                  .getBranchIdFromSection(section);
               final fetchedSemester = _getSemesterFromBatch(batch);
               if (mounted) {
                 setState(() {
@@ -159,39 +168,36 @@ class _CreateDoubtScreenState extends ConsumerState<CreateDoubtScreen> {
   // ── helpers ────────────────────────────────────────────────────────────────
 
   InputDecoration _fieldDecoration(String hint) => InputDecoration(
-        hintText: hint,
-        hintStyle: GoogleFonts.outfit(fontSize: 14, color: Colors.grey[500]),
-        border: InputBorder.none,
-        enabledBorder: InputBorder.none,
-        focusedBorder: InputBorder.none,
-        isDense: true,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      );
+    hintText: hint,
+    hintStyle: GoogleFonts.outfit(fontSize: 14, color: Colors.grey[500]),
+    border: InputBorder.none,
+    enabledBorder: InputBorder.none,
+    focusedBorder: InputBorder.none,
+    isDense: true,
+    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+  );
 
   BoxDecoration _cardDecoration(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return BoxDecoration(
       color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
       borderRadius: BorderRadius.circular(14),
-      border: Border.all(
-        color: isDark ? Colors.grey[800]! : Colors.grey[200]!,
-      ),
+      border: Border.all(color: isDark ? Colors.grey[800]! : Colors.grey[200]!),
     );
   }
 
   Widget _sectionLabel(String label) => Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: Text(
-          label,
-          style: GoogleFonts.outfit(
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 1.1,
-            color: Colors.grey[500],
-          ),
-        ),
-      );
+    padding: const EdgeInsets.only(bottom: 8),
+    child: Text(
+      label,
+      style: GoogleFonts.outfit(
+        fontSize: 11,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 1.1,
+        color: Colors.grey[500],
+      ),
+    ),
+  );
 
   // ── publish ────────────────────────────────────────────────────────────────
 
@@ -203,21 +209,21 @@ class _CreateDoubtScreenState extends ConsumerState<CreateDoubtScreen> {
         imageQuality: 85,
       );
       if (images.isEmpty) return;
-      
+
       final compressedFiles = await Future.wait(
         images.map((img) => ImageUtils.compressImage(File(img.path))),
       );
       final validFiles = compressedFiles.whereType<File>().toList();
-      
+
       if (!mounted) return;
       setState(() {
         selectedImages = List.from(selectedImages)..addAll(validFiles);
       });
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to pick images: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to pick images: $e')));
       }
     }
   }
@@ -251,8 +257,14 @@ class _CreateDoubtScreenState extends ConsumerState<CreateDoubtScreen> {
                 ),
                 const SizedBox(height: 20),
                 ListTile(
-                  leading: Icon(Icons.camera_alt_outlined, color: theme.colorScheme.primary),
-                  title: Text('Take Photo', style: GoogleFonts.outfit(fontWeight: FontWeight.w600)),
+                  leading: Icon(
+                    Icons.camera_alt_outlined,
+                    color: theme.colorScheme.primary,
+                  ),
+                  title: Text(
+                    'Take Photo',
+                    style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+                  ),
                   onTap: () async {
                     Navigator.pop(context);
                     try {
@@ -263,13 +275,16 @@ class _CreateDoubtScreenState extends ConsumerState<CreateDoubtScreen> {
                         imageQuality: 85,
                       );
                       if (image == null) return;
-                      
-                      final compressed = await ImageUtils.compressImage(File(image.path));
+
+                      final compressed = await ImageUtils.compressImage(
+                        File(image.path),
+                      );
                       if (compressed == null) return;
-                      
+
                       if (!mounted) return;
                       setState(() {
-                        selectedImages = List.from(selectedImages)..add(compressed);
+                        selectedImages = List.from(selectedImages)
+                          ..add(compressed);
                       });
                     } catch (e) {
                       ScaffoldMessenger.of(this.context).showSnackBar(
@@ -280,8 +295,14 @@ class _CreateDoubtScreenState extends ConsumerState<CreateDoubtScreen> {
                 ),
                 Divider(color: isDark ? Colors.grey[850] : Colors.grey[200]),
                 ListTile(
-                  leading: Icon(Icons.photo_library_outlined, color: theme.colorScheme.primary),
-                  title: Text('Choose from Gallery', style: GoogleFonts.outfit(fontWeight: FontWeight.w600)),
+                  leading: Icon(
+                    Icons.photo_library_outlined,
+                    color: theme.colorScheme.primary,
+                  ),
+                  title: Text(
+                    'Choose from Gallery',
+                    style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+                  ),
                   onTap: () {
                     Navigator.pop(context);
                     pickImages();
@@ -298,9 +319,9 @@ class _CreateDoubtScreenState extends ConsumerState<CreateDoubtScreen> {
   Future<void> _publishDoubt() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedSubjectId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a subject.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please select a subject.')));
       return;
     }
 
@@ -310,10 +331,10 @@ class _CreateDoubtScreenState extends ConsumerState<CreateDoubtScreen> {
     final parsedTags = rawTags.isEmpty
         ? <String>[]
         : rawTags
-            .split(RegExp(r'[,\s]+'))
-            .map((e) => e.replaceAll('#', '').trim().toLowerCase())
-            .where((e) => e.isNotEmpty)
-            .toList();
+              .split(RegExp(r'[,\s]+'))
+              .map((e) => e.replaceAll('#', '').trim().toLowerCase())
+              .where((e) => e.isNotEmpty)
+              .toList();
 
     final String subjectToSend = _selectedSubjectId == 'other'
         ? _otherSubjectController.text.trim()
@@ -321,7 +342,9 @@ class _CreateDoubtScreenState extends ConsumerState<CreateDoubtScreen> {
 
     try {
       if (_doubtToEdit != null) {
-        await ref.read(skulkFeedProvider.notifier).editDoubt(
+        await ref
+            .read(skulkFeedProvider.notifier)
+            .editDoubt(
               doubtId: _doubtToEdit!.id,
               title: _titleController.text.trim(),
               body: _bodyController.text.trim(),
@@ -348,8 +371,10 @@ class _CreateDoubtScreenState extends ConsumerState<CreateDoubtScreen> {
       );
       final uploadedUrls = uploadedResults.whereType<String>().toList();
       final hasFailedUploads = uploadedUrls.length < selectedImages.length;
-      
-      await ref.read(skulkRepositoryProvider).createDoubt(
+
+      await ref
+          .read(skulkRepositoryProvider)
+          .createDoubt(
             title: _titleController.text.trim(),
             body: _bodyController.text.trim(),
             subjectId: subjectToSend,
@@ -362,7 +387,9 @@ class _CreateDoubtScreenState extends ConsumerState<CreateDoubtScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            backgroundColor: hasFailedUploads ? Colors.orange[800] : Colors.green[700],
+            backgroundColor: hasFailedUploads
+                ? Colors.orange[800]
+                : Colors.green[700],
             content: Text(
               hasFailedUploads
                   ? 'Post published without some images ⚠️'
@@ -397,14 +424,14 @@ class _CreateDoubtScreenState extends ConsumerState<CreateDoubtScreen> {
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final subjectsAsync = ref.watch(subjectsProvider((
-      branchId: _branchId!,
-      semester: _semester!,
-    )));
+    final subjectsAsync = ref.watch(
+      subjectsProvider((branchId: _branchId!, semester: _semester!)),
+    );
 
     return Scaffold(
-      backgroundColor:
-          isDark ? const Color(0xFF141414) : const Color(0xFFF5F5F5),
+      backgroundColor: isDark
+          ? const Color(0xFF141414)
+          : const Color(0xFFF5F5F5),
       appBar: AppBar(
         title: Text(
           _doubtToEdit != null ? 'Edit Doubt' : 'Ask the Community',
@@ -419,8 +446,10 @@ class _CreateDoubtScreenState extends ConsumerState<CreateDoubtScreen> {
         error: (err, _) => Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
-            child: Text('Could not load subjects.\n$err',
-                textAlign: TextAlign.center),
+            child: Text(
+              'Could not load subjects.\n$err',
+              textAlign: TextAlign.center,
+            ),
           ),
         ),
         data: (subjects) {
@@ -455,15 +484,18 @@ class _CreateDoubtScreenState extends ConsumerState<CreateDoubtScreen> {
                         key: ValueKey(_selectedSubjectId),
                         initialValue: _selectedSubjectId,
                         isExpanded: true,
-                        dropdownColor:
-                            isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                        dropdownColor: isDark
+                            ? const Color(0xFF1E1E1E)
+                            : Colors.white,
                         style: GoogleFonts.outfit(
                           fontSize: 14,
                           color: isDark ? Colors.white : Colors.black87,
                         ),
                         decoration: _fieldDecoration('').copyWith(
                           contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 4),
+                            horizontal: 16,
+                            vertical: 4,
+                          ),
                         ),
                         items: [
                           ...subjects.map((sub) {
@@ -480,7 +512,9 @@ class _CreateDoubtScreenState extends ConsumerState<CreateDoubtScreen> {
                             value: 'other',
                             child: Text(
                               'Other (Specify below)',
-                              style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+                              style: GoogleFonts.outfit(
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
                         ],
@@ -499,9 +533,12 @@ class _CreateDoubtScreenState extends ConsumerState<CreateDoubtScreen> {
                         maxLines: 1,
                         textInputAction: TextInputAction.next,
                         style: GoogleFonts.outfit(fontSize: 15),
-                        decoration: _fieldDecoration('Enter subject name here…'),
+                        decoration: _fieldDecoration(
+                          'Enter subject name here…',
+                        ),
                         validator: (v) {
-                          if (_selectedSubjectId == 'other' && (v == null || v.trim().isEmpty)) {
+                          if (_selectedSubjectId == 'other' &&
+                              (v == null || v.trim().isEmpty)) {
                             return 'Please specify the subject name.';
                           }
                           return null;
@@ -545,8 +582,9 @@ class _CreateDoubtScreenState extends ConsumerState<CreateDoubtScreen> {
                       keyboardType: TextInputType.multiline,
                       textInputAction: TextInputAction.newline,
                       style: GoogleFonts.outfit(fontSize: 14, height: 1.5),
-                      decoration:
-                          _fieldDecoration('Explain your doubt in detail…'),
+                      decoration: _fieldDecoration(
+                        'Explain your doubt in detail…',
+                      ),
                       validator: (v) {
                         if (v == null || v.trim().isEmpty) {
                           return 'Please add a description.';
@@ -641,15 +679,18 @@ class _CreateDoubtScreenState extends ConsumerState<CreateDoubtScreen> {
                       maxLines: 1,
                       textInputAction: TextInputAction.done,
                       style: GoogleFonts.outfit(fontSize: 14),
-                      decoration:
-                          _fieldDecoration('exam sem2 math assignment …'),
+                      decoration: _fieldDecoration(
+                        'exam sem2 math assignment …',
+                      ),
                     ),
                   ),
                   const SizedBox(height: 6),
                   Text(
                     'Separate tags with spaces or commas — no # needed.',
                     style: GoogleFonts.outfit(
-                        fontSize: 11, color: Colors.grey[500]),
+                      fontSize: 11,
+                      color: Colors.grey[500],
+                    ),
                   ),
                   const SizedBox(height: 32),
 
@@ -660,11 +701,11 @@ class _CreateDoubtScreenState extends ConsumerState<CreateDoubtScreen> {
                     child: ElevatedButton(
                       onPressed: _isPublishing ? null : _publishDoubt,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor:
-                            Theme.of(context).colorScheme.primary,
+                        backgroundColor: Theme.of(context).colorScheme.primary,
                         foregroundColor: Colors.white,
-                        disabledBackgroundColor:
-                            Theme.of(context).colorScheme.primary.withAlpha(100),
+                        disabledBackgroundColor: Theme.of(
+                          context,
+                        ).colorScheme.primary.withAlpha(100),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
                         ),
@@ -676,12 +717,15 @@ class _CreateDoubtScreenState extends ConsumerState<CreateDoubtScreen> {
                               height: 22,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2.5,
-                                valueColor:
-                                    AlwaysStoppedAnimation(Colors.white),
+                                valueColor: AlwaysStoppedAnimation(
+                                  Colors.white,
+                                ),
                               ),
                             )
                           : Text(
-                              _doubtToEdit != null ? 'Update Doubt' : 'Publish Doubt',
+                              _doubtToEdit != null
+                                  ? 'Update Doubt'
+                                  : 'Publish Doubt',
                               style: GoogleFonts.outfit(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,

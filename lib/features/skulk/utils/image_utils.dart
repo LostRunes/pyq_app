@@ -2,9 +2,7 @@ import 'dart:io';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 
 class ImageUtils {
-  static Future<File?> compressImage(
-    File file,
-  ) async {
+  static Future<File?> compressImage(File file) async {
     final path = file.path;
     final targetPath = '${path}_compressed.webp';
 

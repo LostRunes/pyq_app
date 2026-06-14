@@ -9,7 +9,11 @@ import '../widgets/loading_overlay.dart';
 class TopicListScreen extends ConsumerWidget {
   final String subjectId;
   final String subjectName;
-  const TopicListScreen({super.key, required this.subjectId, required this.subjectName});
+  const TopicListScreen({
+    super.key,
+    required this.subjectId,
+    required this.subjectName,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -31,17 +35,26 @@ class TopicListScreen extends ConsumerWidget {
                     ref.read(pdfLoadingProvider.notifier).setLoading(true);
 
                     try {
-                      final service = ref.read(supabaseServiceProvider);
-                      final data = await service.getFullSubjectData(subjectId);
+                      final data = await ref.read(
+                        subjectPdfDataProvider(subjectId).future,
+                      );
 
                       final pdfService = PdfService();
-                      final pdfBytes = await pdfService.generateSubjectPdf(subjectName, data);
-
-                      await pdfService.downloadPdf(pdfBytes, '${subjectName.replaceAll(' ', '_')}_Full.pdf');
-                    } catch (e) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Error: $e')),
+                      final pdfBytes = await pdfService.generateSubjectPdf(
+                        subjectName,
+                        data,
                       );
+
+                      await pdfService.downloadPdf(
+                        pdfBytes,
+                        '${subjectName.replaceAll(' ', '_')}_Full.pdf',
+                      );
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(
+                          context,
+                        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+                      }
                     } finally {
                       ref.read(pdfLoadingProvider.notifier).setLoading(false);
                     }
@@ -106,14 +119,19 @@ class TopicListScreen extends ConsumerWidget {
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Image.asset('assets/images/lil_octopus.png', height: 130),
+                                  Image.asset(
+                                    'assets/images/lil_octopus.png',
+                                    height: 130,
+                                  ),
                                   const SizedBox(height: 16),
                                   Text(
                                     "No topics found for this subject.",
                                     style: GoogleFonts.outfit(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w600,
-                                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onSurface.withOpacity(0.5),
                                     ),
                                   ),
                                 ],
@@ -144,33 +162,40 @@ class TopicListScreen extends ConsumerWidget {
                                     child: Container(
                                       padding: const EdgeInsets.all(24),
                                       decoration: BoxDecoration(
-                                        color: Theme.of(context).colorScheme.surface,
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.surface,
                                         borderRadius: BorderRadius.circular(32),
                                         boxShadow: [
                                           BoxShadow(
-                                            color: Theme.of(
-                                              context,
-                                            ).colorScheme.primary.withOpacity(0.08),
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .primary
+                                                .withOpacity(0.08),
                                             blurRadius: 20,
                                             offset: const Offset(0, 10),
                                           ),
                                         ],
                                       ),
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Row(
                                             children: [
                                               Container(
-                                                padding: const EdgeInsets.symmetric(
-                                                  horizontal: 14,
-                                                  vertical: 8,
-                                                ),
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 14,
+                                                      vertical: 8,
+                                                    ),
                                                 decoration: BoxDecoration(
-                                                  color: Theme.of(
-                                                    context,
-                                                  ).colorScheme.primary.withOpacity(0.15),
-                                                  borderRadius: BorderRadius.circular(16),
+                                                  color: Theme.of(context)
+                                                      .colorScheme
+                                                      .primary
+                                                      .withOpacity(0.15),
+                                                  borderRadius:
+                                                      BorderRadius.circular(16),
                                                 ),
                                                 child: Text(
                                                   'Topic ${i + 1}',
@@ -186,9 +211,10 @@ class TopicListScreen extends ConsumerWidget {
                                               const Spacer(),
                                               Icon(
                                                 Icons.arrow_forward_ios_rounded,
-                                                color: Theme.of(
-                                                  context,
-                                                ).colorScheme.primary.withOpacity(0.3),
+                                                color: Theme.of(context)
+                                                    .colorScheme
+                                                    .primary
+                                                    .withOpacity(0.3),
                                                 size: 18,
                                               ),
                                             ],
@@ -196,7 +222,9 @@ class TopicListScreen extends ConsumerWidget {
                                           const SizedBox(height: 16),
                                           Text(
                                             topic.name,
-                                            style: Theme.of(context).textTheme.titleLarge
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .titleLarge
                                                 ?.copyWith(
                                                   fontSize: 20,
                                                   fontWeight: FontWeight.w800,
@@ -205,7 +233,9 @@ class TopicListScreen extends ConsumerWidget {
                                           const SizedBox(height: 10),
                                           Text(
                                             topic.summary ?? '',
-                                            style: Theme.of(context).textTheme.bodyMedium
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodyMedium
                                                 ?.copyWith(
                                                   height: 1.6,
                                                   fontWeight: FontWeight.w500,
@@ -220,14 +250,18 @@ class TopicListScreen extends ConsumerWidget {
                                 );
                               },
                             ),
-                      loading: () => const Center(child: CircularProgressIndicator()),
+                      loading: () =>
+                          const Center(child: CircularProgressIndicator()),
                       error: (e, _) => Center(
                         child: Padding(
                           padding: const EdgeInsets.all(24.0),
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Image.asset('assets/images/sad_raccoon.png', height: 130),
+                              Image.asset(
+                                'assets/images/sad_raccoon.png',
+                                height: 130,
+                              ),
                               const SizedBox(height: 16),
                               Text(
                                 'Failed to load topics: $e',
@@ -235,7 +269,9 @@ class TopicListScreen extends ConsumerWidget {
                                 style: GoogleFonts.outfit(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
-                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurface.withOpacity(0.6),
                                 ),
                               ),
                             ],
@@ -247,7 +283,10 @@ class TopicListScreen extends ConsumerWidget {
                 ],
               ),
               if (isLoading)
-                const LoadingOverlay(message: 'Generating your subject PDF... This might take a moment.'),
+                const LoadingOverlay(
+                  message:
+                      'Generating your subject PDF... This might take a moment.',
+                ),
             ],
           ),
         ),

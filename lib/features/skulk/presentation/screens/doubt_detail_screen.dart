@@ -37,15 +37,18 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
     try {
       final response = await _picker.retrieveLostData();
       if (response.isEmpty) return;
-      
+
       if (response.files != null && response.files!.isNotEmpty) {
         final compressedFiles = await Future.wait(
-          response.files!.map((img) => ImageUtils.compressImage(File(img.path))),
+          response.files!.map(
+            (img) => ImageUtils.compressImage(File(img.path)),
+          ),
         );
         final validFiles = compressedFiles.whereType<File>().toList();
         if (validFiles.isNotEmpty) {
           setState(() {
-            selectedSolutionImages = List.from(selectedSolutionImages)..addAll(validFiles);
+            selectedSolutionImages = List.from(selectedSolutionImages)
+              ..addAll(validFiles);
           });
         }
       } else {
@@ -54,7 +57,8 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
           final compressed = await ImageUtils.compressImage(File(file.path));
           if (compressed != null) {
             setState(() {
-              selectedSolutionImages = List.from(selectedSolutionImages)..add(compressed);
+              selectedSolutionImages = List.from(selectedSolutionImages)
+                ..add(compressed);
             });
           }
         }
@@ -72,21 +76,22 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
         imageQuality: 85,
       );
       if (images.isEmpty) return;
-      
+
       final compressedFiles = await Future.wait(
         images.map((img) => ImageUtils.compressImage(File(img.path))),
       );
       final validFiles = compressedFiles.whereType<File>().toList();
-      
+
       if (!mounted) return;
       setState(() {
-        selectedSolutionImages = List.from(selectedSolutionImages)..addAll(validFiles);
+        selectedSolutionImages = List.from(selectedSolutionImages)
+          ..addAll(validFiles);
       });
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to pick images: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to pick images: $e')));
       }
     }
   }
@@ -120,8 +125,14 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
                 ),
                 const SizedBox(height: 20),
                 ListTile(
-                  leading: Icon(Icons.camera_alt_outlined, color: theme.colorScheme.primary),
-                  title: Text('Take Photo', style: GoogleFonts.outfit(fontWeight: FontWeight.w600)),
+                  leading: Icon(
+                    Icons.camera_alt_outlined,
+                    color: theme.colorScheme.primary,
+                  ),
+                  title: Text(
+                    'Take Photo',
+                    style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+                  ),
                   onTap: () async {
                     Navigator.pop(context);
                     try {
@@ -132,13 +143,17 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
                         imageQuality: 85,
                       );
                       if (image == null) return;
-                      
-                      final compressed = await ImageUtils.compressImage(File(image.path));
+
+                      final compressed = await ImageUtils.compressImage(
+                        File(image.path),
+                      );
                       if (compressed == null) return;
-                      
+
                       if (!mounted) return;
                       setState(() {
-                        selectedSolutionImages = List.from(selectedSolutionImages)..add(compressed);
+                        selectedSolutionImages = List.from(
+                          selectedSolutionImages,
+                        )..add(compressed);
                       });
                     } catch (e) {
                       ScaffoldMessenger.of(this.context).showSnackBar(
@@ -149,8 +164,14 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
                 ),
                 Divider(color: isDark ? Colors.grey[850] : Colors.grey[200]),
                 ListTile(
-                  leading: Icon(Icons.photo_library_outlined, color: theme.colorScheme.primary),
-                  title: Text('Choose from Gallery', style: GoogleFonts.outfit(fontWeight: FontWeight.w600)),
+                  leading: Icon(
+                    Icons.photo_library_outlined,
+                    color: theme.colorScheme.primary,
+                  ),
+                  title: Text(
+                    'Choose from Gallery',
+                    style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+                  ),
                   onTap: () {
                     Navigator.pop(context);
                     pickSolutionImages();
@@ -183,19 +204,19 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
         selectedSolutionImages.map((img) => CloudinaryService.uploadImage(img)),
       );
       final uploadedUrls = uploadedResults.whereType<String>().toList();
-      final hasFailedUploads = uploadedUrls.length < selectedSolutionImages.length;
+      final hasFailedUploads =
+          uploadedUrls.length < selectedSolutionImages.length;
 
-      await ref.read(solutionsNotifierProvider(doubtId).notifier).addSolution(
-            body,
-            imageUrls: uploadedUrls,
-          );
+      await ref
+          .read(solutionsNotifierProvider(doubtId).notifier)
+          .addSolution(body, imageUrls: uploadedUrls);
 
       _solutionController.clear();
       setState(() {
         selectedSolutionImages.clear();
       });
       FocusScope.of(context).unfocus();
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           backgroundColor: hasFailedUploads ? Colors.orange[850] : Colors.green,
@@ -233,7 +254,10 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
           backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
           title: Text(
             'Edit Solution',
-            style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16),
+            style: GoogleFonts.outfit(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+            ),
           ),
           content: TextField(
             controller: editController,
@@ -244,14 +268,19 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
               hintStyle: GoogleFonts.outfit(fontSize: 14, color: Colors.grey),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: isDark ? Colors.grey[800]! : Colors.grey[300]!),
+                borderSide: BorderSide(
+                  color: isDark ? Colors.grey[800]! : Colors.grey[300]!,
+                ),
               ),
             ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text('Cancel', style: GoogleFonts.outfit(color: Colors.grey)),
+              child: Text(
+                'Cancel',
+                style: GoogleFonts.outfit(color: Colors.grey),
+              ),
             ),
             ElevatedButton(
               onPressed: () async {
@@ -265,11 +294,16 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Theme.of(context).colorScheme.primary,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
               child: Text(
                 'Save',
-                style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold),
+                style: GoogleFonts.outfit(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ],
@@ -308,7 +342,9 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
     final cardBorder = isDark ? Colors.grey[800]! : Colors.grey[200]!;
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF141414) : const Color(0xFFF9F9F9),
+      backgroundColor: isDark
+          ? const Color(0xFF141414)
+          : const Color(0xFFF9F9F9),
       appBar: AppBar(
         title: Text(
           'Doubt Thread',
@@ -321,7 +357,8 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
           doubtAsync.when(
             data: (doubt) {
               if (doubt == null) return const SizedBox.shrink();
-              final isOwnDoubt = currentUserId != null && currentUserId == doubt.userId;
+              final isOwnDoubt =
+                  currentUserId != null && currentUserId == doubt.userId;
               return PopupMenuButton<String>(
                 icon: const Icon(Icons.more_vert_rounded),
                 onSelected: (value) async {
@@ -342,59 +379,116 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),
-                        title: Text('Delete Doubt', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-                        content: Text('Are you sure you want to delete this doubt?', style: GoogleFonts.outfit()),
+                        title: Text(
+                          'Delete Doubt',
+                          style: GoogleFonts.outfit(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        content: Text(
+                          'Are you sure you want to delete this doubt?',
+                          style: GoogleFonts.outfit(),
+                        ),
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.pop(context, false),
-                            child: Text('Cancel', style: GoogleFonts.outfit(color: Colors.grey)),
+                            child: Text(
+                              'Cancel',
+                              style: GoogleFonts.outfit(color: Colors.grey),
+                            ),
                           ),
                           TextButton(
                             onPressed: () => Navigator.pop(context, true),
-                            child: Text('Delete', style: GoogleFonts.outfit(color: Colors.redAccent)),
+                            child: Text(
+                              'Delete',
+                              style: GoogleFonts.outfit(
+                                color: Colors.redAccent,
+                              ),
+                            ),
                           ),
                         ],
                       ),
                     );
                     if (confirm == true) {
-                      await ref.read(skulkFeedProvider.notifier).deleteDoubt(doubt.id);
+                      await ref
+                          .read(skulkFeedProvider.notifier)
+                          .deleteDoubt(doubt.id);
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Doubt deleted successfully.')),
+                          const SnackBar(
+                            content: Text('Doubt deleted successfully.'),
+                          ),
                         );
                         Navigator.pop(context);
                       }
                     }
                   } else if (value == 'report') {
-                    ReportBottomSheet.show(context, target: ReportTarget.doubt, targetId: doubt.id);
+                    ReportBottomSheet.show(
+                      context,
+                      target: ReportTarget.doubt,
+                      targetId: doubt.id,
+                    );
                   }
                 },
                 itemBuilder: (context) => [
                   if (isOwnDoubt) ...[
                     PopupMenuItem(
                       value: 'edit',
-                      child: Row(children: [
-                        const Icon(Icons.edit_outlined, size: 16, color: Colors.grey),
-                        const SizedBox(width: 8),
-                        Text('Edit Doubt', style: GoogleFonts.outfit(fontSize: 13)),
-                      ]),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.edit_outlined,
+                            size: 16,
+                            color: Colors.grey,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Edit Doubt',
+                            style: GoogleFonts.outfit(fontSize: 13),
+                          ),
+                        ],
+                      ),
                     ),
                     PopupMenuItem(
                       value: 'delete',
-                      child: Row(children: [
-                        const Icon(Icons.delete_outline_rounded, size: 16, color: Colors.redAccent),
-                        const SizedBox(width: 8),
-                        Text('Delete', style: GoogleFonts.outfit(fontSize: 13, color: Colors.redAccent)),
-                      ]),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.delete_outline_rounded,
+                            size: 16,
+                            color: Colors.redAccent,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Delete',
+                            style: GoogleFonts.outfit(
+                              fontSize: 13,
+                              color: Colors.redAccent,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                   PopupMenuItem(
                     value: 'report',
-                    child: Row(children: [
-                      const Icon(Icons.flag_outlined, size: 16, color: Colors.redAccent),
-                      const SizedBox(width: 8),
-                      Text('Report', style: GoogleFonts.outfit(fontSize: 13, color: Colors.redAccent)),
-                    ]),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.flag_outlined,
+                          size: 16,
+                          color: Colors.redAccent,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Report',
+                          style: GoogleFonts.outfit(
+                            fontSize: 13,
+                            color: Colors.redAccent,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               );
@@ -417,7 +511,8 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
             );
           }
 
-          final isDoubtOwner = currentUserId != null && currentUserId == doubt.userId;
+          final isDoubtOwner =
+              currentUserId != null && currentUserId == doubt.userId;
 
           return Column(
             children: [
@@ -431,10 +526,10 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
                       Container(
                         padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
-                          color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-                          border: Border(
-                            bottom: BorderSide(color: cardBorder),
-                          ),
+                          color: isDark
+                              ? const Color(0xFF1E1E1E)
+                              : Colors.white,
+                          border: Border(bottom: BorderSide(color: cardBorder)),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -445,7 +540,8 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
                                 CircleAvatar(
                                   radius: 20,
                                   backgroundImage: AssetImage(
-                                    (doubt.authorAvatarUrl != null && doubt.authorAvatarUrl!.isNotEmpty)
+                                    (doubt.authorAvatarUrl != null &&
+                                            doubt.authorAvatarUrl!.isNotEmpty)
                                         ? doubt.authorAvatarUrl!
                                         : 'assets/images/pikachu.png',
                                   ),
@@ -453,7 +549,8 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
                                 const SizedBox(width: 10),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Row(
                                         children: [
@@ -465,16 +562,28 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
                                               style: GoogleFonts.outfit(
                                                 fontSize: 14,
                                                 fontWeight: FontWeight.w600,
-                                                color: isDark ? Colors.grey[200] : Colors.grey[800],
+                                                color: isDark
+                                                    ? Colors.grey[200]
+                                                    : Colors.grey[800],
                                               ),
                                             ),
                                           ),
                                           const SizedBox(width: 4),
                                           Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 5,
+                                              vertical: 1.5,
+                                            ),
                                             decoration: BoxDecoration(
-                                              color: isDark ? Colors.blue.withOpacity(0.15) : Colors.blue.withOpacity(0.1),
-                                              borderRadius: BorderRadius.circular(6),
+                                              color: isDark
+                                                  ? Colors.blue.withOpacity(
+                                                      0.15,
+                                                    )
+                                                  : Colors.blue.withOpacity(
+                                                      0.1,
+                                                    ),
+                                              borderRadius:
+                                                  BorderRadius.circular(6),
                                             ),
                                             child: Text(
                                               '🔥 ${doubt.authorReputation}',
@@ -500,16 +609,25 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
                                 ),
                                 if (doubt.isSolved)
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
                                     decoration: BoxDecoration(
                                       color: Colors.green.withOpacity(0.15),
                                       borderRadius: BorderRadius.circular(20),
-                                      border: Border.all(color: Colors.green.withOpacity(0.3)),
+                                      border: Border.all(
+                                        color: Colors.green.withOpacity(0.3),
+                                      ),
                                     ),
                                     child: Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        const Icon(Icons.check_circle_rounded, size: 12, color: Colors.green),
+                                        const Icon(
+                                          Icons.check_circle_rounded,
+                                          size: 12,
+                                          color: Colors.green,
+                                        ),
                                         const SizedBox(width: 4),
                                         Text(
                                           'Solved',
@@ -530,18 +648,27 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
                             if (doubt.subjectName.isNotEmpty)
                               Container(
                                 margin: const EdgeInsets.only(bottom: 12),
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 5,
+                                ),
                                 decoration: BoxDecoration(
-                                  color: isDark ? Colors.purple.withOpacity(0.15) : Colors.purple.withOpacity(0.08),
+                                  color: isDark
+                                      ? Colors.purple.withOpacity(0.15)
+                                      : Colors.purple.withOpacity(0.08),
                                   borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: Colors.purple.withOpacity(0.2)),
+                                  border: Border.all(
+                                    color: Colors.purple.withOpacity(0.2),
+                                  ),
                                 ),
                                 child: Text(
                                   doubt.subjectName,
                                   style: GoogleFonts.outfit(
                                     fontSize: 11,
                                     fontWeight: FontWeight.w600,
-                                    color: isDark ? Colors.purple[200] : Colors.purple[700],
+                                    color: isDark
+                                        ? Colors.purple[200]
+                                        : Colors.purple[700],
                                   ),
                                 ),
                               ),
@@ -550,10 +677,11 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
                             Text(
                               doubt.title,
                               style: GoogleFonts.outfit(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: isDark ? Colors.white : Colors.black,
-                                  height: 1.3),
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: isDark ? Colors.white : Colors.black,
+                                height: 1.3,
+                              ),
                             ),
                             const SizedBox(height: 8),
 
@@ -564,13 +692,18 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
                                 fontSize: 14,
                                 fontWeight: FontWeight.w400,
                                 height: 1.5,
-                                color: isDark ? Colors.grey[300] : Colors.grey[800],
+                                color: isDark
+                                    ? Colors.grey[300]
+                                    : Colors.grey[800],
                               ),
                             ),
                             const SizedBox(height: 16),
 
                             if (doubt.imageUrls.isNotEmpty) ...[
-                              CloudinaryImageGallery(imageUrls: doubt.imageUrls, height: 200),
+                              CloudinaryImageGallery(
+                                imageUrls: doubt.imageUrls,
+                                height: 200,
+                              ),
                               const SizedBox(height: 16),
                             ],
 
@@ -581,11 +714,15 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
                                 child: ListView.separated(
                                   scrollDirection: Axis.horizontal,
                                   itemCount: doubt.tags.length,
-                                  separatorBuilder: (_, __) => const SizedBox(width: 6),
+                                  separatorBuilder: (_, __) =>
+                                      const SizedBox(width: 6),
                                   itemBuilder: (context, index) {
                                     final tag = doubt.tags[index];
                                     return Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 3,
+                                      ),
                                       decoration: BoxDecoration(
                                         color: accentBg,
                                         borderRadius: BorderRadius.circular(8),
@@ -596,7 +733,9 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
                                         style: GoogleFonts.outfit(
                                           fontSize: 11,
                                           fontWeight: FontWeight.w500,
-                                          color: isDark ? Colors.grey[400] : Colors.grey[600],
+                                          color: isDark
+                                              ? Colors.grey[400]
+                                              : Colors.grey[600],
                                         ),
                                       ),
                                     );
@@ -612,23 +751,36 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
                                 // Upvote Doubt Button
                                 InkWell(
                                   onTap: () {
-                                    ref.read(userVotesProvider.notifier).toggleDoubtVote(doubt.id);
+                                    ref
+                                        .read(userVotesProvider.notifier)
+                                        .toggleDoubtVote(doubt.id);
                                   },
                                   borderRadius: BorderRadius.circular(10),
                                   child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 14,
+                                      vertical: 8,
+                                    ),
                                     decoration: BoxDecoration(
                                       color: isUpvoted
-                                          ? (isDark ? Colors.amber.withOpacity(0.15) : Colors.amber.withOpacity(0.1))
-                                          : (isDark ? const Color(0xFF262626) : Colors.grey[100]),
+                                          ? (isDark
+                                                ? Colors.amber.withOpacity(0.15)
+                                                : Colors.amber.withOpacity(0.1))
+                                          : (isDark
+                                                ? const Color(0xFF262626)
+                                                : Colors.grey[100]),
                                       borderRadius: BorderRadius.circular(10),
                                     ),
                                     child: Row(
                                       children: [
                                         Icon(
-                                          isUpvoted ? Icons.arrow_upward_rounded : Icons.arrow_upward_outlined,
+                                          isUpvoted
+                                              ? Icons.arrow_upward_rounded
+                                              : Icons.arrow_upward_outlined,
                                           size: 18,
-                                          color: isUpvoted ? Colors.amber[600] : Colors.grey,
+                                          color: isUpvoted
+                                              ? Colors.amber[600]
+                                              : Colors.grey,
                                         ),
                                         const SizedBox(width: 6),
                                         Text(
@@ -636,7 +788,9 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
                                           style: GoogleFonts.outfit(
                                             fontSize: 13,
                                             fontWeight: FontWeight.w600,
-                                            color: isUpvoted ? Colors.amber[600] : Colors.grey,
+                                            color: isUpvoted
+                                                ? Colors.amber[600]
+                                                : Colors.grey,
                                           ),
                                         ),
                                       ],
@@ -657,9 +811,14 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
                                   },
                                   borderRadius: BorderRadius.circular(10),
                                   child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 14,
+                                      vertical: 8,
+                                    ),
                                     decoration: BoxDecoration(
-                                      color: isDark ? const Color(0xFF262626) : Colors.grey[100],
+                                      color: isDark
+                                          ? const Color(0xFF262626)
+                                          : Colors.grey[100],
                                       borderRadius: BorderRadius.circular(10),
                                     ),
                                     child: Row(
@@ -691,7 +850,10 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
 
                       // Solutions List Header
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
                         child: Row(
                           children: [
                             Text(
@@ -705,9 +867,14 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
                             ),
                             const SizedBox(width: 6),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
                               decoration: BoxDecoration(
-                                color: isDark ? Colors.grey[850] : Colors.grey[200],
+                                color: isDark
+                                    ? Colors.grey[850]
+                                    : Colors.grey[200],
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Text(
@@ -727,18 +894,25 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
                       solutions.isEmpty
                           ? Center(
                               child: Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 40),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 40,
+                                ),
                                 child: Column(
                                   children: [
                                     Icon(
                                       Icons.school_outlined,
                                       size: 44,
-                                      color: isDark ? Colors.grey[800] : Colors.grey[300],
+                                      color: isDark
+                                          ? Colors.grey[800]
+                                          : Colors.grey[300],
                                     ),
                                     const SizedBox(height: 8),
                                     Text(
                                       'No solutions posted yet.',
-                                      style: GoogleFonts.outfit(fontSize: 13, color: Colors.grey),
+                                      style: GoogleFonts.outfit(
+                                        fontSize: 13,
+                                        color: Colors.grey,
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -755,15 +929,26 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
                                   isDoubtOwner: isDoubtOwner,
                                   onToggleAccept: () {
                                     ref
-                                        .read(solutionsNotifierProvider(doubtId).notifier)
-                                        .toggleAcceptSolution(sol.id, !sol.isAccepted);
+                                        .read(
+                                          solutionsNotifierProvider(
+                                            doubtId,
+                                          ).notifier,
+                                        )
+                                        .toggleAcceptSolution(
+                                          sol.id,
+                                          !sol.isAccepted,
+                                        );
                                   },
                                   onEdit: () {
                                     _showEditSolutionDialog(doubtId, sol);
                                   },
                                   onDelete: () {
                                     ref
-                                        .read(solutionsNotifierProvider(doubtId).notifier)
+                                        .read(
+                                          solutionsNotifierProvider(
+                                            doubtId,
+                                          ).notifier,
+                                        )
                                         .deleteSolution(sol.id);
                                   },
                                   onCommentTap: () {
@@ -786,11 +971,12 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
               Container(
                 decoration: BoxDecoration(
                   color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-                  border: Border(
-                    top: BorderSide(color: cardBorder),
-                  ),
+                  border: Border(top: BorderSide(color: cardBorder)),
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
                 child: SafeArea(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -815,7 +1001,9 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
                                         borderRadius: BorderRadius.circular(8),
                                         image: DecorationImage(
                                           image: ResizeImage(
-                                            FileImage(selectedSolutionImages[index]),
+                                            FileImage(
+                                              selectedSolutionImages[index],
+                                            ),
                                             width: 120,
                                             height: 120,
                                           ),
@@ -830,7 +1018,9 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
                                     child: GestureDetector(
                                       onTap: () {
                                         setState(() {
-                                          selectedSolutionImages.removeAt(index);
+                                          selectedSolutionImages.removeAt(
+                                            index,
+                                          );
                                         });
                                       },
                                       child: Container(
@@ -856,16 +1046,23 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
                       Row(
                         children: [
                           IconButton(
-                            icon: Icon(Icons.add_a_photo_outlined, color: Theme.of(context).colorScheme.primary),
+                            icon: Icon(
+                              Icons.add_a_photo_outlined,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
                             onPressed: _showSolutionImageSourceBottomSheet,
                           ),
                           Expanded(
                             child: Container(
                               decoration: BoxDecoration(
-                                color: isDark ? const Color(0xFF2A2A2A) : Colors.grey[100],
+                                color: isDark
+                                    ? const Color(0xFF2A2A2A)
+                                    : Colors.grey[100],
                                 borderRadius: BorderRadius.circular(20),
                               ),
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                              ),
                               child: TextField(
                                 controller: _solutionController,
                                 maxLines: null,
@@ -873,26 +1070,37 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
                                 style: GoogleFonts.outfit(fontSize: 13),
                                 decoration: InputDecoration(
                                   hintText: 'Share a helpful solution...',
-                                  hintStyle: GoogleFonts.outfit(fontSize: 13, color: Colors.grey),
+                                  hintStyle: GoogleFonts.outfit(
+                                    fontSize: 13,
+                                    color: Colors.grey,
+                                  ),
                                   border: InputBorder.none,
-                                  contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    vertical: 10,
+                                  ),
                                 ),
                               ),
                             ),
                           ),
                           const SizedBox(width: 8),
                           GestureDetector(
-                            onTap: _isSubmittingSolution ? null : () => _submitSolution(doubtId),
+                            onTap: _isSubmittingSolution
+                                ? null
+                                : () => _submitSolution(doubtId),
                             child: CircleAvatar(
                               radius: 20,
-                              backgroundColor: Theme.of(context).colorScheme.primary,
+                              backgroundColor: Theme.of(
+                                context,
+                              ).colorScheme.primary,
                               child: _isSubmittingSolution
                                   ? const SizedBox(
                                       width: 16,
                                       height: 16,
                                       child: CircularProgressIndicator(
                                         strokeWidth: 2,
-                                        valueColor: AlwaysStoppedAnimation(Colors.white),
+                                        valueColor: AlwaysStoppedAnimation(
+                                          Colors.white,
+                                        ),
                                       ),
                                     )
                                   : const Icon(

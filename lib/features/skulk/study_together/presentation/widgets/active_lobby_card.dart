@@ -7,10 +7,7 @@ import '../providers/study_together_providers.dart';
 class ActiveLobbyCard extends ConsumerWidget {
   final StudyRoom lobby;
 
-  const ActiveLobbyCard({
-    super.key,
-    required this.lobby,
-  });
+  const ActiveLobbyCard({super.key, required this.lobby});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

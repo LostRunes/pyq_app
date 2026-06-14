@@ -16,7 +16,7 @@ class ProfileScreen extends ConsumerStatefulWidget {
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   bool _isLoading = true;
-  
+
   // Dynamic profile states (Supabase 2)
   String _displayName = 'Focus Fox Student';
   String _username = 'focus_fox_user';
@@ -28,7 +28,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   int _doubtsAsked = 0;
   int _solutionsGiven = 0;
   int _acceptedSolutions = 0;
-  
+
   // Dynamic student record states (Supabase 1)
   String _rollNo = 'External';
   String _branchName = 'General';
@@ -81,8 +81,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       if (profile != null) {
         setState(() {
           _username = profile['username']?.toString() ?? 'focus_fox_user';
-          _displayName = profile['display_name']?.toString() ?? user.userMetadata?['full_name']?.toString() ?? 'Focus Fox Student';
-          _avatarPath = profile['avatar_url']?.toString() ?? 'assets/images/pikachu.png';
+          _displayName =
+              profile['display_name']?.toString() ??
+              user.userMetadata?['full_name']?.toString() ??
+              'Focus Fox Student';
+          _avatarPath =
+              profile['avatar_url']?.toString() ?? 'assets/images/pikachu.png';
           _reputation = profile['reputation'] as int? ?? 0;
           _doubtsAsked = profile['doubts_asked'] as int? ?? 0;
           _solutionsGiven = profile['solutions_given'] as int? ?? 0;
@@ -105,8 +109,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
           // Fetch branches list from Supabase 1 to resolve branch name
           final branches = await studentService.getBranches();
-          final resolvedBranchId = await studentService.getBranchIdFromSection(section);
-          
+          final resolvedBranchId = await studentService.getBranchIdFromSection(
+            section,
+          );
+
           final branch = branches.firstWhere(
             (b) => b.id == resolvedBranchId,
             orElse: () => Branch(id: '', name: 'CSE'),
@@ -166,6 +172,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             _displayName = displayName;
             _avatarPath = avatarPath;
           });
+          ref.invalidate(userProfileProvider);
           _showSuccessSnackBar('Profile updated successfully! ✨');
         },
       ),
@@ -175,7 +182,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   void _showSuccessSnackBar(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(msg, style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+        content: Text(
+          msg,
+          style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+        ),
         backgroundColor: Theme.of(context).colorScheme.primary,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -271,7 +281,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         actions: [
           if (!_isLoading)
             IconButton(
-              icon: Icon(Icons.edit_rounded, color: isDark ? Colors.white : Colors.black87),
+              icon: Icon(
+                Icons.edit_rounded,
+                color: isDark ? Colors.white : Colors.black87,
+              ),
               onPressed: () => _showEditProfileBottomSheet(context),
             ),
           if (!_isLoading)
@@ -311,7 +324,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           child: _isLoading
               ? const Center(child: CircularProgressIndicator())
               : SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24.0,
+                    vertical: 12.0,
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -340,7 +356,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   Widget _buildSkulkCard(BuildContext context, bool isDark) {
-    final cardColor = isDark ? const Color(0xFF1A1A2E).withOpacity(0.9) : Colors.white;
+    final cardColor = isDark
+        ? const Color(0xFF1A1A2E).withOpacity(0.9)
+        : Colors.white;
 
     final stats = [
       {'icon': '🔥', 'label': 'Reputation', 'value': '$_reputation pts'},
@@ -355,7 +373,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         color: cardColor,
         borderRadius: BorderRadius.circular(28),
         border: Border.all(
-          color: isDark ? Colors.purple.withOpacity(0.3) : Colors.purple.withOpacity(0.15),
+          color: isDark
+              ? Colors.purple.withOpacity(0.3)
+              : Colors.purple.withOpacity(0.15),
           width: 1.5,
         ),
         boxShadow: [
@@ -383,7 +403,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ),
               const Spacer(),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.purple.withOpacity(0.12),
                   borderRadius: BorderRadius.circular(20),
@@ -435,8 +458,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   Widget _buildHeroCard(BuildContext context, bool isDark) {
     final theme = Theme.of(context);
-    final cardColor = isDark ? const Color(0xFF251E4E).withOpacity(0.85) : Colors.white;
-    final accentColor = isDark ? const Color(0xFFC0A6FF) : const Color(0xFF7D4B26);
+    final cardColor = isDark
+        ? const Color(0xFF251E4E).withOpacity(0.85)
+        : Colors.white;
+    final accentColor = isDark
+        ? const Color(0xFFC0A6FF)
+        : const Color(0xFF7D4B26);
 
     return Container(
       padding: const EdgeInsets.all(24),
@@ -484,7 +511,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 ),
                 CircleAvatar(
                   radius: 50,
-                  backgroundColor: isDark ? const Color(0xFF15112E) : const Color(0xFFFFF7ED),
+                  backgroundColor: isDark
+                      ? const Color(0xFF15112E)
+                      : const Color(0xFFFFF7ED),
                   child: Padding(
                     padding: const EdgeInsets.all(4.0),
                     child: Image.asset(
@@ -571,7 +600,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 isDark,
                 icon: Icons.calendar_today_outlined,
                 label: 'Semester',
-                val: _isKiitStudent ? _semesterVal.replaceAll('Semester ', 'S') : 'N/A',
+                val: _isKiitStudent
+                    ? _semesterVal.replaceAll('Semester ', 'S')
+                    : 'N/A',
               ),
             ],
           ),
@@ -636,7 +667,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       itemCount: stats.length,
       itemBuilder: (context, index) {
         final item = stats[index];
-        final cardColor = isDark ? const Color(0xFF251E4E).withOpacity(0.85) : Colors.white;
+        final cardColor = isDark
+            ? const Color(0xFF251E4E).withOpacity(0.85)
+            : Colors.white;
 
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -644,7 +677,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             color: cardColor,
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
-              color: isDark ? const Color(0xFF382F7E) : const Color(0xFFF6DDB7).withOpacity(0.5),
+              color: isDark
+                  ? const Color(0xFF382F7E)
+                  : const Color(0xFFF6DDB7).withOpacity(0.5),
               width: 1.2,
             ),
             boxShadow: [
@@ -661,10 +696,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             children: [
               Row(
                 children: [
-                  Text(
-                    item['icon']!,
-                    style: const TextStyle(fontSize: 22),
-                  ),
+                  Text(item['icon']!, style: const TextStyle(fontSize: 22)),
                   const Spacer(),
                   const Icon(
                     Icons.arrow_forward_ios_rounded,
@@ -699,7 +731,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   Widget _buildProgressCard(BuildContext context, bool isDark) {
     final theme = Theme.of(context);
-    final cardColor = isDark ? const Color(0xFF251E4E).withOpacity(0.85) : Colors.white;
+    final cardColor = isDark
+        ? const Color(0xFF251E4E).withOpacity(0.85)
+        : Colors.white;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -725,7 +759,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             children: [
               Icon(
                 Icons.analytics_outlined,
-                color: isDark ? const Color(0xFFC0A6FF) : theme.colorScheme.primary,
+                color: isDark
+                    ? const Color(0xFFC0A6FF)
+                    : theme.colorScheme.primary,
               ),
               const SizedBox(width: 8),
               Text(
@@ -755,7 +791,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 style: GoogleFonts.outfit(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
-                  color: isDark ? const Color(0xFFC0A6FF) : theme.colorScheme.primary,
+                  color: isDark
+                      ? const Color(0xFFC0A6FF)
+                      : theme.colorScheme.primary,
                 ),
               ),
             ],
@@ -766,7 +804,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             child: LinearProgressIndicator(
               value: 0.68,
               minHeight: 8,
-              backgroundColor: isDark ? const Color(0xFF15112E) : Colors.grey.shade200,
+              backgroundColor: isDark
+                  ? const Color(0xFF15112E)
+                  : Colors.grey.shade200,
               valueColor: AlwaysStoppedAnimation<Color>(
                 isDark ? const Color(0xFFC0A6FF) : theme.colorScheme.primary,
               ),
@@ -828,13 +868,35 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   Widget _buildBadgesSection(BuildContext context, bool isDark) {
     final theme = Theme.of(context);
-    final cardColor = isDark ? const Color(0xFF251E4E).withOpacity(0.85) : Colors.white;
+    final cardColor = isDark
+        ? const Color(0xFF251E4E).withOpacity(0.85)
+        : Colors.white;
 
     final badges = [
-      {'icon': '🌅', 'title': 'Early Bird', 'unlocked': true, 'subtitle': 'Study before 6 AM'},
-      {'icon': '🥷', 'title': 'Note Ninja', 'unlocked': true, 'subtitle': 'Shared 3+ notes'},
-      {'icon': '🧠', 'title': 'AI Solver', 'unlocked': true, 'subtitle': 'Solved 10+ with AI'},
-      {'icon': '⭐️', 'title': 'Streak Star', 'unlocked': false, 'subtitle': 'Reach a 10D streak'},
+      {
+        'icon': '🌅',
+        'title': 'Early Bird',
+        'unlocked': true,
+        'subtitle': 'Study before 6 AM',
+      },
+      {
+        'icon': '🥷',
+        'title': 'Note Ninja',
+        'unlocked': true,
+        'subtitle': 'Shared 3+ notes',
+      },
+      {
+        'icon': '🧠',
+        'title': 'AI Solver',
+        'unlocked': true,
+        'subtitle': 'Solved 10+ with AI',
+      },
+      {
+        'icon': '⭐️',
+        'title': 'Streak Star',
+        'unlocked': false,
+        'subtitle': 'Reach a 10D streak',
+      },
     ];
 
     return Container(
@@ -861,7 +923,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             children: [
               Icon(
                 Icons.emoji_events_outlined,
-                color: isDark ? const Color(0xFFC0A6FF) : theme.colorScheme.primary,
+                color: isDark
+                    ? const Color(0xFFC0A6FF)
+                    : theme.colorScheme.primary,
               ),
               const SizedBox(width: 8),
               Text(
@@ -892,12 +956,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
                       color: unlocked
-                          ? (isDark ? const Color(0x33C0A6FF) : const Color(0xFFFFF7ED))
-                          : (isDark ? const Color(0x11FFFFFF) : Colors.grey.shade100),
+                          ? (isDark
+                                ? const Color(0x33C0A6FF)
+                                : const Color(0xFFFFF7ED))
+                          : (isDark
+                                ? const Color(0x11FFFFFF)
+                                : Colors.grey.shade100),
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
                         color: unlocked
-                            ? (isDark ? const Color(0xFFC0A6FF).withOpacity(0.3) : const Color(0xFFF6DDB7))
+                            ? (isDark
+                                  ? const Color(0xFFC0A6FF).withOpacity(0.3)
+                                  : const Color(0xFFF6DDB7))
                             : Colors.transparent,
                         width: 1,
                       ),
@@ -983,7 +1053,7 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _displayNameController = TextEditingController();
   late String _avatarPath;
-  
+
   Timer? _debounce;
   bool _isCheckingUsername = false;
   bool? _isUsernameUnique;
@@ -992,19 +1062,54 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
 
   String _generateCoolUsername() {
     final adjectives = [
-      'smart', 'study', 'focus', 'epic', 'cyber', 'nerdy', 'sleepy', 'shadow', 
-      'swift', 'clever', 'cosmic', 'pixel', 'bright', 'super', 'quick', 'bold',
-      'alpha', 'omega', 'zen', 'active', 'prime', 'stellar', 'happy', 'coding'
+      'smart',
+      'study',
+      'focus',
+      'epic',
+      'cyber',
+      'nerdy',
+      'sleepy',
+      'shadow',
+      'swift',
+      'clever',
+      'cosmic',
+      'pixel',
+      'bright',
+      'super',
+      'quick',
+      'bold',
+      'alpha',
+      'omega',
+      'zen',
+      'active',
+      'prime',
+      'stellar',
+      'happy',
+      'coding',
     ];
     final nouns = [
-      'fox', 'panda', 'pikachu', 'cat', 'octopus', 'owl', 'bear', 'raccoon', 
-      'shark', 'dragon', 'scholar', 'coder', 'genius', 'learner', 'champion', 'wizard'
+      'fox',
+      'panda',
+      'pikachu',
+      'cat',
+      'octopus',
+      'owl',
+      'bear',
+      'raccoon',
+      'shark',
+      'dragon',
+      'scholar',
+      'coder',
+      'genius',
+      'learner',
+      'champion',
+      'wizard',
     ];
     final rand = Random();
     final adj = adjectives[rand.nextInt(adjectives.length)];
     final noun = nouns[rand.nextInt(nouns.length)];
     final num = rand.nextInt(900) + 100; // 3 digit number: 100-999
-    
+
     return '${adj}_${noun}_$num';
   }
 
@@ -1020,7 +1125,8 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
     _usernameController.text = widget.currentUsername;
     _displayNameController.text = widget.currentDisplayName;
     _avatarPath = widget.currentAvatarPath;
-    _isUsernameUnique = true; // Initial value is unique since it's already theirs
+    _isUsernameUnique =
+        true; // Initial value is unique since it's already theirs
   }
 
   @override
@@ -1033,7 +1139,7 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
 
   void _onUsernameChanged(String value) {
     if (_debounce?.isActive ?? false) _debounce!.cancel();
-    
+
     final cleanValue = value.trim();
     if (cleanValue == widget.currentUsername) {
       setState(() {
@@ -1112,14 +1218,21 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
       if (user == null) throw Exception('No logged in user found');
 
       // Update in Supabase 2
-      await Supabase.instance.client.from('user_profiles').update({
-        'username': username,
-        'display_name': displayName.isEmpty ? null : displayName,
-        'avatar_url': _avatarPath,
-      }).eq('id', user.id);
+      await Supabase.instance.client
+          .from('user_profiles')
+          .update({
+            'username': username,
+            'display_name': displayName.isEmpty ? null : displayName,
+            'avatar_url': _avatarPath,
+          })
+          .eq('id', user.id);
 
-      widget.onSave(username, displayName.isEmpty ? 'Focus Fox Student' : displayName, _avatarPath);
-      
+      widget.onSave(
+        username,
+        displayName.isEmpty ? 'Focus Fox Student' : displayName,
+        _avatarPath,
+      );
+
       if (mounted) {
         Navigator.pop(context); // Close bottom sheet
       }
@@ -1129,7 +1242,10 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Update failed: $e', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+          content: Text(
+            'Update failed: $e',
+            style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+          ),
           backgroundColor: Colors.redAccent,
           behavior: SnackBarBehavior.floating,
         ),
@@ -1189,7 +1305,7 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
               ),
             ),
             const SizedBox(height: 24),
-            
+
             // Scrolling Mascot List
             Text(
               'SELECT STUDY MASCOT',
@@ -1221,16 +1337,23 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: isSelected ? theme.colorScheme.primary : Colors.transparent,
+                          color: isSelected
+                              ? theme.colorScheme.primary
+                              : Colors.transparent,
                           width: 2.5,
                         ),
                       ),
                       child: CircleAvatar(
                         radius: 28,
-                        backgroundColor: isDark ? const Color(0xFF15112E) : Colors.amber.shade50.withOpacity(0.3),
+                        backgroundColor: isDark
+                            ? const Color(0xFF15112E)
+                            : Colors.amber.shade50.withOpacity(0.3),
                         child: Padding(
                           padding: const EdgeInsets.all(4.0),
-                          child: Image.asset(mascot['path']!, fit: BoxFit.contain),
+                          child: Image.asset(
+                            mascot['path']!,
+                            fit: BoxFit.contain,
+                          ),
                         ),
                       ),
                     ),
@@ -1292,28 +1415,50 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
                         ),
                       )
                     : (_isUsernameUnique == true
-                        ? const Icon(Icons.check_circle_rounded, color: Colors.green)
-                        : (_isUsernameUnique == false
-                            ? const Icon(Icons.error_rounded, color: Colors.redAccent)
-                            : null)),
+                          ? const Icon(
+                              Icons.check_circle_rounded,
+                              color: Colors.green,
+                            )
+                          : (_isUsernameUnique == false
+                                ? const Icon(
+                                    Icons.error_rounded,
+                                    color: Colors.redAccent,
+                                  )
+                                : null)),
               ),
-              style: GoogleFonts.outfit(fontWeight: FontWeight.w600, fontSize: 15),
+              style: GoogleFonts.outfit(
+                fontWeight: FontWeight.w600,
+                fontSize: 15,
+              ),
             ),
             const SizedBox(height: 6),
             if (_isCheckingUsername)
               Text(
                 'Checking availability...',
-                style: GoogleFonts.outfit(fontSize: 11, color: theme.colorScheme.primary, fontWeight: FontWeight.bold),
+                style: GoogleFonts.outfit(
+                  fontSize: 11,
+                  color: theme.colorScheme.primary,
+                  fontWeight: FontWeight.bold,
+                ),
               )
-            else if (_isUsernameUnique == true && _usernameController.text.trim() != widget.currentUsername)
+            else if (_isUsernameUnique == true &&
+                _usernameController.text.trim() != widget.currentUsername)
               Text(
                 'Username is available! ✨',
-                style: GoogleFonts.outfit(fontSize: 11, color: Colors.green, fontWeight: FontWeight.bold),
+                style: GoogleFonts.outfit(
+                  fontSize: 11,
+                  color: Colors.green,
+                  fontWeight: FontWeight.bold,
+                ),
               )
             else if (_usernameError.isNotEmpty)
               Text(
                 _usernameError,
-                style: GoogleFonts.outfit(fontSize: 11, color: Colors.redAccent, fontWeight: FontWeight.bold),
+                style: GoogleFonts.outfit(
+                  fontSize: 11,
+                  color: Colors.redAccent,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
 
             const SizedBox(height: 16),
@@ -1334,19 +1479,27 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
               decoration: const InputDecoration(
                 prefixIcon: Icon(Icons.person_outline_rounded, size: 18),
               ),
-              style: GoogleFonts.outfit(fontWeight: FontWeight.w600, fontSize: 15),
+              style: GoogleFonts.outfit(
+                fontWeight: FontWeight.w600,
+                fontSize: 15,
+              ),
             ),
-            
+
             const SizedBox(height: 32),
-            
+
             // Save Changes button
             ElevatedButton(
-              onPressed: (_isUsernameUnique == true && !_isSaving) ? _saveChanges : null,
+              onPressed: (_isUsernameUnique == true && !_isSaving)
+                  ? _saveChanges
+                  : null,
               child: _isSaving
                   ? const SizedBox(
                       height: 24,
                       width: 24,
-                      child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        color: Colors.white,
+                      ),
                     )
                   : Text(
                       'Save changes',

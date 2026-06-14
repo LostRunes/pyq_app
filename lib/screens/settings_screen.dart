@@ -20,6 +20,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _hapticFeedback = true;
 
   @override
+  void initState() {
+    super.initState();
+    _tempSemester = ref.read(selectedSemesterProvider);
+    _tempBranchId = ref.read(selectedBranchIdProvider);
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
@@ -74,32 +81,50 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
         child: SafeArea(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 24.0,
+              vertical: 12.0,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const SizedBox(height: 10),
-                
+
                 // Preferences Group
-                _buildSectionHeader(context, isDark, 'Preferences', Icons.tune_rounded),
+                _buildSectionHeader(
+                  context,
+                  isDark,
+                  'Preferences',
+                  Icons.tune_rounded,
+                ),
                 const SizedBox(height: 12),
                 _buildPreferencesCard(context, isDark, branchesAsync),
-                
+
                 const SizedBox(height: 24),
-                
+
                 // Styling & System Group
-                _buildSectionHeader(context, isDark, 'App Settings', Icons.settings_brightness_rounded),
+                _buildSectionHeader(
+                  context,
+                  isDark,
+                  'App Settings',
+                  Icons.settings_brightness_rounded,
+                ),
                 const SizedBox(height: 12),
                 _buildAppSettingsCard(context, isDark, themeMode),
-                
+
                 const SizedBox(height: 24),
-                
+
                 // Information & Version Card
                 _buildInfoCard(context, isDark),
                 const SizedBox(height: 24),
 
                 // Danger Zone — Logout
-                _buildSectionHeader(context, isDark, 'Account', Icons.manage_accounts_rounded),
+                _buildSectionHeader(
+                  context,
+                  isDark,
+                  'Account',
+                  Icons.manage_accounts_rounded,
+                ),
                 const SizedBox(height: 12),
                 _buildLogoutCard(context, isDark),
                 const SizedBox(height: 32),
@@ -111,7 +136,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  Widget _buildSectionHeader(BuildContext context, bool isDark, String title, IconData icon) {
+  Widget _buildSectionHeader(
+    BuildContext context,
+    bool isDark,
+    String title,
+    IconData icon,
+  ) {
     final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4.0),
@@ -136,8 +166,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  Widget _buildPreferencesCard(BuildContext context, bool isDark, AsyncValue<List<Branch>> branchesAsync) {
-    final cardColor = isDark ? const Color(0xFF251E4E).withOpacity(0.85) : Colors.white;
+  Widget _buildPreferencesCard(
+    BuildContext context,
+    bool isDark,
+    AsyncValue<List<Branch>> branchesAsync,
+  ) {
+    final cardColor = isDark
+        ? const Color(0xFF251E4E).withOpacity(0.85)
+        : Colors.white;
 
     return Container(
       padding: const EdgeInsets.all(24),
@@ -195,6 +231,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 setState(() {
                   _tempSemester = sem;
                 });
+                ref.read(selectedSemesterProvider.notifier).setSemester(sem);
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text('Switched view to Semester $sem! ⚡'),
@@ -205,9 +242,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               }
             },
           ),
-          
+
           const SizedBox(height: 20),
-          
+
           // Change Branch Dropdown
           Text(
             'Branch / Specialization',
@@ -253,6 +290,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     setState(() {
                       _tempBranchId = branch.id;
                     });
+                    ref
+                        .read(selectedBranchIdProvider.notifier)
+                        .setBranchId(branch.id);
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text('Switched view to ${branch.name}! ⚡'),
@@ -280,9 +320,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  Widget _buildAppSettingsCard(BuildContext context, bool isDark, ThemeMode themeMode) {
+  Widget _buildAppSettingsCard(
+    BuildContext context,
+    bool isDark,
+    ThemeMode themeMode,
+  ) {
     final theme = Theme.of(context);
-    final cardColor = isDark ? const Color(0xFF251E4E).withOpacity(0.85) : Colors.white;
+    final cardColor = isDark
+        ? const Color(0xFF251E4E).withOpacity(0.85)
+        : Colors.white;
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8),
@@ -305,10 +351,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         children: [
           // Theme Toggle Row
           ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 24,
+              vertical: 4,
+            ),
             leading: Icon(
               isDark ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
-              color: isDark ? const Color(0xFFC0A6FF) : theme.colorScheme.primary,
+              color: isDark
+                  ? const Color(0xFFC0A6FF)
+                  : theme.colorScheme.primary,
             ),
             title: Text(
               'Dark Mode Theme',
@@ -319,7 +370,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
             ),
             subtitle: Text(
-              isDark ? 'Starry night palette active' : 'Warm cream palette active',
+              isDark
+                  ? 'Starry night palette active'
+                  : 'Warm cream palette active',
               style: GoogleFonts.outfit(
                 fontSize: 12,
                 color: isDark ? Colors.white54 : Colors.black54,
@@ -336,10 +389,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const Divider(indent: 24, endIndent: 24),
           // Push Notifications Row
           ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 24,
+              vertical: 4,
+            ),
             leading: Icon(
               Icons.notifications_active_outlined,
-              color: isDark ? const Color(0xFFC0A6FF) : theme.colorScheme.primary,
+              color: isDark
+                  ? const Color(0xFFC0A6FF)
+                  : theme.colorScheme.primary,
             ),
             title: Text(
               'Exam Notifications',
@@ -369,10 +427,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const Divider(indent: 24, endIndent: 24),
           // Haptics Feedback Row
           ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 24,
+              vertical: 4,
+            ),
             leading: Icon(
               Icons.vibration_rounded,
-              color: isDark ? const Color(0xFFC0A6FF) : theme.colorScheme.primary,
+              color: isDark
+                  ? const Color(0xFFC0A6FF)
+                  : theme.colorScheme.primary,
             ),
             title: Text(
               'Micro-Haptics',
@@ -406,7 +469,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Widget _buildInfoCard(BuildContext context, bool isDark) {
     final theme = Theme.of(context);
-    final cardColor = isDark ? const Color(0xFF251E4E).withOpacity(0.85) : Colors.white;
+    final cardColor = isDark
+        ? const Color(0xFF251E4E).withOpacity(0.85)
+        : Colors.white;
 
     return Container(
       padding: const EdgeInsets.all(24),
@@ -555,7 +620,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Widget _buildLogoutCard(BuildContext context, bool isDark) {
-    final cardColor = isDark ? const Color(0xFF251E4E).withOpacity(0.85) : Colors.white;
+    final cardColor = isDark
+        ? const Color(0xFF251E4E).withOpacity(0.85)
+        : Colors.white;
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8),
@@ -563,7 +630,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         color: cardColor,
         borderRadius: BorderRadius.circular(28),
         border: Border.all(
-          color: isDark ? Colors.red.withOpacity(0.3) : Colors.red.withOpacity(0.15),
+          color: isDark
+              ? Colors.red.withOpacity(0.3)
+              : Colors.red.withOpacity(0.15),
           width: 1.5,
         ),
         boxShadow: [

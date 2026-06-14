@@ -5,10 +5,7 @@ import '../../data/models/study_room.dart';
 class SubjectRoomCard extends StatelessWidget {
   final StudyRoom room;
 
-  const SubjectRoomCard({
-    super.key,
-    required this.room,
-  });
+  const SubjectRoomCard({super.key, required this.room});
 
   @override
   Widget build(BuildContext context) {
@@ -66,7 +63,9 @@ class SubjectRoomCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF282828) : const Color(0xFFF1F3F5),
+                    color: isDark
+                        ? const Color(0xFF282828)
+                        : const Color(0xFFF1F3F5),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(

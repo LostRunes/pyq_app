@@ -48,7 +48,7 @@ class Doubt {
   factory Doubt.fromJson(Map<String, dynamic> json, {String subjectName = ''}) {
     // Parse author nested map
     final authorMap = json['user_profiles'] as Map<String, dynamic>? ?? {};
-    
+
     // Parse tags list
     final rawTags = json['tags'];
     List<String> parsedTags = [];
@@ -56,14 +56,18 @@ class Doubt {
       parsedTags = List<String>.from(rawTags.map((e) => e.toString()));
     } else if (rawTags is String) {
       // Fallback in case tags are returned as comma-separated string
-      parsedTags = rawTags.isEmpty ? [] : rawTags.split(',').map((e) => e.trim()).toList();
+      parsedTags = rawTags.isEmpty
+          ? []
+          : rawTags.split(',').map((e) => e.trim()).toList();
     }
 
     // Parse image URLs list
     final rawImageUrls = json['image_urls'];
     List<String> parsedImageUrls = [];
     if (rawImageUrls is List) {
-      parsedImageUrls = List<String>.from(rawImageUrls.map((e) => e.toString()));
+      parsedImageUrls = List<String>.from(
+        rawImageUrls.map((e) => e.toString()),
+      );
     }
 
     return Doubt(
@@ -78,11 +82,16 @@ class Doubt {
       commentsCount: json['comments_count'] as int? ?? 0,
       viewsCount: json['views_count'] as int? ?? 0,
       isSolved: json['is_solved'] as bool? ?? false,
-      createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : DateTime.now(),
-      updatedAt: json['updated_at'] != null ? DateTime.parse(json['updated_at']) : DateTime.now(),
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'])
+          : DateTime.now(),
+      updatedAt: json['updated_at'] != null
+          ? DateTime.parse(json['updated_at'])
+          : DateTime.now(),
       imageUrls: parsedImageUrls,
       authorUsername: authorMap['username']?.toString() ?? 'anonymous',
-      authorDisplayName: authorMap['display_name']?.toString() ?? 'Anonymous Student',
+      authorDisplayName:
+          authorMap['display_name']?.toString() ?? 'Anonymous Student',
       authorAvatarUrl: authorMap['avatar_url']?.toString(),
       authorReputation: authorMap['reputation'] as int? ?? 0,
       subjectName: subjectName,

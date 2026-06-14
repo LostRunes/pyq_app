@@ -29,10 +29,7 @@ class CloudinaryService {
       request.fields['upload_preset'] = uploadPreset;
 
       request.files.add(
-        await http.MultipartFile.fromPath(
-          'file',
-          compressedFile.path,
-        ),
+        await http.MultipartFile.fromPath('file', compressedFile.path),
       );
 
       final response = await request.send();

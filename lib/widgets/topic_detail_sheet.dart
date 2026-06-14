@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:url_launcher/url_launcher.dart';
+
 import '../models/topic.dart';
 import '../core/providers.dart';
 
@@ -14,13 +14,6 @@ class TopicDetailSheet extends ConsumerWidget {
     required this.topic,
     required this.importanceProgress,
   });
-
-  Future<void> _launchUrl(String urlString) async {
-    final Uri url = Uri.parse(urlString);
-    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
-      throw Exception('Could not launch $urlString');
-    }
-  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -69,7 +62,9 @@ class TopicDetailSheet extends ConsumerWidget {
                     child: CircularProgressIndicator(
                       value: importanceProgress,
                       strokeWidth: 10,
-                      backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
+                      backgroundColor: theme.colorScheme.primary.withOpacity(
+                        0.1,
+                      ),
                       valueColor: AlwaysStoppedAnimation<Color>(
                         _getImportanceColor(importanceProgress, theme),
                       ),
@@ -88,7 +83,7 @@ class TopicDetailSheet extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 32),
-          
+
           // Action Buttons
           ElevatedButton.icon(
             onPressed: () {
@@ -96,42 +91,65 @@ class TopicDetailSheet extends ConsumerWidget {
               Navigator.pushNamed(
                 context,
                 '/questions',
-                arguments: {
-                  'topicId': topic.id,
-                  'topicName': topic.name,
-                },
+                arguments: {'topicId': topic.id, 'topicName': topic.name},
               );
             },
             icon: const Icon(Icons.description_rounded),
             label: const Text('See PYQs of this topic'),
             style: ElevatedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 18),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
             ),
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           resourcesAsync.when(
             data: (resources) {
-              final ytResource = resources.where((r) => r.resourceType.toLowerCase().contains('youtube') || r.resourceType.toLowerCase().contains('yt')).firstOrNull;
-              
+              final ytResource = resources
+                  .where(
+                    (r) =>
+                        r.resourceType.toLowerCase().contains('youtube') ||
+                        r.resourceType.toLowerCase().contains('yt'),
+                  )
+                  .firstOrNull;
+
               return ElevatedButton.icon(
-                onPressed: ytResource != null ? () => _launchUrl(ytResource.url) : null,
+                onPressed: ytResource != null
+                    ? () {
+                        Navigator.pop(context); // Close bottom sheet
+                        Navigator.pushNamed(
+                          context,
+                          '/youtube_resource',
+                          arguments: {
+                            'url': ytResource.url,
+                            'title': ytResource.title,
+                          },
+                        );
+                      }
+                    : null,
                 icon: const Icon(Icons.play_circle_fill_rounded),
-                label: Text(ytResource != null ? 'YT Resource: ${ytResource.title}' : 'No YT Resource Available'),
+                label: Text(
+                  ytResource != null
+                      ? 'YT Resource: ${ytResource.title}'
+                      : 'No YT Resource Available',
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: theme.colorScheme.secondary,
                   foregroundColor: theme.colorScheme.onSecondary,
                   padding: const EdgeInsets.symmetric(vertical: 18),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
                 ),
               );
             },
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (e, _) => Text('Error loading resources: $e'),
           ),
-          
+
           const SizedBox(height: 16),
         ],
       ),

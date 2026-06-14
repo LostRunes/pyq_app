@@ -32,7 +32,9 @@ class StudyRoom {
       icon: json['icon'] as String? ?? '💬',
       isVoiceEnabled: json['is_voice_enabled'] as bool? ?? false,
       isArchived: json['is_archived'] as bool? ?? false,
-      lastMessageAt: DateTime.parse(json['last_message_at'] ?? json['created_at']),
+      lastMessageAt: DateTime.parse(
+        json['last_message_at'] ?? json['created_at'],
+      ),
       createdBy: json['created_by'] as String?,
       subjectId: json['subject_id'] as String?,
     );
