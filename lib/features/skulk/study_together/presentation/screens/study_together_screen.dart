@@ -6,6 +6,7 @@ import '../widgets/active_lobby_card.dart';
 import '../widgets/subject_room_card.dart';
 import '../widgets/community_space_tile.dart';
 import '../../../../../widgets/custom_search_bar.dart';
+import '../../../../../utils/fuzzy_search.dart';
 
 class StudyTogetherScreen extends ConsumerStatefulWidget {
   const StudyTogetherScreen({super.key});
@@ -355,37 +356,28 @@ class _StudyTogetherScreenState extends ConsumerState<StudyTogetherScreen> {
                             ),
                             data: (subjectMetaMap) {
                               final filtered = subjects.where((room) {
-                                if (searchQuery.isEmpty) return true;
-                                final query = searchQuery.toLowerCase();
-
-                                if (room.name.toLowerCase().contains(query))
-                                  return true;
+                                if (FuzzySearch.matches(room.name, searchQuery)) return true;
                                 if (room.subjectId != null &&
-                                    room.subjectId!.toLowerCase().contains(
-                                      query,
-                                    ))
+                                    FuzzySearch.matches(room.subjectId, searchQuery)) {
                                   return true;
+                                }
 
                                 final metaList = subjectMetaMap[room.subjectId];
                                 if (metaList != null) {
                                   for (final m in metaList) {
-                                    if (m.code.toLowerCase().contains(query))
+                                    if (FuzzySearch.matches(m.code, searchQuery)) return true;
+                                    if (FuzzySearch.matches(m.branchName, searchQuery)) return true;
+                                    if (FuzzySearch.matches('semester ${m.semester}', searchQuery) ||
+                                        FuzzySearch.matches('sem ${m.semester}', searchQuery) ||
+                                        FuzzySearch.matches('${m.semester}', searchQuery)) {
                                       return true;
-                                    if (m.branchName.toLowerCase().contains(
-                                      query,
-                                    ))
-                                      return true;
-                                    if ('semester ${m.semester}'.contains(
-                                          query,
-                                        ) ||
-                                        'sem ${m.semester}'.contains(query) ||
-                                        '${m.semester}'.contains(query))
-                                      return true;
+                                    }
                                     final year = (m.semester + 1) ~/ 2;
-                                    if ('year $year'.contains(query) ||
-                                        'yr $year'.contains(query) ||
-                                        '$year year'.contains(query))
+                                    if (FuzzySearch.matches('year $year', searchQuery) ||
+                                        FuzzySearch.matches('yr $year', searchQuery) ||
+                                        FuzzySearch.matches('$year year', searchQuery)) {
                                       return true;
+                                    }
                                   }
                                 }
                                 return false;
@@ -621,11 +613,9 @@ class _StudyTogetherScreenState extends ConsumerState<StudyTogetherScreen> {
                   // Apply search filter in memory
                   var filteredSubjects = subjectRooms;
                   if (_subjectSearchQuery.isNotEmpty) {
-                    final query = _subjectSearchQuery.toLowerCase();
                     filteredSubjects = subjectRooms.where((room) {
-                      return room.name.toLowerCase().contains(query) ||
-                          (room.subjectId?.toLowerCase().contains(query) ??
-                              false);
+                      return FuzzySearch.matches(room.name, _subjectSearchQuery) ||
+                          FuzzySearch.matches(room.subjectId, _subjectSearchQuery);
                     }).toList();
                   }
 
