@@ -20,6 +20,8 @@ class SubjectsPage extends ConsumerWidget {
       )),
     );
 
+    final searchQuery = ref.watch(subjectsSearchProvider);
+
     return RefreshIndicator(
       onRefresh: () async {
         await ref.refresh(
@@ -30,12 +32,20 @@ class SubjectsPage extends ConsumerWidget {
         );
       },
       child: subjectsAsync.when(
-        data: (subjects) => ListView.builder(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-          itemCount: subjects.length + 1,
-          itemBuilder: (context, i) {
-            if (i == 0) {
+        data: (subjects) {
+          final filtered = subjects.where((subject) {
+            if (searchQuery.isEmpty) return true;
+            final q = searchQuery.toLowerCase();
+            return subject.name.toLowerCase().contains(q) ||
+                subject.code.toLowerCase().contains(q);
+          }).toList();
+
+          return ListView.builder(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            itemCount: filtered.isEmpty ? 2 : filtered.length + 1,
+            itemBuilder: (context, i) {
+              if (i == 0) {
               return Container(
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 child: Column(
@@ -122,7 +132,23 @@ class SubjectsPage extends ConsumerWidget {
               );
             }
 
-            final subject = subjects[i - 1];
+            if (filtered.isEmpty) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 40),
+                  child: Text(
+                    'No matching subjects found 🔍',
+                    style: GoogleFonts.outfit(
+                      color: Colors.grey,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              );
+            }
+
+            final subject = filtered[i - 1];
             final isIconLeft = (i - 1) % 2 == 0;
 
             final iconWidget = Container(
@@ -263,8 +289,9 @@ class SubjectsPage extends ConsumerWidget {
               ),
             );
           },
-        ),
-        loading: () => const Center(child: CircularProgressIndicator()),
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => ListView(
           physics: const AlwaysScrollableScrollPhysics(),
           children: [

@@ -377,6 +377,7 @@ class _GpaCalculatorScreenState extends State<GpaCalculatorScreen> {
                             icon: const Icon(Icons.add_rounded),
                             label: const Text('Add Course'),
                             style: ElevatedButton.styleFrom(
+                              minimumSize: const Size(140, 48),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(14),
                               ),
@@ -550,6 +551,7 @@ class _GpaCalculatorScreenState extends State<GpaCalculatorScreen> {
                             icon: const Icon(Icons.add_rounded),
                             label: const Text('Add Semester'),
                             style: ElevatedButton.styleFrom(
+                              minimumSize: const Size(160, 48),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(14),
                               ),

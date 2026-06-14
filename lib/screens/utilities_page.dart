@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../core/providers.dart';
 
-class UtilitiesPage extends StatelessWidget {
+class UtilitiesPage extends ConsumerWidget {
   const UtilitiesPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final searchQuery = ref.watch(utilitiesSearchProvider);
 
     final utils = [
       {
@@ -32,6 +35,13 @@ class UtilitiesPage extends StatelessWidget {
       },
     ];
 
+    final filteredUtils = utils.where((util) {
+      if (searchQuery.isEmpty) return true;
+      final q = searchQuery.toLowerCase();
+      return (util['title'] as String).toLowerCase().contains(q) ||
+          (util['desc'] as String).toLowerCase().contains(q);
+    }).toList();
+
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
       child: Column(
@@ -54,19 +64,32 @@ class UtilitiesPage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 32),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: utils.length,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              childAspectRatio: 1.0, // Force square boxes
-            ),
-            itemBuilder: (context, index) {
-              final util = utils[index];
-              final Color utilColor = util['color'] as Color;
+          filteredUtils.isEmpty
+              ? Container(
+                  padding: const EdgeInsets.symmetric(vertical: 60),
+                  alignment: Alignment.center,
+                  child: Text(
+                    'No matching utilities found 🔍',
+                    style: GoogleFonts.outfit(
+                      color: Colors.grey,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                )
+              : GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: filteredUtils.length,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                    childAspectRatio: 1.0, // Force square boxes
+                  ),
+                  itemBuilder: (context, index) {
+                    final util = filteredUtils[index];
+                    final Color utilColor = util['color'] as Color;
               return InkWell(
                 onTap: () {
                   Navigator.pushNamed(context, util['route'] as String);
