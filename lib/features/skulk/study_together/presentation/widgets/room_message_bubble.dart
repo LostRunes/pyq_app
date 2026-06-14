@@ -88,6 +88,25 @@ class _RoomMessageBubbleState extends State<RoomMessageBubble> with SingleTicker
       displayMessage = match.group(3) ?? displayMessage;
     }
 
+    // Parse Image prefixes: [image:URL]
+    final List<String> imageUrls = [];
+    final imageRegex = RegExp(r'\[image:([^\]]*)\]');
+    final matches = imageRegex.allMatches(displayMessage);
+    for (final m in matches) {
+      final url = m.group(1);
+      if (url != null) {
+        imageUrls.add(url);
+      }
+    }
+    displayMessage = displayMessage.replaceAll(imageRegex, '').trim();
+
+    if (repliedToText != null) {
+      repliedToText = repliedToText.replaceAll(imageRegex, '[Image]').trim();
+      if (repliedToText.isEmpty) {
+        repliedToText = '[Image]';
+      }
+    }
+
     final screenWidth = MediaQuery.of(context).size.width;
     final isDragRight = !isMe;
 
@@ -117,15 +136,14 @@ class _RoomMessageBubbleState extends State<RoomMessageBubble> with SingleTicker
         });
       },
       child: Container(
-        width: screenWidth + 70, // Expand width to hold the off-screen timestamp
         clipBehavior: Clip.none,
         child: Transform.translate(
           offset: Offset(widget.dragOffset + _replyDragOffset, 0),
-          child: Row(
+          child: Stack(
+            clipBehavior: Clip.none,
             children: [
-              // Main Message Bubble View
-              Container(
-                width: screenWidth,
+              // Main Message Bubble row (occupies full screen width)
+              Padding(
                 padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
                 child: Stack(
                   clipBehavior: Clip.none,
@@ -242,14 +260,56 @@ class _RoomMessageBubbleState extends State<RoomMessageBubble> with SingleTicker
                                         ),
                                       ),
                                     ],
-                                    Text(
-                                      displayMessage,
-                                      style: GoogleFonts.outfit(
-                                        fontSize: 14,
-                                        color: textColor,
-                                        height: 1.3,
+                                    if (imageUrls.isNotEmpty) ...[
+                                      Container(
+                                        constraints: const BoxConstraints(maxHeight: 240),
+                                        margin: EdgeInsets.only(bottom: displayMessage.isNotEmpty ? 6 : 0),
+                                        child: ClipRRect(
+                                          borderRadius: BorderRadius.circular(12),
+                                          child: imageUrls.length == 1
+                                              ? Image.network(
+                                                  imageUrls.first,
+                                                  fit: BoxFit.cover,
+                                                  loadingBuilder: (context, child, loadingProgress) {
+                                                    if (loadingProgress == null) return child;
+                                                    return Container(
+                                                      height: 150,
+                                                      width: 200,
+                                                      color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFE2E2E2),
+                                                      child: const Center(
+                                                        child: CircularProgressIndicator(strokeWidth: 2),
+                                                      ),
+                                                    );
+                                                  },
+                                                )
+                                              : GridView.builder(
+                                                  shrinkWrap: true,
+                                                  physics: const NeverScrollableScrollPhysics(),
+                                                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                                    crossAxisCount: 2,
+                                                    crossAxisSpacing: 4,
+                                                    mainAxisSpacing: 4,
+                                                  ),
+                                                  itemCount: imageUrls.length,
+                                                  itemBuilder: (context, idx) {
+                                                    return Image.network(
+                                                      imageUrls[idx],
+                                                      fit: BoxFit.cover,
+                                                    );
+                                                  },
+                                                ),
+                                        ),
                                       ),
-                                    ),
+                                    ],
+                                    if (displayMessage.isNotEmpty)
+                                      Text(
+                                        displayMessage,
+                                        style: GoogleFonts.outfit(
+                                          fontSize: 14,
+                                          color: textColor,
+                                          height: 1.3,
+                                        ),
+                                      ),
                                   ],
                                 ),
                               ),
@@ -262,17 +322,23 @@ class _RoomMessageBubbleState extends State<RoomMessageBubble> with SingleTicker
                   ],
                 ),
               ),
-              // Off-screen slide-in timestamp
-              Container(
+
+              // Off-screen slide-in timestamp (positioned exactly beyond screen edge)
+              Positioned(
+                right: -70,
+                top: 0,
+                bottom: 0,
                 width: 70,
-                alignment: Alignment.centerLeft,
-                padding: const EdgeInsets.only(left: 12),
-                child: Text(
-                  timeStr,
-                  style: GoogleFonts.outfit(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.grey[600],
+                child: Container(
+                  alignment: Alignment.centerLeft,
+                  padding: const EdgeInsets.only(left: 12),
+                  child: Text(
+                    timeStr,
+                    style: GoogleFonts.outfit(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.grey[600],
+                    ),
                   ),
                 ),
               ),

@@ -1,9 +1,13 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../data/models/study_room.dart';
 import '../../data/models/room_message.dart';
+import '../../../utils/image_utils.dart';
+import '../../../data/services/cloudinary_service.dart';
 import '../providers/study_together_providers.dart';
 import '../widgets/room_message_bubble.dart';
 
@@ -26,6 +30,108 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen> {
   RoomMessage? _replyingTo;
   double _dragOffset = 0.0;
   bool _isDragging = false;
+  final List<File> _selectedImages = [];
+  final ImagePicker _picker = ImagePicker();
+
+  void _showImageSourceBottomSheet() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Share Photo in Chat',
+                  style: GoogleFonts.outfit(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 20),
+                ListTile(
+                  leading: Icon(
+                    Icons.camera_alt_outlined,
+                    color: theme.colorScheme.primary,
+                  ),
+                  title: Text(
+                    'Take Photo',
+                    style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+                  ),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    try {
+                      final image = await _picker.pickImage(
+                        source: ImageSource.camera,
+                        maxWidth: 1800,
+                        maxHeight: 1800,
+                        imageQuality: 85,
+                      );
+                      if (image == null) return;
+                      final compressed = await ImageUtils.compressImage(File(image.path));
+                      if (compressed == null) return;
+                      setState(() {
+                        _selectedImages.add(compressed);
+                      });
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Failed to take photo: $e')),
+                      );
+                    }
+                  },
+                ),
+                Divider(color: isDark ? Colors.grey[850] : Colors.grey[200]),
+                ListTile(
+                  leading: Icon(
+                    Icons.photo_library_outlined,
+                    color: theme.colorScheme.primary,
+                  ),
+                  title: Text(
+                    'Choose from Gallery',
+                    style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+                  ),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    try {
+                      final images = await _picker.pickMultiImage(
+                        maxWidth: 1800,
+                        maxHeight: 1800,
+                        imageQuality: 85,
+                      );
+                      if (images.isEmpty) return;
+                      final compressedList = await Future.wait(
+                        images.map((img) => ImageUtils.compressImage(File(img.path))),
+                      );
+                      final valid = compressedList.whereType<File>().toList();
+                      setState(() {
+                        _selectedImages.addAll(valid);
+                      });
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Failed to pick images: $e')),
+                      );
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
 
   @override
   void initState() {
@@ -79,7 +185,7 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen> {
 
   Future<void> _sendMessage() async {
     final text = _messageController.text.trim();
-    if (text.isEmpty || _isSending) return;
+    if ((text.isEmpty && _selectedImages.isEmpty) || _isSending) return;
 
     if (text.length > 2000) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -101,11 +207,25 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen> {
     }
     _typingTimer?.cancel();
 
+    final imagesToUpload = List<File>.from(_selectedImages);
+    setState(() => _selectedImages.clear());
+
     try {
+      String imagePrefix = '';
+      if (imagesToUpload.isNotEmpty) {
+        final urls = await Future.wait(
+          imagesToUpload.map((img) => CloudinaryService.uploadImage(img)),
+        );
+        final validUrls = urls.whereType<String>().toList();
+        for (final url in validUrls) {
+          imagePrefix += '[image:$url]';
+        }
+      }
+
       final replyPrefix = repliedMsg != null
           ? '[reply:${repliedMsg.senderDisplayName ?? repliedMsg.senderUsername ?? "User"}:${repliedMsg.message.replaceAll(']', ' ').replaceAll('[', ' ')}]'
           : '';
-      final fullText = '$replyPrefix$text';
+      final fullText = '$replyPrefix$imagePrefix$text';
 
       await ref
           .read(roomChatProvider(widget.room.id).notifier)
@@ -409,6 +529,59 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen> {
                 ),
               ),
 
+            // Image Preview above the composer
+            if (_selectedImages.isNotEmpty)
+              Container(
+                height: 80,
+                color: isDark ? const Color(0xFF0F0F0F) : Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _selectedImages.length,
+                  itemBuilder: (context, index) {
+                    return Stack(
+                      children: [
+                        Container(
+                          width: 64,
+                          height: 64,
+                          margin: const EdgeInsets.only(right: 12),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(8),
+                            image: DecorationImage(
+                              image: FileImage(_selectedImages[index]),
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          top: 2,
+                          right: 14,
+                          child: GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _selectedImages.removeAt(index);
+                              });
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(2),
+                              decoration: const BoxDecoration(
+                                color: Colors.black54,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.close,
+                                size: 12,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+
             // Input composer
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -422,6 +595,17 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen> {
               ),
               child: Row(
                 children: [
+                  GestureDetector(
+                    onTap: _showImageSourceBottomSheet,
+                    child: Padding(
+                      padding: const EdgeInsets.only(right: 12),
+                      child: Icon(
+                        Icons.add_photo_alternate_outlined,
+                        color: Theme.of(context).colorScheme.primary,
+                        size: 24,
+                      ),
+                    ),
+                  ),
                   Expanded(
                     child: Container(
                       decoration: BoxDecoration(
@@ -446,6 +630,9 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen> {
                             fontSize: 14,
                           ),
                           border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          filled: false,
                           contentPadding: const EdgeInsets.symmetric(
                             vertical: 10,
                           ),
