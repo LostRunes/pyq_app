@@ -94,7 +94,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
             if (mounted) {
               Navigator.pushReplacementNamed(
                 context,
-                '/subjects',
+                '/main_navigation',
                 arguments: {'branchId': branchId, 'semester': semester},
               );
             }
@@ -112,7 +112,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
             if (mounted) {
               Navigator.pushReplacementNamed(
                 context,
-                '/subjects',
+                '/main_navigation',
                 arguments: {
                   'branchId': savedBranchId,
                   'semester': savedSemester,

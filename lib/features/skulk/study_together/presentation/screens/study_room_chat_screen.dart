@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../data/models/study_room.dart';
+import '../../data/models/room_message.dart';
 import '../providers/study_together_providers.dart';
 import '../widgets/room_message_bubble.dart';
 
@@ -19,6 +21,11 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   bool _isSending = false;
+  Timer? _typingTimer;
+  bool _isCurrentlyTyping = false;
+  RoomMessage? _replyingTo;
+  double _dragOffset = 0.0;
+  bool _isDragging = false;
 
   @override
   void initState() {
@@ -28,9 +35,34 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen> {
 
   @override
   void dispose() {
+    _typingTimer?.cancel();
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
+  }
+
+  void _onTextChanged(String text) {
+    if (text.trim().isEmpty) {
+      if (_isCurrentlyTyping) {
+        _isCurrentlyTyping = false;
+        ref.read(roomTypingProvider(widget.room.id).notifier).sendTyping(false);
+      }
+      _typingTimer?.cancel();
+      return;
+    }
+
+    if (!_isCurrentlyTyping) {
+      _isCurrentlyTyping = true;
+      ref.read(roomTypingProvider(widget.room.id).notifier).sendTyping(true);
+    }
+
+    _typingTimer?.cancel();
+    _typingTimer = Timer(const Duration(seconds: 3), () {
+      if (_isCurrentlyTyping) {
+        _isCurrentlyTyping = false;
+        ref.read(roomTypingProvider(widget.room.id).notifier).sendTyping(false);
+      }
+    });
   }
 
   void _onScroll() {
@@ -60,11 +92,24 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen> {
 
     setState(() => _isSending = true);
     _messageController.clear();
+    final repliedMsg = _replyingTo;
+    setState(() => _replyingTo = null);
+    
+    if (_isCurrentlyTyping) {
+      _isCurrentlyTyping = false;
+      ref.read(roomTypingProvider(widget.room.id).notifier).sendTyping(false);
+    }
+    _typingTimer?.cancel();
 
     try {
+      final replyPrefix = repliedMsg != null
+          ? '[reply:${repliedMsg.senderDisplayName ?? repliedMsg.senderUsername ?? "User"}:${repliedMsg.message.replaceAll(']', ' ').replaceAll('[', ' ')}]'
+          : '';
+      final fullText = '$replyPrefix$text';
+
       await ref
           .read(roomChatProvider(widget.room.id).notifier)
-          .sendMessage(text);
+          .sendMessage(fullText);
 
       // Auto scroll to bottom when sending if in top-down layout
       final messages = ref.read(roomChatProvider(widget.room.id));
@@ -98,14 +143,22 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen> {
     final messages = ref.watch(roomChatProvider(widget.room.id));
     final presenceCount = ref.watch(roomPresenceProvider(widget.room.id));
     final chatNotifier = ref.read(roomChatProvider(widget.room.id).notifier);
+    final typingUsers = ref.watch(roomTypingProvider(widget.room.id));
 
     return Scaffold(
       backgroundColor: isDark
-          ? const Color(0xFF141414)
-          : const Color(0xFFF6F8FA),
+          ? const Color(0xFF0F0F0F) // Solid Instagram-style dark mode background
+          : Colors.white,
       appBar: AppBar(
-        backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-        elevation: 0.5,
+        backgroundColor: isDark ? const Color(0xFF0F0F0F) : Colors.white,
+        elevation: 0,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1.0),
+          child: Container(
+            color: isDark ? const Color(0xFF262626) : const Color(0xFFEFEFEF),
+            height: 1.0,
+          ),
+        ),
         iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black87),
         title: Row(
           children: [
@@ -156,92 +209,214 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen> {
           children: [
             // Message List Area
             Expanded(
-              child: messages.isEmpty
-                  ? Center(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 32),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              widget.room.icon,
-                              style: const TextStyle(fontSize: 48),
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'No messages yet.',
-                              style: GoogleFonts.outfit(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: isDark ? Colors.white70 : Colors.black54,
+              child: GestureDetector(
+                onHorizontalDragUpdate: (details) {
+                  setState(() {
+                    _dragOffset = (_dragOffset + details.delta.dx).clamp(-70.0, 0.0);
+                    _isDragging = true;
+                  });
+                },
+                onHorizontalDragEnd: (details) {
+                  setState(() {
+                    _isDragging = false;
+                  });
+                },
+                child: TweenAnimationBuilder<double>(
+                  tween: Tween<double>(begin: _dragOffset, end: _isDragging ? _dragOffset : 0.0),
+                  duration: const Duration(milliseconds: 150),
+                  builder: (context, offset, child) {
+                    if (messages.isEmpty) {
+                      return Center(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 32),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                widget.room.icon,
+                                style: const TextStyle(fontSize: 48),
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'No messages yet.',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: isDark ? Colors.white70 : Colors.black54,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                'Start the late-night academic chaos ☕',
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.outfit(
+                                  fontSize: 13,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+
+                    if (messages.length < 12) {
+                      final oldestFirst = messages.reversed.toList();
+                      return ListView.builder(
+                        controller: _scrollController,
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 12,
+                        ),
+                        reverse: false,
+                        itemCount: messages.length,
+                        itemBuilder: (context, index) {
+                          final msg = oldestFirst[index];
+                          return RoomMessageBubble(
+                            message: msg,
+                            dragOffset: offset,
+                            onReply: () {
+                              setState(() {
+                                _replyingTo = msg;
+                              });
+                            },
+                          );
+                        },
+                      );
+                    }
+
+                    return ListView.builder(
+                      controller: _scrollController,
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 12,
+                      ),
+                      reverse: true,
+                      itemCount:
+                          messages.length +
+                          (chatNotifier.isLoadingMore ? 1 : 0),
+                      itemBuilder: (context, index) {
+                        if (index == messages.length) {
+                          return const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 16),
+                            child: Center(
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
                               ),
                             ),
-                            const SizedBox(height: 6),
-                            Text(
-                              'Start the late-night academic chaos ☕',
-                              textAlign: TextAlign.center,
-                              style: GoogleFonts.outfit(
-                                fontSize: 13,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          ],
+                          );
+                        }
+                        final msg = messages[index];
+                        return RoomMessageBubble(
+                          message: msg,
+                          dragOffset: offset,
+                          onReply: () {
+                            setState(() {
+                              _replyingTo = msg;
+                            });
+                          },
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ),
+
+            // Real-time typing indicator bubble
+            if (typingUsers.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 8,
+                        height: 8,
+                        margin: const EdgeInsets.only(right: 6),
+                        child: const CircularProgressIndicator(
+                          strokeWidth: 1.5,
+                          valueColor: AlwaysStoppedAnimation(Colors.grey),
                         ),
                       ),
-                    )
-                  : (messages.length < 12
-                        ? ListView.builder(
-                            controller: _scrollController,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 12,
+                      Text(
+                        typingUsers.length == 1
+                            ? '${typingUsers.first} is typing...'
+                            : '${typingUsers.join(', ')} are typing...',
+                        style: GoogleFonts.outfit(
+                          fontSize: 12,
+                          color: Colors.grey[500],
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+            // Instagram-style Reply Preview Box
+            if (_replyingTo != null)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF161616) : const Color(0xFFF8F9FA),
+                  border: Border(
+                    top: BorderSide(
+                      color: isDark ? const Color(0xFF262626) : const Color(0xFFEFEFEF),
+                    ),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.reply_rounded, size: 16, color: Colors.grey),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Replying to ${_replyingTo!.senderDisplayName ?? _replyingTo!.senderUsername ?? "User"}',
+                            style: GoogleFonts.outfit(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                              color: isDark ? Colors.white70 : Colors.black87,
                             ),
-                            reverse: false,
-                            itemCount: messages.length,
-                            itemBuilder: (context, index) {
-                              // Render oldest first from the top
-                              final oldestFirst = messages.reversed.toList();
-                              return RoomMessageBubble(
-                                message: oldestFirst[index],
-                              );
-                            },
-                          )
-                        : ListView.builder(
-                            controller: _scrollController,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 12,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            _replyingTo!.message.startsWith('[reply:')
+                                ? _replyingTo!.message.substring(_replyingTo!.message.indexOf(']') + 1)
+                                : _replyingTo!.message,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.outfit(
+                              fontSize: 11,
+                              color: Colors.grey,
                             ),
-                            reverse: true,
-                            itemCount:
-                                messages.length +
-                                (chatNotifier.isLoadingMore ? 1 : 0),
-                            itemBuilder: (context, index) {
-                              if (index == messages.length) {
-                                return const Padding(
-                                  padding: EdgeInsets.symmetric(vertical: 16),
-                                  child: Center(
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  ),
-                                );
-                              }
-                              return RoomMessageBubble(
-                                message: messages[index],
-                              );
-                            },
-                          )),
-            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded, size: 18),
+                      onPressed: () {
+                        setState(() {
+                          _replyingTo = null;
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              ),
 
             // Input composer
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                color: isDark ? const Color(0xFF0F0F0F) : Colors.white,
                 border: Border(
                   top: BorderSide(
-                    color: isDark ? Colors.grey[850]! : Colors.grey[200]!,
+                    color: isDark ? const Color(0xFF262626) : const Color(0xFFEFEFEF),
                   ),
                 ),
               ),
@@ -251,22 +426,23 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen> {
                     child: Container(
                       decoration: BoxDecoration(
                         color: isDark
-                            ? const Color(0xFF282828)
-                            : const Color(0xFFF1F3F5),
+                            ? const Color(0xFF262626)
+                            : const Color(0xFFF2F2F2),
                         borderRadius: BorderRadius.circular(24),
                       ),
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: TextField(
                         controller: _messageController,
+                        onChanged: _onTextChanged,
                         style: GoogleFonts.outfit(fontSize: 14),
                         maxLines: 4,
                         minLines: 1,
                         textInputAction: TextInputAction.send,
                         onSubmitted: (_) => _sendMessage(),
                         decoration: InputDecoration(
-                          hintText: 'Type academic thoughts...',
+                          hintText: 'Message...',
                           hintStyle: GoogleFonts.outfit(
-                            color: Colors.grey,
+                            color: Colors.grey[500],
                             fontSize: 14,
                           ),
                           border: InputBorder.none,
@@ -277,7 +453,7 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 12),
                   GestureDetector(
                     onTap: _sendMessage,
                     child: Container(

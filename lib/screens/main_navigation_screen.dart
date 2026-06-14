@@ -8,22 +8,22 @@ import '../features/skulk/presentation/screens/skulk_feed_screen.dart';
 import '../features/skulk/presentation/providers/skulk_providers.dart';
 import 'subjects_page.dart';
 import 'prep_zone_page.dart';
-import 'dashboard_page.dart';
+import 'utilities_page.dart';
 
-class SubjectListScreen extends ConsumerStatefulWidget {
+class MainNavigationScreen extends ConsumerStatefulWidget {
   final String branchId;
   final int semester;
-  const SubjectListScreen({
+  const MainNavigationScreen({
     super.key,
     required this.branchId,
     required this.semester,
   });
 
   @override
-  ConsumerState<SubjectListScreen> createState() => _SubjectListScreenState();
+  ConsumerState<MainNavigationScreen> createState() => _MainNavigationScreenState();
 }
 
-class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
+class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
     with SingleTickerProviderStateMixin {
   late int _currentSemester;
   late String _currentBranchId;
@@ -357,7 +357,7 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
             children: [
               const SubjectsPage(),
               const PrepZonePage(),
-              const DashboardPage(),
+              const UtilitiesPage(),
               _buildSkulkPage(context),
             ],
           ),
@@ -468,8 +468,8 @@ class _SubjectListScreenState extends ConsumerState<SubjectListScreen>
                 ),
                 _buildNavBarItem(
                   2,
-                  Icons.leaderboard_rounded,
-                  'Dashboard',
+                  Icons.widgets_rounded,
+                  'Utilities',
                   orangeActive,
                   orangeInactive,
                 ),

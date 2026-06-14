@@ -170,7 +170,7 @@ class _BranchYearSelectionScreenState
                           if (mounted) {
                             Navigator.pushReplacementNamed(
                               context,
-                              '/subjects',
+                              '/main_navigation',
                               arguments: {
                                 'branchId': selectedBranch!.id,
                                 'semester': selectedSemester,
