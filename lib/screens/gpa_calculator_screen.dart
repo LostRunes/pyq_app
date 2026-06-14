@@ -23,8 +23,8 @@ class _GpaCalculatorScreenState extends State<GpaCalculatorScreen> {
     double totalPoints = 0;
     double totalCredits = 0;
     for (var course in _sgpaCourses) {
-      final double credits = course['credits'] ?? 0.0;
-      final double gradePoint = course['gradePoint'] ?? 0.0;
+      final double credits = (course['credits'] as num?)?.toDouble() ?? 0.0;
+      final double gradePoint = (course['gradePoint'] as num?)?.toDouble() ?? 0.0;
       totalPoints += credits * gradePoint;
       totalCredits += credits;
     }
@@ -65,8 +65,8 @@ class _GpaCalculatorScreenState extends State<GpaCalculatorScreen> {
     double totalPoints = 0;
     double totalCredits = 0;
     for (var sem in _cgpaSemesters) {
-      final double credits = sem['credits'] ?? 0.0;
-      final double sgpa = sem['sgpa'] ?? 0.0;
+      final double credits = (sem['credits'] as num?)?.toDouble() ?? 0.0;
+      final double sgpa = (sem['sgpa'] as num?)?.toDouble() ?? 0.0;
       totalPoints += credits * sgpa;
       totalCredits += credits;
     }
@@ -265,7 +265,7 @@ class _GpaCalculatorScreenState extends State<GpaCalculatorScreen> {
                               Expanded(
                                 flex: 3,
                                 child: DropdownButtonFormField<double>(
-                                  value: course['credits'] as double?,
+                                  value: (course['credits'] as num?)?.toDouble(),
                                   decoration: InputDecoration(
                                     labelText: 'Credits',
                                     contentPadding: const EdgeInsets.symmetric(
@@ -301,7 +301,7 @@ class _GpaCalculatorScreenState extends State<GpaCalculatorScreen> {
                               Expanded(
                                 flex: 4,
                                 child: DropdownButtonFormField<double>(
-                                  value: course['gradePoint'] as double?,
+                                  value: (course['gradePoint'] as num?)?.toDouble(),
                                   decoration: InputDecoration(
                                     labelText: 'Grade',
                                     contentPadding: const EdgeInsets.symmetric(
@@ -328,7 +328,7 @@ class _GpaCalculatorScreenState extends State<GpaCalculatorScreen> {
                                           ]
                                           .map(
                                             (g) => DropdownMenuItem(
-                                              value: g['val'] as double,
+                                              value: (g['val'] as num).toDouble(),
                                               child: Text(
                                                 g['label'] as String,
                                                 overflow: TextOverflow.ellipsis,
@@ -431,7 +431,7 @@ class _GpaCalculatorScreenState extends State<GpaCalculatorScreen> {
                               Expanded(
                                 flex: 3,
                                 child: DropdownButtonFormField<double>(
-                                  value: semester['credits'] as double?,
+                                  value: (semester['credits'] as num?)?.toDouble(),
                                   decoration: InputDecoration(
                                     labelText: 'Credits',
                                     contentPadding: const EdgeInsets.symmetric(
@@ -478,7 +478,7 @@ class _GpaCalculatorScreenState extends State<GpaCalculatorScreen> {
                               Expanded(
                                 flex: 3,
                                 child: DropdownButtonFormField<double>(
-                                  value: semester['sgpa'] as double?,
+                                  value: (semester['sgpa'] as num?)?.toDouble(),
                                   decoration: InputDecoration(
                                     labelText: 'SGPA',
                                     contentPadding: const EdgeInsets.symmetric(
