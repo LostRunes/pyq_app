@@ -27,7 +27,6 @@ class _StudyTogetherScreenState extends ConsumerState<StudyTogetherScreen> {
   }
 
   void _showCreateOrJoinDialog(BuildContext context) {
-    final theme = Theme.of(context);
     showDialog(
       context: context,
       builder: (context) {
@@ -246,59 +245,144 @@ class _StudyTogetherScreenState extends ConsumerState<StudyTogetherScreen> {
     final allRoomsAsync = ref.read(studyRoomsProvider);
     final joinedNotifier = ref.read(joinedRoomIdsProvider.notifier);
     final joinedIds = ref.read(joinedRoomIdsProvider);
+    final branchSubjectsMapAsync = ref.watch(branchSubjectsMapProvider);
 
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          title: Text('Add Subject Rooms', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-          content: SizedBox(
-            width: double.maxFinite,
-            height: 300,
-            child: allRoomsAsync.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, _) => Center(child: Text('Error: $err')),
-              data: (allRooms) {
-                final subjects = allRooms.where((r) => r.type == 'subject').toList();
-                return StatefulBuilder(
-                  builder: (context, setInnerState) {
-                    return ListView.builder(
-                      itemCount: subjects.length,
-                      itemBuilder: (context, index) {
-                        final room = subjects[index];
-                        final isAdded = joinedIds.contains(room.id);
-                        return ListTile(
-                          title: Text(room.name, style: GoogleFonts.outfit(fontWeight: FontWeight.w600)),
-                          subtitle: Text(room.subjectId ?? '', style: GoogleFonts.outfit(fontSize: 12)),
-                          trailing: IconButton(
-                            icon: Icon(
-                              isAdded ? Icons.check_circle : Icons.add_circle_outline_rounded,
-                              color: isAdded ? Colors.green : Colors.blue,
-                            ),
-                            onPressed: () async {
-                              if (isAdded) {
-                                await joinedNotifier.removeRoom(room.id);
-                              } else {
-                                await joinedNotifier.addRoom(room.id);
+        String searchQuery = '';
+        return StatefulBuilder(
+          builder: (context, setInnerState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+              title: Text('Add Subject Rooms', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+              content: SizedBox(
+                width: double.maxFinite,
+                height: 380,
+                child: Column(
+                  children: [
+                    Container(
+                      height: 44,
+                      margin: const EdgeInsets.only(bottom: 12),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? const Color(0xFF1E1E1E)
+                            : Colors.grey[100],
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.grey[800]!
+                              : Colors.grey[300]!,
+                        ),
+                      ),
+                      child: TextField(
+                        style: GoogleFonts.outfit(fontSize: 14),
+                        onChanged: (val) {
+                          setInnerState(() {
+                            searchQuery = val;
+                          });
+                        },
+                        decoration: InputDecoration(
+                          hintText: 'Search subject, sem, year, branch, code...',
+                          hintStyle: GoogleFonts.outfit(color: Colors.grey, fontSize: 13),
+                          prefixIcon: const Icon(Icons.search_rounded, size: 18, color: Colors.grey),
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(vertical: 11),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: allRoomsAsync.when(
+                        loading: () => const Center(child: CircularProgressIndicator()),
+                        error: (err, _) => Center(child: Text('Error: $err')),
+                        data: (allRooms) {
+                          final subjects = allRooms.where((r) => r.type == 'subject').toList();
+
+                          return branchSubjectsMapAsync.when(
+                            loading: () => const Center(child: CircularProgressIndicator()),
+                            error: (err, _) => Center(child: Text('Error loading subject details')),
+                            data: (subjectMetaMap) {
+                              final filtered = subjects.where((room) {
+                                if (searchQuery.isEmpty) return true;
+                                final query = searchQuery.toLowerCase();
+
+                                if (room.name.toLowerCase().contains(query)) return true;
+                                if (room.subjectId != null && room.subjectId!.toLowerCase().contains(query)) return true;
+
+                                final metaList = subjectMetaMap[room.subjectId];
+                                if (metaList != null) {
+                                  for (final m in metaList) {
+                                    if (m.code.toLowerCase().contains(query)) return true;
+                                    if (m.branchName.toLowerCase().contains(query)) return true;
+                                    if ('semester ${m.semester}'.contains(query) || 'sem ${m.semester}'.contains(query) || '${m.semester}'.contains(query)) return true;
+                                    final year = (m.semester + 1) ~/ 2;
+                                    if ('year $year'.contains(query) || 'yr $year'.contains(query) || '$year year'.contains(query)) return true;
+                                  }
+                                }
+                                return false;
+                              }).toList();
+
+                              if (filtered.isEmpty) {
+                                return Center(
+                                  child: Text(
+                                    'No matching subject rooms found',
+                                    style: GoogleFonts.outfit(color: Colors.grey),
+                                  ),
+                                );
                               }
-                              setInnerState(() {});
+
+                              return ListView.builder(
+                                itemCount: filtered.length,
+                                itemBuilder: (context, index) {
+                                  final room = filtered[index];
+                                  final isAdded = joinedIds.contains(room.id);
+
+                                  String subInfo = room.subjectId ?? '';
+                                  final metaList = subjectMetaMap[room.subjectId];
+                                  if (metaList != null && metaList.isNotEmpty) {
+                                    final first = metaList.first;
+                                    final year = (first.semester + 1) ~/ 2;
+                                    subInfo = '${first.code} • Sem ${first.semester} • Yr $year';
+                                  }
+
+                                  return ListTile(
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+                                    title: Text(room.name, style: GoogleFonts.outfit(fontWeight: FontWeight.w600, fontSize: 14)),
+                                    subtitle: Text(subInfo, style: GoogleFonts.outfit(fontSize: 11, color: Colors.grey)),
+                                    trailing: IconButton(
+                                      icon: Icon(
+                                        isAdded ? Icons.check_circle : Icons.add_circle_outline_rounded,
+                                        color: isAdded ? Colors.green : Colors.blue,
+                                        size: 22,
+                                      ),
+                                      onPressed: () async {
+                                        if (isAdded) {
+                                          await joinedNotifier.removeRoom(room.id);
+                                        } else {
+                                          await joinedNotifier.addRoom(room.id);
+                                        }
+                                        setInnerState(() {});
+                                      },
+                                    ),
+                                  );
+                                },
+                              );
                             },
-                          ),
-                        );
-                      },
-                    );
-                  },
-                );
-              },
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text('Done', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-            ),
-          ],
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text('Done', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+                ),
+              ],
+            );
+          },
         );
       },
     );
@@ -340,8 +424,8 @@ class _StudyTogetherScreenState extends ConsumerState<StudyTogetherScreen> {
             },
           ),
           IconButton(
-            icon: const Icon(Icons.search_rounded),
-            tooltip: 'Search Subject Rooms',
+            icon: const Icon(Icons.library_add_rounded),
+            tooltip: 'Add Subject Rooms',
             onPressed: () {
               _showAddSubjectRoomDialog(context);
             },

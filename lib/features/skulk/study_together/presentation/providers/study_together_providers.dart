@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../../../../services/supabase_service.dart';
 import '../../../../../core/providers.dart';
 import '../../data/models/study_room.dart';
 import '../../data/models/room_message.dart';
@@ -507,3 +506,34 @@ final roomTypingProvider =
       RoomTypingNotifier.new,
       isAutoDispose: true,
     );
+
+final branchSubjectsMapProvider = FutureProvider<Map<String, List<({int semester, String branchId, String branchName, String code})>>>((ref) async {
+  final client = ref.watch(supabaseServiceProvider).supabase;
+  final res = await client
+      .from('branch_subjects')
+      .select('semester, branch_id, branches(name), subjects(code, id)');
+  
+  final Map<String, List<({int semester, String branchId, String branchName, String code})>> map = {};
+  
+  for (var row in res as List) {
+    final subject = row['subjects'];
+    if (subject == null) continue;
+    final subjectId = subject['id'] as String;
+    final code = subject['code'] as String? ?? '';
+    final branch = row['branches'];
+    final branchName = branch != null ? branch['name'] as String? ?? '' : '';
+    final semester = row['semester'] as int? ?? 1;
+    final branchIdVal = row['branch_id'] as String? ?? '';
+    
+    if (!map.containsKey(subjectId)) {
+      map[subjectId] = [];
+    }
+    map[subjectId]!.add((
+      semester: semester,
+      branchId: branchIdVal,
+      branchName: branchName,
+      code: code,
+    ));
+  }
+  return map;
+});
