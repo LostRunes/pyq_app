@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../core/providers.dart';
 
+import '../utils/fuzzy_search.dart';
+
 class PrepZonePage extends ConsumerWidget {
   const PrepZonePage({super.key});
 
@@ -22,11 +24,11 @@ class PrepZonePage extends ConsumerWidget {
       },
       /*
       {
-        'title': 'GATE Prep',
-        'desc': 'Syllabus, weightage & mock tests',
-        'icon': Icons.psychology_rounded,
+        'title': 'Gate Prep',
+        'desc': 'Previous year GATE papers & syllabus',
+        'icon': Icons.menu_book_rounded,
         'route': '/gate_prep',
-        'color': const Color(0xFFEC4899), // Pink/Rose
+        'color': const Color(0xFFE11D48), // Rose
         'isComingSoon': false,
       },
       */
@@ -41,10 +43,8 @@ class PrepZonePage extends ConsumerWidget {
     ];
 
     final filteredItems = prepItems.where((item) {
-      if (searchQuery.isEmpty) return true;
-      final q = searchQuery.toLowerCase();
-      return (item['title'] as String).toLowerCase().contains(q) ||
-          (item['desc'] as String).toLowerCase().contains(q);
+      return FuzzySearch.matches(item['title'] as String?, searchQuery) ||
+          FuzzySearch.matches(item['desc'] as String?, searchQuery);
     }).toList();
 
     return SingleChildScrollView(

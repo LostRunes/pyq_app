@@ -124,17 +124,17 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
                   )),
         title: _isSearching
             ? Container(
-                height: 42,
+                height: 36,
                 decoration: BoxDecoration(
                   color: isDark 
                       ? const Color(0xFF1E1B4B).withOpacity(0.4) 
                       : Colors.black.withOpacity(0.04),
-                  borderRadius: BorderRadius.circular(24),
+                  borderRadius: BorderRadius.circular(18),
                   border: Border.all(
                     color: isDark 
                         ? Colors.white.withOpacity(0.12) 
                         : Colors.black.withOpacity(0.08),
-                    width: 1.5,
+                    width: 1.0,
                   ),
                 ),
                 padding: const EdgeInsets.symmetric(horizontal: 14),
@@ -159,6 +159,10 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
                         color: isDark ? Colors.white38 : Colors.black38,
                       ),
                       border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      filled: false,
+                      contentPadding: EdgeInsets.zero,
                       isDense: true,
                       icon: Icon(
                         Icons.search_rounded,

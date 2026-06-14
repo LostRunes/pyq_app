@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../core/providers.dart';
+import '../utils/fuzzy_search.dart';
 
 class UtilitiesPage extends ConsumerWidget {
   const UtilitiesPage({super.key});
@@ -13,18 +14,18 @@ class UtilitiesPage extends ConsumerWidget {
 
     final utils = [
       {
-        'title': 'Upload Notes',
-        'desc': 'Share study notes & materials',
-        'icon': Icons.cloud_upload_rounded,
-        'route': '/upload_notes',
-        'color': const Color(0xFF6366F1), // Indigo
+        'title': 'GPA Calculator',
+        'desc': 'Track grades & semester GPA',
+        'icon': Icons.calculate_rounded,
+        'route': '/gpa_calc',
+        'color': const Color(0xFF10B981), // Emerald
       },
       {
-        'title': 'GPA Calculator',
-        'desc': 'Calculate SGPA & CGPA',
-        'icon': Icons.calculate_rounded,
-        'route': '/gpa_calculator',
-        'color': const Color(0xFF10B981), // Emerald
+        'title': 'Study Together',
+        'desc': 'Join peer study rooms & voice lounges',
+        'icon': Icons.group_work_rounded,
+        'route': '/study_together',
+        'color': const Color(0xFF6366F1), // Indigo
       },
       {
         'title': 'Syllabus',
@@ -36,10 +37,8 @@ class UtilitiesPage extends ConsumerWidget {
     ];
 
     final filteredUtils = utils.where((util) {
-      if (searchQuery.isEmpty) return true;
-      final q = searchQuery.toLowerCase();
-      return (util['title'] as String).toLowerCase().contains(q) ||
-          (util['desc'] as String).toLowerCase().contains(q);
+      return FuzzySearch.matches(util['title'] as String?, searchQuery) ||
+          FuzzySearch.matches(util['desc'] as String?, searchQuery);
     }).toList();
 
     return SingleChildScrollView(

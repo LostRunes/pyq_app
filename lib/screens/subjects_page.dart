@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../core/providers.dart';
-import '../models/subject.dart';
+
+import '../utils/fuzzy_search.dart';
 
 class SubjectsPage extends ConsumerWidget {
   const SubjectsPage({super.key});
@@ -34,10 +35,8 @@ class SubjectsPage extends ConsumerWidget {
       child: subjectsAsync.when(
         data: (subjects) {
           final filtered = subjects.where((subject) {
-            if (searchQuery.isEmpty) return true;
-            final q = searchQuery.toLowerCase();
-            return subject.name.toLowerCase().contains(q) ||
-                subject.code.toLowerCase().contains(q);
+            return FuzzySearch.matches(subject.name, searchQuery) ||
+                FuzzySearch.matches(subject.code, searchQuery);
           }).toList();
 
           return ListView.builder(

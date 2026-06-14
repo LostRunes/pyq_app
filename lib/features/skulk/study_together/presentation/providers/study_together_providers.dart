@@ -234,14 +234,35 @@ final communitySpacesProvider =
     Provider.autoDispose<AsyncValue<List<StudyRoom>>>((ref) {
       final roomsAsync = ref.watch(studyRoomsProvider);
       return roomsAsync.whenData(
-        (rooms) => rooms
-            .where(
-              (r) =>
-                  r.type == 'community' ||
-                  r.type == 'general' ||
-                  r.type == 'voice',
-            )
-            .toList(),
+        (rooms) {
+          final filtered = rooms
+              .where(
+                (r) =>
+                    r.type == 'community' ||
+                    r.type == 'general' ||
+                    r.type == 'voice',
+              )
+              .toList();
+
+          filtered.sort((a, b) {
+            int getWeight(StudyRoom room) {
+              final name = room.name.toLowerCase();
+              if (name.contains('general chat')) return 1;
+              if (name.contains('placement')) return 2;
+              if (name.contains('voice') || name.contains('lounge')) return 3;
+              return 4;
+            }
+
+            final weightA = getWeight(a);
+            final weightB = getWeight(b);
+            if (weightA != weightB) {
+              return weightA.compareTo(weightB);
+            }
+            return a.name.compareTo(b.name);
+          });
+
+          return filtered;
+        },
       );
     });
 
