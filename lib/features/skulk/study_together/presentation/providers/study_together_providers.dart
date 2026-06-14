@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../data/models/study_room.dart';
@@ -233,5 +234,93 @@ class RoomPresenceNotifier extends Notifier<int> {
 final roomPresenceProvider =
     NotifierProvider.family<RoomPresenceNotifier, int, String>(
       RoomPresenceNotifier.new,
+      isAutoDispose: true,
+    );
+
+class RoomTypingNotifier extends Notifier<List<String>> {
+  RoomTypingNotifier(this.roomId);
+  final String roomId;
+
+  RealtimeChannel? _channel;
+  final Map<String, Timer> _timers = {};
+
+  @override
+  List<String> build() {
+    final supabase = Supabase.instance.client;
+    
+    _channel = supabase.channel('room-typing-$roomId')
+      ..onBroadcast(
+        event: 'typing',
+        callback: (payload) {
+          final username = payload['username'] as String?;
+          final isTyping = payload['is_typing'] as bool? ?? false;
+          final userId = payload['user_id'] as String?;
+          if (username == null || userId == null) return;
+          
+          final currentUserId = supabase.auth.currentUser?.id;
+          if (userId == currentUserId) return; // ignore self
+
+          if (isTyping) {
+            _timers[userId]?.cancel();
+            
+            if (!state.contains(username)) {
+              state = [...state, username];
+            }
+            
+            _timers[userId] = Timer(const Duration(seconds: 4), () {
+              state = state.where((u) => u != username).toList();
+            });
+          } else {
+            _timers[userId]?.cancel();
+            state = state.where((u) => u != username).toList();
+          }
+        },
+      );
+      
+    _channel!.subscribe();
+
+    ref.onDispose(() {
+      for (final t in _timers.values) {
+        t.cancel();
+      }
+      if (_channel != null) {
+        supabase.removeChannel(_channel!);
+      }
+    });
+
+    return [];
+  }
+
+  Future<void> sendTyping(bool isTyping) async {
+    final supabase = Supabase.instance.client;
+    final user = supabase.auth.currentUser;
+    if (user == null || _channel == null) return;
+
+    String displayName = 'Someone';
+    try {
+      final res = await supabase
+          .from('user_profiles')
+          .select('display_name')
+          .eq('id', user.id)
+          .maybeSingle();
+      if (res != null && res['display_name'] != null) {
+        displayName = res['display_name'] as String;
+      }
+    } catch (_) {}
+
+    await _channel!.sendBroadcastMessage(
+      event: 'typing',
+      payload: {
+        'user_id': user.id,
+        'username': displayName,
+        'is_typing': isTyping,
+      },
+    );
+  }
+}
+
+final roomTypingProvider =
+    NotifierProvider.family<RoomTypingNotifier, List<String>, String>(
+      RoomTypingNotifier.new,
       isAutoDispose: true,
     );

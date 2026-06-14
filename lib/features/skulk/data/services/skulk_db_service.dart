@@ -311,22 +311,11 @@ class SkulkDbService {
     String postId,
     bool accept,
   ) async {
-    // 1. Reset all solutions for this post to is_accepted = false
-    if (accept) {
-      await _client
-          .from('answers')
-          .update({'is_accepted': false})
-          .eq('post_id', postId);
-    }
-
-    // 2. Update targeted solution
-    await _client
-        .from('answers')
-        .update({'is_accepted': accept})
-        .eq('id', solutionId);
-
-    // 3. Mark the doubt post as solved or unsolved accordingly
-    await setDoubtSolved(postId, accept);
+    await _client.rpc('accept_solution', params: {
+      'solution_id': solutionId,
+      'post_id': postId,
+      'accept_val': accept,
+    });
   }
 
   // ----------------------------------------------------
