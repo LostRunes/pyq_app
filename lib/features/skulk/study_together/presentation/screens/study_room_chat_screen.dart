@@ -28,10 +28,12 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen> {
   Timer? _typingTimer;
   bool _isCurrentlyTyping = false;
   RoomMessage? _replyingTo;
+  RoomMessage? _editingMessage;
   double _dragOffset = 0.0;
   bool _isDragging = false;
   final List<File> _selectedImages = [];
   final ImagePicker _picker = ImagePicker();
+  final Map<String, GlobalKey> _messageKeys = {};
 
   void _showImageSourceBottomSheet() {
     final theme = Theme.of(context);
@@ -183,6 +185,56 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen> {
     }
   }
 
+  void _scrollToMessage(String msgId) {
+    final messages = ref.read(roomChatProvider(widget.room.id));
+    
+    // Debug logging
+    debugPrint("SCROLL TO: '$msgId'");
+    debugPrint("TOTAL MESSAGES IN PROVIDER: ${messages.length}");
+    for (int idx = 0; idx < messages.length; idx++) {
+      debugPrint("  [$idx] ID: '${messages[idx].id}' | TEXT: '${messages[idx].message}'");
+    }
+
+    final cleanMsgId = msgId.trim();
+
+    // Determine the index of the message in the list
+    int index = -1;
+    if (messages.length < 12) {
+      final oldestFirst = messages.reversed.toList();
+      index = oldestFirst.indexWhere((m) => m.id.trim() == cleanMsgId);
+    } else {
+      index = messages.indexWhere((m) => m.id.trim() == cleanMsgId);
+    }
+
+    if (index == -1) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Message is not loaded in current history')),
+      );
+      return;
+    }
+
+    final key = _messageKeys[cleanMsgId];
+    if (key != null && key.currentContext != null) {
+      Scrollable.ensureVisible(
+        key.currentContext!,
+        duration: const Duration(milliseconds: 300),
+        alignment: 0.5,
+        curve: Curves.easeInOut,
+      );
+    } else {
+      // Fallback: estimate scroll offset based on index and average item height (80.0 px)
+      const double averageItemHeight = 80.0;
+      final double targetOffset = index * averageItemHeight;
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          targetOffset.clamp(0.0, _scrollController.position.maxScrollExtent),
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
+      }
+    }
+  }
+
   Future<void> _sendMessage() async {
     final text = _messageController.text.trim();
     if ((text.isEmpty && _selectedImages.isEmpty) || _isSending) return;
@@ -193,6 +245,27 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen> {
           content: Text('Message too long (max 2000 characters).'),
         ),
       );
+      return;
+    }
+
+    final editingMsg = _editingMessage;
+    if (editingMsg != null) {
+      setState(() => _isSending = true);
+      _messageController.clear();
+      setState(() => _editingMessage = null);
+      try {
+        await ref
+            .read(roomChatProvider(widget.room.id).notifier)
+            .editMessage(editingMsg.id, text);
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to edit message: $e')),
+          );
+        }
+      } finally {
+        setState(() => _isSending = false);
+      }
       return;
     }
 
@@ -222,8 +295,21 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen> {
         }
       }
 
+      // Clean up replied message text to strip images/URLs
+      String cleanedReplyText = '';
+      if (repliedMsg != null) {
+        cleanedReplyText = repliedMsg.message
+            .replaceAll(RegExp(r'\[image:[^\]]*\]'), '[Image]')
+            .replaceAll(RegExp(r'https?://[^\s]+'), '[Link]')
+            .replaceAll('[', '').replaceAll(']', '')
+            .trim();
+        if (cleanedReplyText.isEmpty) {
+          cleanedReplyText = '[Image]';
+        }
+      }
+
       final replyPrefix = repliedMsg != null
-          ? '[reply:${repliedMsg.senderDisplayName ?? repliedMsg.senderUsername ?? "User"}:${repliedMsg.message.replaceAll(']', ' ').replaceAll('[', ' ')}]'
+          ? '[reply:${repliedMsg.id}:${repliedMsg.senderDisplayName ?? repliedMsg.senderUsername ?? "User"}:$cleanedReplyText]'
           : '';
       final fullText = '$replyPrefix$imagePrefix$text';
 
@@ -384,7 +470,7 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen> {
                       );
                     }
 
-                    if (messages.length < 12) {
+                     if (messages.length < 12) {
                       final oldestFirst = messages.reversed.toList();
                       return ListView.builder(
                         controller: _scrollController,
@@ -395,13 +481,30 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen> {
                         itemCount: messages.length,
                         itemBuilder: (context, index) {
                           final msg = oldestFirst[index];
+                          final key = _messageKeys.putIfAbsent(msg.id, () => GlobalKey());
                           return RoomMessageBubble(
+                            key: key,
                             message: msg,
                             dragOffset: offset,
                             onReply: () {
                               setState(() {
                                 _replyingTo = msg;
+                                _editingMessage = null;
                               });
+                            },
+                            onRepliedMessageTap: _scrollToMessage,
+                            onEdit: () {
+                              setState(() {
+                                _editingMessage = msg;
+                                _replyingTo = null;
+                                _messageController.text = msg.message
+                                    .replaceAll(RegExp(r'^\[reply:[^\]]*\]'), '')
+                                    .replaceAll(RegExp(r'\[image:[^\]]*\]'), '')
+                                    .trim();
+                              });
+                            },
+                            onDelete: () {
+                              ref.read(roomChatProvider(widget.room.id).notifier).deleteMessage(msg.id);
                             },
                           );
                         },
@@ -429,13 +532,30 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen> {
                           );
                         }
                         final msg = messages[index];
+                        final key = _messageKeys.putIfAbsent(msg.id, () => GlobalKey());
                         return RoomMessageBubble(
+                          key: key,
                           message: msg,
                           dragOffset: offset,
                           onReply: () {
                             setState(() {
                               _replyingTo = msg;
+                              _editingMessage = null;
                             });
+                          },
+                          onRepliedMessageTap: _scrollToMessage,
+                          onEdit: () {
+                            setState(() {
+                              _editingMessage = msg;
+                              _replyingTo = null;
+                              _messageController.text = msg.message
+                                  .replaceAll(RegExp(r'^\[reply:[^\]]*\]'), '')
+                                  .replaceAll(RegExp(r'\[image:[^\]]*\]'), '')
+                                  .trim();
+                            });
+                          },
+                          onDelete: () {
+                            ref.read(roomChatProvider(widget.room.id).notifier).deleteMessage(msg.id);
                           },
                         );
                       },
@@ -526,6 +646,64 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen> {
                       onPressed: () {
                         setState(() {
                           _replyingTo = null;
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              ),
+
+            // Edit Preview Box
+            if (_editingMessage != null)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF161616) : const Color(0xFFF8F9FA),
+                  border: Border(
+                    top: BorderSide(
+                      color: isDark ? const Color(0xFF262626) : const Color(0xFFEFEFEF),
+                    ),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.edit_rounded, size: 16, color: Colors.grey),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Editing message',
+                            style: GoogleFonts.outfit(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                              color: isDark ? Colors.white70 : Colors.black87,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            _editingMessage!.message
+                                .replaceAll(RegExp(r'^\[reply:[^\]]*\]'), '')
+                                .replaceAll(RegExp(r'\[image:[^\]]*\]'), '')
+                                .trim(),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.outfit(
+                              fontSize: 11,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded, size: 18),
+                      onPressed: () {
+                        setState(() {
+                          _editingMessage = null;
+                          _messageController.clear();
                         });
                       },
                     ),

@@ -285,12 +285,12 @@ class RoomChatNotifier extends Notifier<List<RoomMessage>> {
     // Load initial page
     _loadInitialMessages();
 
-    // Subscribe to real-time Postgres insertions on room_messages for this room
+    // Subscribe to real-time Postgres insertions, updates, and deletes on room_messages for this room
     final supabase = Supabase.instance.client;
     _realtimeChannel = supabase
         .channel('room-messages-changes-$roomId')
         .onPostgresChanges(
-          event: PostgresChangeEvent.insert,
+          event: PostgresChangeEvent.all,
           schema: 'public',
           table: 'room_messages',
           filter: PostgresChangeFilter(
@@ -299,15 +299,35 @@ class RoomChatNotifier extends Notifier<List<RoomMessage>> {
             value: roomId,
           ),
           callback: (payload) {
-            final newMsgJson = payload.newRecord;
-            // Skip if soft-deleted
-            if (newMsgJson['deleted_at'] != null) return;
-            final newMsg = RoomMessage.fromJson(newMsgJson);
+            final eventType = payload.eventType;
 
-            // Prevent duplicate appending
-            final exists = state.any((m) => m.id == newMsg.id);
-            if (!exists) {
-              state = [newMsg, ...state];
+            if (eventType == PostgresChangeEvent.insert) {
+              final newMsgJson = payload.newRecord;
+              if (newMsgJson['deleted_at'] != null) return;
+              final newMsg = RoomMessage.fromJson(newMsgJson);
+
+              // Prevent duplicate appending
+              final exists = state.any((m) => m.id == newMsg.id);
+              if (!exists) {
+                state = [newMsg, ...state];
+              }
+            } else if (eventType == PostgresChangeEvent.update) {
+              final updatedMsgJson = payload.newRecord;
+              final updatedMsg = RoomMessage.fromJson(updatedMsgJson);
+
+              if (updatedMsg.deletedAt != null) {
+                // Soft-deleted message: remove from local state
+                state = state.where((m) => m.id != updatedMsg.id).toList();
+              } else {
+                // Edited message: replace the old version in local state
+                state = state.map((m) => m.id == updatedMsg.id ? updatedMsg : m).toList();
+              }
+            } else if (eventType == PostgresChangeEvent.delete) {
+              final oldRecord = payload.oldRecord;
+              final oldId = oldRecord['id'] as String?;
+              if (oldId != null) {
+                state = state.where((m) => m.id != oldId).toList();
+              }
             }
           },
         );
@@ -373,6 +393,28 @@ class RoomChatNotifier extends Notifier<List<RoomMessage>> {
       if (!exists) {
         state = [sentMsg, ...state];
       }
+    } catch (_) {
+      rethrow;
+    }
+  }
+
+  /// Edit message helper
+  Future<void> editMessage(String messageId, String newText) async {
+    final repo = ref.read(studyTogetherRepositoryProvider);
+    try {
+      final updatedMsg = await repo.editMessage(messageId, newText);
+      state = state.map((m) => m.id == messageId ? updatedMsg : m).toList();
+    } catch (_) {
+      rethrow;
+    }
+  }
+
+  /// Delete message helper (soft delete / unsend)
+  Future<void> deleteMessage(String messageId) async {
+    final repo = ref.read(studyTogetherRepositoryProvider);
+    try {
+      await repo.deleteMessage(messageId);
+      state = state.where((m) => m.id != messageId).toList();
     } catch (_) {
       rethrow;
     }
