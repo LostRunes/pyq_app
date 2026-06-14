@@ -282,7 +282,11 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen> {
         iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black87),
         title: Row(
           children: [
-            Text(widget.room.icon, style: const TextStyle(fontSize: 20)),
+            Icon(
+              widget.room.isVoiceEnabled ? Icons.volume_up_rounded : Icons.chat_bubble_outline_rounded,
+              size: 20,
+              color: isDark ? Colors.white70 : Colors.black87,
+            ),
             const SizedBox(width: 8),
             Expanded(
               child: Column(

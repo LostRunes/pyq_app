@@ -59,6 +59,41 @@ class _RoomMessageBubbleState extends State<RoomMessageBubble> with SingleTicker
     return '$hour:$minute $amPm';
   }
 
+  void _showFullScreenImage(BuildContext context, String imageUrl) {
+    showDialog(
+      context: context,
+      builder: (_) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: EdgeInsets.zero,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            InteractiveViewer(
+              minScale: 0.5,
+              maxScale: 4.0,
+              child: Image.network(
+                imageUrl,
+                fit: BoxFit.contain,
+              ),
+            ),
+            Positioned(
+              top: 40,
+              right: 20,
+              child: IconButton(
+                icon: const Icon(
+                  Icons.close,
+                  color: Colors.white,
+                  size: 30,
+                ),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final currentUserId = Supabase.instance.client.auth.currentUser?.id;
@@ -267,20 +302,23 @@ class _RoomMessageBubbleState extends State<RoomMessageBubble> with SingleTicker
                                         child: ClipRRect(
                                           borderRadius: BorderRadius.circular(12),
                                           child: imageUrls.length == 1
-                                              ? Image.network(
-                                                  imageUrls.first,
-                                                  fit: BoxFit.cover,
-                                                  loadingBuilder: (context, child, loadingProgress) {
-                                                    if (loadingProgress == null) return child;
-                                                    return Container(
-                                                      height: 150,
-                                                      width: 200,
-                                                      color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFE2E2E2),
-                                                      child: const Center(
-                                                        child: CircularProgressIndicator(strokeWidth: 2),
-                                                      ),
-                                                    );
-                                                  },
+                                              ? GestureDetector(
+                                                  onTap: () => _showFullScreenImage(context, imageUrls.first),
+                                                  child: Image.network(
+                                                    imageUrls.first,
+                                                    fit: BoxFit.cover,
+                                                    loadingBuilder: (context, child, loadingProgress) {
+                                                      if (loadingProgress == null) return child;
+                                                      return Container(
+                                                        height: 150,
+                                                        width: 200,
+                                                        color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFE2E2E2),
+                                                        child: const Center(
+                                                          child: CircularProgressIndicator(strokeWidth: 2),
+                                                        ),
+                                                      );
+                                                    },
+                                                  ),
                                                 )
                                               : GridView.builder(
                                                   shrinkWrap: true,
@@ -292,9 +330,13 @@ class _RoomMessageBubbleState extends State<RoomMessageBubble> with SingleTicker
                                                   ),
                                                   itemCount: imageUrls.length,
                                                   itemBuilder: (context, idx) {
-                                                    return Image.network(
-                                                      imageUrls[idx],
-                                                      fit: BoxFit.cover,
+                                                    final url = imageUrls[idx];
+                                                    return GestureDetector(
+                                                      onTap: () => _showFullScreenImage(context, url),
+                                                      child: Image.network(
+                                                        url,
+                                                        fit: BoxFit.cover,
+                                                      ),
                                                     );
                                                   },
                                                 ),
