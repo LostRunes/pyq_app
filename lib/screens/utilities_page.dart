@@ -17,14 +17,14 @@ class UtilitiesPage extends ConsumerWidget {
         'title': 'GPA Calculator',
         'desc': 'Track grades & semester GPA',
         'icon': Icons.calculate_rounded,
-        'route': '/gpa_calc',
+        'route': '/gpa_calculator',
         'color': const Color(0xFF10B981), // Emerald
       },
       {
-        'title': 'Study Together',
-        'desc': 'Join peer study rooms & voice lounges',
-        'icon': Icons.group_work_rounded,
-        'route': '/study_together',
+        'title': 'Upload Notes',
+        'desc': 'Share study notes & materials',
+        'icon': Icons.cloud_upload_rounded,
+        'route': '/upload_notes',
         'color': const Color(0xFF6366F1), // Indigo
       },
       {
@@ -56,7 +56,7 @@ class UtilitiesPage extends ConsumerWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Access all essential tools and peer rooms',
+            'Access all essential tools and resources',
             style: GoogleFonts.outfit(
               fontSize: 14,
               color: theme.colorScheme.onSurface.withOpacity(0.6),
