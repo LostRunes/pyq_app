@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../core/providers.dart';
-import '../models/subject.dart';
 import '../features/skulk/presentation/screens/skulk_feed_screen.dart';
 import '../features/skulk/presentation/providers/skulk_providers.dart';
 import 'subjects_page.dart';
@@ -80,136 +79,162 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        leadingWidth: _currentIndex == 3 ? 56 : 110,
-        leading: _currentIndex == 3
-            ? (_isSearching
-                  ? IconButton(
-                      icon: const Icon(Icons.arrow_back_rounded),
-                      onPressed: () {
-                        setState(() {
-                          _isSearching = false;
-                          _skulkSearchController.clear();
-                          ref.read(skulkFeedSearchProvider.notifier).state = '';
-                        });
-                      },
-                    )
-                  : const Padding(
-                      padding: EdgeInsets.only(left: 8.0),
-                      child: NotificationBell(),
-                    ))
-            : Row(
-                children: [
-                  const SizedBox(width: 8),
-                  IconButton(
-                    icon: const Icon(Icons.notifications_none_rounded),
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('No new notifications. 🔔'),
-                        ),
-                      );
-                    },
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.search_rounded),
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Search feature coming soon! 🔍'),
-                        ),
-                      );
-                    },
-                  ),
-                ],
-              ),
-        title: _currentIndex == 3
-            ? (_isSearching
-                  ? Container(
-                      height: 42,
-                      decoration: BoxDecoration(
-                        color: isDark 
-                            ? const Color(0xFF1E1B4B).withOpacity(0.4) 
-                            : Colors.black.withOpacity(0.04),
-                        borderRadius: BorderRadius.circular(24),
-                        border: Border.all(
-                          color: isDark 
-                              ? Colors.white.withOpacity(0.12) 
-                              : Colors.black.withOpacity(0.08),
-                          width: 1.5,
-                        ),
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
-                      child: Center(
-                        child: TextField(
-                          controller: _skulkSearchController,
-                          autofocus: true,
-                          style: GoogleFonts.outfit(
-                            fontSize: 14,
-                            color: isDark ? Colors.white : Colors.black87,
-                          ),
-                          decoration: InputDecoration(
-                            hintText: 'Search doubts, titles or tags...',
-                            hintStyle: GoogleFonts.outfit(
-                              fontSize: 13,
-                              color: isDark ? Colors.white38 : Colors.black38,
-                            ),
-                            border: InputBorder.none,
-                            isDense: true,
-                            icon: Icon(
-                              Icons.search_rounded,
-                              size: 18,
-                              color: isDark ? Colors.white54 : Colors.black54,
-                            ),
-                          ),
-                          onChanged: (val) {
-                            ref.read(skulkFeedSearchProvider.notifier).state = val;
-                          },
-                        ),
-                      ),
-                    )
-                  : Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'Skulk',
-                          style: GoogleFonts.outfit(
-                            fontWeight: FontWeight.w900,
-                            fontSize: 20,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Image.asset(
-                          'assets/images/lil_fox.png',
-                          width: 32,
-                          height: 32,
-                          fit: BoxFit.contain,
-                        ),
-                      ],
-                    ))
-            : null,
-        centerTitle: _currentIndex == 3,
-        actions: [
-          if (_currentIndex == 3) ...[
-            if (_isSearching)
-              IconButton(
-                icon: const Icon(Icons.close_rounded),
+        leadingWidth: _isSearching ? 56 : (_currentIndex == 3 ? 56 : 110),
+        leading: _isSearching
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back_rounded),
                 onPressed: () {
                   setState(() {
+                    _isSearching = false;
                     _skulkSearchController.clear();
+                    ref.read(subjectsSearchProvider.notifier).state = '';
+                    ref.read(prepZoneSearchProvider.notifier).state = '';
+                    ref.read(utilitiesSearchProvider.notifier).state = '';
                     ref.read(skulkFeedSearchProvider.notifier).state = '';
                   });
                 },
               )
-            else
-              IconButton(
-                icon: const Icon(Icons.search_rounded),
-                onPressed: () {
-                  setState(() {
-                    _isSearching = true;
-                  });
-                },
-              ),
-          ],
+            : (_currentIndex == 3
+                ? const Padding(
+                    padding: EdgeInsets.only(left: 8.0),
+                    child: NotificationBell(),
+                  )
+                : Row(
+                    children: [
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: const Icon(Icons.notifications_none_rounded),
+                        onPressed: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('No new notifications. 🔔'),
+                            ),
+                          );
+                        },
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.search_rounded),
+                        onPressed: () {
+                          setState(() {
+                            _isSearching = true;
+                          });
+                        },
+                      ),
+                    ],
+                  )),
+        title: _isSearching
+            ? Container(
+                height: 36,
+                decoration: BoxDecoration(
+                  color: isDark 
+                      ? const Color(0xFF1E1B4B).withOpacity(0.4) 
+                      : Colors.black.withOpacity(0.04),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                    color: isDark 
+                        ? Colors.white.withOpacity(0.12) 
+                        : Colors.black.withOpacity(0.08),
+                    width: 1.0,
+                  ),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                child: Center(
+                  child: TextField(
+                    controller: _skulkSearchController,
+                    autofocus: true,
+                    style: GoogleFonts.outfit(
+                      fontSize: 14,
+                      color: isDark ? Colors.white : Colors.black87,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: _currentIndex == 0
+                          ? 'Search subjects or codes...'
+                          : _currentIndex == 1
+                              ? 'Search preparation tools...'
+                              : _currentIndex == 2
+                                  ? 'Search utilities...'
+                                  : 'Search doubts, titles or tags...',
+                      hintStyle: GoogleFonts.outfit(
+                        fontSize: 13,
+                        color: isDark ? Colors.white38 : Colors.black38,
+                      ),
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      filled: false,
+                      contentPadding: EdgeInsets.zero,
+                      isDense: true,
+                      icon: Icon(
+                        Icons.search_rounded,
+                        size: 18,
+                        color: isDark ? Colors.white54 : Colors.black54,
+                      ),
+                    ),
+                    onChanged: (val) {
+                      if (_currentIndex == 0) {
+                        ref.read(subjectsSearchProvider.notifier).state = val;
+                      } else if (_currentIndex == 1) {
+                        ref.read(prepZoneSearchProvider.notifier).state = val;
+                      } else if (_currentIndex == 2) {
+                        ref.read(utilitiesSearchProvider.notifier).state = val;
+                      } else if (_currentIndex == 3) {
+                        ref.read(skulkFeedSearchProvider.notifier).state = val;
+                      }
+                    },
+                  ),
+                ),
+              )
+            : (_currentIndex == 3
+                ? Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Skulk',
+                        style: GoogleFonts.outfit(
+                          fontWeight: FontWeight.w900,
+                          fontSize: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Image.asset(
+                        'assets/images/lil_fox.png',
+                        width: 32,
+                        height: 32,
+                        fit: BoxFit.contain,
+                      ),
+                    ],
+                  )
+                : null),
+        centerTitle: _currentIndex == 3,
+        actions: [
+          if (_isSearching)
+            IconButton(
+              icon: const Icon(Icons.close_rounded),
+              onPressed: () {
+                setState(() {
+                  _skulkSearchController.clear();
+                  if (_currentIndex == 0) {
+                    ref.read(subjectsSearchProvider.notifier).state = '';
+                  } else if (_currentIndex == 1) {
+                    ref.read(prepZoneSearchProvider.notifier).state = '';
+                  } else if (_currentIndex == 2) {
+                    ref.read(utilitiesSearchProvider.notifier).state = '';
+                  } else if (_currentIndex == 3) {
+                    ref.read(skulkFeedSearchProvider.notifier).state = '';
+                  }
+                });
+              },
+            )
+          else if (_currentIndex == 3)
+            IconButton(
+              icon: const Icon(Icons.search_rounded),
+              onPressed: () {
+                setState(() {
+                  _isSearching = true;
+                });
+              },
+            ),
+
           PopupMenuButton<String>(
             offset: const Offset(0, 48),
             shape: RoundedRectangleBorder(
@@ -347,11 +372,12 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
             onPageChanged: (index) {
               setState(() {
                 _currentIndex = index;
-                if (index != 3) {
-                  _isSearching = false;
-                  _skulkSearchController.clear();
-                  ref.read(skulkFeedSearchProvider.notifier).state = '';
-                }
+                _isSearching = false;
+                _skulkSearchController.clear();
+                ref.read(subjectsSearchProvider.notifier).state = '';
+                ref.read(prepZoneSearchProvider.notifier).state = '';
+                ref.read(utilitiesSearchProvider.notifier).state = '';
+                ref.read(skulkFeedSearchProvider.notifier).state = '';
               });
             },
             children: [
