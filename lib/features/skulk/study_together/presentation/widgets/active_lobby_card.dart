@@ -66,9 +66,10 @@ class ActiveLobbyCard extends ConsumerWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          lobby.icon.isNotEmpty ? lobby.icon : '🔥',
-                          style: const TextStyle(fontSize: 26),
+                        Icon(
+                          lobby.isVoiceEnabled ? Icons.volume_up_rounded : Icons.chat_bubble_outline_rounded,
+                          size: 26,
+                          color: isDark ? Colors.white70 : Colors.black54,
                         ),
                         if (lobby.isVoiceEnabled)
                           Container(

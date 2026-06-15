@@ -224,7 +224,7 @@ class UserVotesNotifier extends AsyncNotifier<Map<String, bool>> {
     final previousState = state.value ?? {};
     final isUpvoted = previousState[doubtId] ?? false;
 
-    // 1. Optimistic UI update
+    // 1. Optimistic UI update for user votes map
     final updatedMap = Map<String, bool>.from(previousState);
     if (isUpvoted) {
       updatedMap.remove(doubtId);
@@ -233,14 +233,67 @@ class UserVotesNotifier extends AsyncNotifier<Map<String, bool>> {
     }
     state = AsyncData(updatedMap);
 
+    // 2. Optimistic count update in skulkFeedProvider
+    final feedNotifier = ref.read(skulkFeedProvider.notifier);
+    if (feedNotifier.state.hasValue) {
+      final list = feedNotifier.state.value!;
+      feedNotifier.state = AsyncData(
+        list.map((d) {
+          if (d.id == doubtId) {
+            return d.copyWith(
+              upvotesCount: d.upvotesCount + (isUpvoted ? -1 : 1),
+            );
+          }
+          return d;
+        }).toList(),
+      );
+    }
+
+    // 3. Optimistic count update in doubtDetailProvider
+    final detailNotifier = ref.read(doubtDetailProvider(doubtId).notifier);
+    if (detailNotifier.state.hasValue) {
+      final d = detailNotifier.state.value;
+      if (d != null) {
+        detailNotifier.state = AsyncData(
+          d.copyWith(
+            upvotesCount: d.upvotesCount + (isUpvoted ? -1 : 1),
+          ),
+        );
+      }
+    }
+
     try {
       await repo.toggleDoubtUpvote(doubtId);
-      // Refresh feed in background to sync count
-      ref.invalidate(skulkFeedProvider);
-      ref.invalidate(doubtDetailProvider(doubtId));
     } catch (_) {
       // Revert on error
       state = AsyncData(previousState);
+      
+      // Revert feed count
+      if (feedNotifier.state.hasValue) {
+        final list = feedNotifier.state.value!;
+        feedNotifier.state = AsyncData(
+          list.map((d) {
+            if (d.id == doubtId) {
+              return d.copyWith(
+                upvotesCount: d.upvotesCount + (isUpvoted ? 1 : -1),
+              );
+            }
+            return d;
+          }).toList(),
+        );
+      }
+      
+      // Revert detail count
+      if (detailNotifier.state.hasValue) {
+        final d = detailNotifier.state.value;
+        if (d != null) {
+          detailNotifier.state = AsyncData(
+            d.copyWith(
+              upvotesCount: d.upvotesCount + (isUpvoted ? 1 : -1),
+            ),
+          );
+        }
+      }
     }
   }
 
@@ -250,7 +303,7 @@ class UserVotesNotifier extends AsyncNotifier<Map<String, bool>> {
     final previousState = state.value ?? {};
     final isUpvoted = previousState[solutionId] ?? false;
 
-    // 1. Optimistic UI update
+    // 1. Optimistic UI update for user votes map
     final updatedMap = Map<String, bool>.from(previousState);
     if (isUpvoted) {
       updatedMap.remove(solutionId);
@@ -259,13 +312,34 @@ class UserVotesNotifier extends AsyncNotifier<Map<String, bool>> {
     }
     state = AsyncData(updatedMap);
 
+    // 2. Optimistic solutions count update
+    final solutionsNotifier = ref.read(solutionsNotifierProvider(doubtId).notifier);
+    final solutionsList = solutionsNotifier.state;
+    solutionsNotifier.state = solutionsList.map((s) {
+      if (s.id == solutionId) {
+        return s.copyWith(
+          upvotesCount: s.upvotesCount + (isUpvoted ? -1 : 1),
+        );
+      }
+      return s;
+    }).toList();
+
     try {
       await repo.toggleSolutionUpvote(solutionId);
-      // Refresh solutions notifier for this doubt to sync count
-      ref.read(solutionsNotifierProvider(doubtId).notifier).refresh();
     } catch (_) {
       // Revert on error
       state = AsyncData(previousState);
+      
+      // Revert solution count
+      final revertedList = solutionsNotifier.state;
+      solutionsNotifier.state = revertedList.map((s) {
+        if (s.id == solutionId) {
+          return s.copyWith(
+            upvotesCount: s.upvotesCount + (isUpvoted ? 1 : -1),
+          );
+        }
+        return s;
+      }).toList();
     }
   }
 }
@@ -276,14 +350,33 @@ final userVotesProvider =
       isAutoDispose: true,
     );
 
-/// Single Doubt detail thread loader
-final doubtDetailProvider = FutureProvider.family<Doubt?, String>((
-  ref,
-  doubtId,
-) async {
-  final repo = ref.watch(skulkRepositoryProvider);
-  return repo.getDoubtDetail(doubtId);
-}, isAutoDispose: true);
+/// Single Doubt detail thread loader (allows local state mutation for upvote counts)
+class DoubtDetailNotifier extends Notifier<AsyncValue<Doubt?>> {
+  DoubtDetailNotifier(this.doubtId);
+  final String doubtId;
+
+  @override
+  AsyncValue<Doubt?> build() {
+    _loadDoubt();
+    return const AsyncValue.loading();
+  }
+
+  Future<void> _loadDoubt() async {
+    try {
+      final repo = ref.read(skulkRepositoryProvider);
+      final res = await repo.getDoubtDetail(doubtId);
+      state = AsyncValue.data(res);
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+    }
+  }
+}
+
+final doubtDetailProvider =
+    NotifierProvider.family<DoubtDetailNotifier, AsyncValue<Doubt?>, String>(
+      DoubtDetailNotifier.new,
+      isAutoDispose: true,
+    );
 
 /// Solutions notifier family to manage answers in a thread
 class SolutionsNotifier extends Notifier<List<Solution>> {

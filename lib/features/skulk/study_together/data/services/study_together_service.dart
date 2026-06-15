@@ -60,4 +60,31 @@ class StudyTogetherService {
 
     return res;
   }
+
+  /// Edits a message
+  Future<Map<String, dynamic>> editMessage(String messageId, String newText) async {
+    final res = await _client
+        .from('room_messages')
+        .update({
+          'message': newText,
+          'edited_at': DateTime.now().toUtc().toIso8601String(),
+        })
+        .eq('id', messageId)
+        .select()
+        .single();
+    return res;
+  }
+
+  /// Soft deletes a message by setting deleted_at
+  Future<Map<String, dynamic>> deleteMessage(String messageId) async {
+    final res = await _client
+        .from('room_messages')
+        .update({
+          'deleted_at': DateTime.now().toUtc().toIso8601String(),
+        })
+        .eq('id', messageId)
+        .select()
+        .single();
+    return res;
+  }
 }

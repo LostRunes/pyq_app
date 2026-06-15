@@ -36,10 +36,10 @@ class CommunitySpaceTile extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             child: Row(
               children: [
-                // Emojis/Icons
-                Text(
-                  room.icon.isNotEmpty ? room.icon : '💬',
-                  style: const TextStyle(fontSize: 18),
+                Icon(
+                  room.isVoiceEnabled ? Icons.volume_up_rounded : Icons.chat_bubble_outline_rounded,
+                  size: 18,
+                  color: isDark ? Colors.white70 : Colors.black54,
                 ),
                 const SizedBox(width: 14),
                 // Title and Subtitle

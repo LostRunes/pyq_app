@@ -33,4 +33,16 @@ class StudyTogetherRepository {
     final rawMessage = await _service.sendMessage(roomId, messageText);
     return RoomMessage.fromJson(rawMessage);
   }
+
+  /// Edits an existing message
+  Future<RoomMessage> editMessage(String messageId, String newText) async {
+    final rawMessage = await _service.editMessage(messageId, newText);
+    return RoomMessage.fromJson(rawMessage);
+  }
+
+  /// Soft deletes/unsends a message
+  Future<RoomMessage> deleteMessage(String messageId) async {
+    final rawMessage = await _service.deleteMessage(messageId);
+    return RoomMessage.fromJson(rawMessage);
+  }
 }

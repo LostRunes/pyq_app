@@ -1075,6 +1075,9 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
                                     color: Colors.grey,
                                   ),
                                   border: InputBorder.none,
+                                  enabledBorder: InputBorder.none,
+                                  focusedBorder: InputBorder.none,
+                                  filled: false,
                                   contentPadding: const EdgeInsets.symmetric(
                                     vertical: 10,
                                   ),

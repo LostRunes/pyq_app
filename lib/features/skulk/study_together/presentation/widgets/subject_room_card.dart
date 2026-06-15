@@ -68,9 +68,10 @@ class SubjectRoomCard extends StatelessWidget {
                         : const Color(0xFFF1F3F5),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Text(
-                    room.icon.isNotEmpty ? room.icon : '📘',
-                    style: const TextStyle(fontSize: 18),
+                  child: Icon(
+                    room.isVoiceEnabled ? Icons.volume_up_rounded : Icons.chat_bubble_outline_rounded,
+                    size: 18,
+                    color: isDark ? Colors.white70 : Colors.black54,
                   ),
                 ),
                 const SizedBox(width: 12),
