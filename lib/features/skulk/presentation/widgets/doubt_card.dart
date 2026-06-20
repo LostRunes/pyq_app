@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../../../core/providers.dart';
-import '../../../../utils/auth_dialog.dart';
 import '../../data/models/doubt.dart';
 import '../providers/skulk_providers.dart';
 import 'report_bottom_sheet.dart';
@@ -222,15 +220,11 @@ class DoubtCard extends ConsumerWidget {
                         }
                       }
                     } else if (value == 'report') {
-                      if (ref.read(isGuestProvider)) {
-                        showLoginRequiredDialog(context, 'report content');
-                      } else {
-                        ReportBottomSheet.show(
-                          context,
-                          target: ReportTarget.doubt,
-                          targetId: doubt.id,
-                        );
-                      }
+                      ReportBottomSheet.show(
+                        context,
+                        target: ReportTarget.doubt,
+                        targetId: doubt.id,
+                      );
                     }
                   },
                   itemBuilder: (_) => [
@@ -429,13 +423,9 @@ class DoubtCard extends ConsumerWidget {
                 // Upvote
                 InkWell(
                   onTap: () {
-                    if (ref.read(isGuestProvider)) {
-                      showLoginRequiredDialog(context, 'upvote doubts');
-                    } else {
-                      ref
-                          .read(userVotesProvider.notifier)
-                          .toggleDoubtVote(doubt.id);
-                    }
+                    ref
+                        .read(userVotesProvider.notifier)
+                        .toggleDoubtVote(doubt.id);
                   },
                   borderRadius: BorderRadius.circular(10),
                   child: Container(

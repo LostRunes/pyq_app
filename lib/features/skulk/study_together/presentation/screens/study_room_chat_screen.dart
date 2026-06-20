@@ -8,8 +8,6 @@ import '../../data/models/study_room.dart';
 import '../../data/models/room_message.dart';
 import '../../../utils/image_utils.dart';
 import '../../../data/services/cloudinary_service.dart';
-import '../../../../../core/providers.dart';
-import '../../../../../utils/auth_dialog.dart';
 import '../providers/study_together_providers.dart';
 import '../widgets/room_message_bubble.dart';
 
@@ -489,36 +487,24 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen> {
                             message: msg,
                             dragOffset: offset,
                             onReply: () {
-                              if (ref.read(isGuestProvider)) {
-                                showLoginRequiredDialog(context, 'reply to messages');
-                              } else {
-                                setState(() {
-                                  _replyingTo = msg;
-                                  _editingMessage = null;
-                                });
-                              }
+                              setState(() {
+                                _replyingTo = msg;
+                                _editingMessage = null;
+                              });
                             },
                             onRepliedMessageTap: _scrollToMessage,
                             onEdit: () {
-                              if (ref.read(isGuestProvider)) {
-                                showLoginRequiredDialog(context, 'edit messages');
-                              } else {
-                                setState(() {
-                                  _editingMessage = msg;
-                                  _replyingTo = null;
-                                  _messageController.text = msg.message
-                                      .replaceAll(RegExp(r'^\[reply:[^\]]*\]'), '')
-                                      .replaceAll(RegExp(r'\[image:[^\]]*\]'), '')
-                                      .trim();
-                                });
-                              }
+                              setState(() {
+                                _editingMessage = msg;
+                                _replyingTo = null;
+                                _messageController.text = msg.message
+                                    .replaceAll(RegExp(r'^\[reply:[^\]]*\]'), '')
+                                    .replaceAll(RegExp(r'\[image:[^\]]*\]'), '')
+                                    .trim();
+                              });
                             },
                             onDelete: () {
-                              if (ref.read(isGuestProvider)) {
-                                showLoginRequiredDialog(context, 'delete messages');
-                              } else {
-                                ref.read(roomChatProvider(widget.room.id).notifier).deleteMessage(msg.id);
-                              }
+                              ref.read(roomChatProvider(widget.room.id).notifier).deleteMessage(msg.id);
                             },
                           );
                         },
@@ -552,36 +538,24 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen> {
                           message: msg,
                           dragOffset: offset,
                           onReply: () {
-                            if (ref.read(isGuestProvider)) {
-                              showLoginRequiredDialog(context, 'reply to messages');
-                            } else {
-                              setState(() {
-                                _replyingTo = msg;
-                                _editingMessage = null;
-                              });
-                            }
+                            setState(() {
+                              _replyingTo = msg;
+                              _editingMessage = null;
+                            });
                           },
                           onRepliedMessageTap: _scrollToMessage,
                           onEdit: () {
-                            if (ref.read(isGuestProvider)) {
-                              showLoginRequiredDialog(context, 'edit messages');
-                            } else {
-                              setState(() {
-                                _editingMessage = msg;
-                                _replyingTo = null;
-                                _messageController.text = msg.message
-                                    .replaceAll(RegExp(r'^\[reply:[^\]]*\]'), '')
-                                    .replaceAll(RegExp(r'\[image:[^\]]*\]'), '')
-                                    .trim();
-                              });
-                            }
+                            setState(() {
+                              _editingMessage = msg;
+                              _replyingTo = null;
+                              _messageController.text = msg.message
+                                  .replaceAll(RegExp(r'^\[reply:[^\]]*\]'), '')
+                                  .replaceAll(RegExp(r'\[image:[^\]]*\]'), '')
+                                  .trim();
+                            });
                           },
                           onDelete: () {
-                            if (ref.read(isGuestProvider)) {
-                              showLoginRequiredDialog(context, 'delete messages');
-                            } else {
-                              ref.read(roomChatProvider(widget.room.id).notifier).deleteMessage(msg.id);
-                            }
+                            ref.read(roomChatProvider(widget.room.id).notifier).deleteMessage(msg.id);
                           },
                         );
                       },
@@ -804,13 +778,7 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen> {
               child: Row(
                 children: [
                   GestureDetector(
-                    onTap: () {
-                      if (ref.read(isGuestProvider)) {
-                        showLoginRequiredDialog(context, 'send photos');
-                      } else {
-                        _showImageSourceBottomSheet();
-                      }
-                    },
+                    onTap: _showImageSourceBottomSheet,
                     child: Padding(
                       padding: const EdgeInsets.only(right: 12),
                       child: Icon(
@@ -831,24 +799,12 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen> {
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: TextField(
                         controller: _messageController,
-                        readOnly: ref.read(isGuestProvider),
-                        onTap: () {
-                          if (ref.read(isGuestProvider)) {
-                            showLoginRequiredDialog(context, 'send messages');
-                          }
-                        },
                         onChanged: _onTextChanged,
                         style: GoogleFonts.outfit(fontSize: 14),
                         maxLines: 4,
                         minLines: 1,
                         textInputAction: TextInputAction.send,
-                        onSubmitted: (_) {
-                          if (ref.read(isGuestProvider)) {
-                            showLoginRequiredDialog(context, 'send messages');
-                          } else {
-                            _sendMessage();
-                          }
-                        },
+                        onSubmitted: (_) => _sendMessage(),
                         decoration: InputDecoration(
                           hintText: 'Message...',
                           hintStyle: GoogleFonts.outfit(
@@ -868,13 +824,7 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen> {
                   ),
                   const SizedBox(width: 12),
                   GestureDetector(
-                    onTap: () {
-                      if (ref.read(isGuestProvider)) {
-                        showLoginRequiredDialog(context, 'send messages');
-                      } else {
-                        _sendMessage();
-                      }
-                    },
+                    onTap: _sendMessage,
                     child: Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
