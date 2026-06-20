@@ -620,9 +620,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Widget _buildLogoutCard(BuildContext context, bool isDark) {
+    final isGuest = ref.watch(isGuestProvider);
     final cardColor = isDark
         ? const Color(0xFF251E4E).withOpacity(0.85)
         : Colors.white;
+    final color = isGuest ? Colors.green : Colors.redAccent;
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8),
@@ -630,9 +632,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         color: cardColor,
         borderRadius: BorderRadius.circular(28),
         border: Border.all(
-          color: isDark
-              ? Colors.red.withOpacity(0.3)
-              : Colors.red.withOpacity(0.15),
+          color: color.withOpacity(isDark ? 0.3 : 0.15),
           width: 1.5,
         ),
         boxShadow: [
@@ -648,25 +648,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         leading: Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: Colors.redAccent.withOpacity(0.12),
+            color: color.withOpacity(0.12),
             shape: BoxShape.circle,
           ),
-          child: const Icon(
-            Icons.logout_rounded,
-            color: Colors.redAccent,
+          child: Icon(
+            isGuest ? Icons.login_rounded : Icons.logout_rounded,
+            color: color,
             size: 22,
           ),
         ),
         title: Text(
-          'Sign Out',
+          isGuest ? 'Sign In' : 'Sign Out',
           style: GoogleFonts.outfit(
             fontWeight: FontWeight.w800,
             fontSize: 16,
-            color: Colors.redAccent,
+            color: color,
           ),
         ),
         subtitle: Text(
-          'Sign out from your Google account',
+          isGuest ? 'Sign in with your Google account to access all features' : 'Sign out from your Google account',
           style: GoogleFonts.outfit(
             fontSize: 12,
             color: isDark ? Colors.white54 : Colors.black54,
@@ -674,10 +674,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ),
         trailing: Icon(
           Icons.chevron_right_rounded,
-          color: Colors.redAccent.withOpacity(0.7),
+          color: color.withOpacity(0.7),
         ),
-        onTap: _confirmSignOut,
+        onTap: () async {
+          if (isGuest) {
+            ref.read(isGuestProvider.notifier).state = false;
+            Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+          } else {
+            _confirmSignOut();
+          }
+        },
       ),
     );
   }
+
 }

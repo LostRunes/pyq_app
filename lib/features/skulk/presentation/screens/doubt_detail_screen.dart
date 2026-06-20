@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../../core/providers.dart';
+import '../../../../utils/auth_dialog.dart';
 import '../../data/models/solution.dart';
 import '../providers/skulk_providers.dart';
 import '../widgets/comment_section.dart';
@@ -423,11 +425,15 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
                       }
                     }
                   } else if (value == 'report') {
-                    ReportBottomSheet.show(
-                      context,
-                      target: ReportTarget.doubt,
-                      targetId: doubt.id,
-                    );
+                    if (ref.read(isGuestProvider)) {
+                      showLoginRequiredDialog(context, 'report content');
+                    } else {
+                      ReportBottomSheet.show(
+                        context,
+                        target: ReportTarget.doubt,
+                        targetId: doubt.id,
+                      );
+                    }
                   }
                 },
                 itemBuilder: (context) => [
@@ -751,9 +757,13 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
                                 // Upvote Doubt Button
                                 InkWell(
                                   onTap: () {
-                                    ref
-                                        .read(userVotesProvider.notifier)
-                                        .toggleDoubtVote(doubt.id);
+                                    if (ref.read(isGuestProvider)) {
+                                      showLoginRequiredDialog(context, 'upvote doubts');
+                                    } else {
+                                      ref
+                                          .read(userVotesProvider.notifier)
+                                          .toggleDoubtVote(doubt.id);
+                                    }
                                   },
                                   borderRadius: BorderRadius.circular(10),
                                   child: Container(
@@ -1050,7 +1060,13 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
                               Icons.add_a_photo_outlined,
                               color: Theme.of(context).colorScheme.primary,
                             ),
-                            onPressed: _showSolutionImageSourceBottomSheet,
+                            onPressed: () {
+                              if (ref.read(isGuestProvider)) {
+                                showLoginRequiredDialog(context, 'post a solution');
+                              } else {
+                                _showSolutionImageSourceBottomSheet();
+                              }
+                            },
                           ),
                           Expanded(
                             child: Container(
@@ -1065,6 +1081,12 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
                               ),
                               child: TextField(
                                 controller: _solutionController,
+                                readOnly: ref.read(isGuestProvider),
+                                onTap: () {
+                                  if (ref.read(isGuestProvider)) {
+                                    showLoginRequiredDialog(context, 'post a solution');
+                                  }
+                                },
                                 maxLines: null,
                                 keyboardType: TextInputType.multiline,
                                 style: GoogleFonts.outfit(fontSize: 13),
@@ -1089,7 +1111,13 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
                           GestureDetector(
                             onTap: _isSubmittingSolution
                                 ? null
-                                : () => _submitSolution(doubtId),
+                                : () {
+                                    if (ref.read(isGuestProvider)) {
+                                      showLoginRequiredDialog(context, 'post a solution');
+                                    } else {
+                                      _submitSolution(doubtId);
+                                    }
+                                  },
                             child: CircleAvatar(
                               radius: 20,
                               backgroundColor: Theme.of(

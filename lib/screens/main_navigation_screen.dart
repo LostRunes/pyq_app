@@ -8,6 +8,7 @@ import '../features/skulk/presentation/providers/skulk_providers.dart';
 import 'subjects_page.dart';
 import 'prep_zone_page.dart';
 import 'utilities_page.dart';
+import '../utils/auth_dialog.dart';
 
 class MainNavigationScreen extends ConsumerStatefulWidget {
   final String branchId;
@@ -67,6 +68,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
   Widget build(BuildContext context) {
     final activeSemester = ref.watch(selectedSemesterProvider);
     final activeBranchId = ref.watch(selectedBranchIdProvider);
+    final isGuest = ref.watch(isGuestProvider);
 
     if (_currentSemester != activeSemester) {
       _currentSemester = activeSemester;
@@ -276,11 +278,20 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
             ),
             onSelected: (value) {
               if (value == 'profile') {
-                Navigator.pushNamed(context, '/profile');
+                if (isGuest) {
+                  showLoginRequiredDialog(context, "view your profile");
+                } else {
+                  Navigator.pushNamed(context, '/profile');
+                }
               } else if (value == 'settings') {
                 Navigator.pushNamed(context, '/settings');
               } else if (value == 'logout') {
-                _showLogoutDialog(context);
+                if (isGuest) {
+                  ref.read(isGuestProvider.notifier).state = false;
+                  Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+                } else {
+                  _showLogoutDialog(context);
+                }
               }
             },
             itemBuilder: (BuildContext context) => [
@@ -329,16 +340,16 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
                 value: 'logout',
                 child: Row(
                   children: [
-                    const Icon(
-                      Icons.logout_rounded,
-                      color: Colors.redAccent,
+                    Icon(
+                      isGuest ? Icons.login_rounded : Icons.logout_rounded,
+                      color: isGuest ? Colors.green : Colors.redAccent,
                       size: 20,
                     ),
                     const SizedBox(width: 12),
                     Text(
-                      'Logout',
+                      isGuest ? 'Sign In' : 'Logout',
                       style: GoogleFonts.outfit(
-                        color: Colors.redAccent,
+                        color: isGuest ? Colors.green : Colors.redAccent,
                         fontWeight: FontWeight.bold,
                         fontSize: 13,
                       ),

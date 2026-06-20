@@ -624,6 +624,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                     ],
                                   ),
                           ),
+                          const SizedBox(height: 16),
+                          TextButton(
+                            onPressed: _isLoading
+                                ? null
+                                : () {
+                                    ref.read(isGuestProvider.notifier).state = true;
+                                    Navigator.pushReplacementNamed(context, '/selection');
+                                  },
+                            child: Text(
+                              'Proceed without log in',
+                              style: GoogleFonts.outfit(
+                                fontWeight: FontWeight.bold,
+                                color: theme.colorScheme.primary,
+                                fontSize: 15,
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ),

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../../../core/providers.dart';
+import '../../../../../utils/auth_dialog.dart';
 import '../providers/study_together_providers.dart';
 import '../widgets/active_lobby_card.dart';
 import '../widgets/subject_room_card.dart';
@@ -508,14 +510,22 @@ class _StudyTogetherScreenState extends ConsumerState<StudyTogetherScreen> {
             icon: const Icon(Icons.add_circle_outline_rounded),
             tooltip: 'Create or Join Room',
             onPressed: () {
-              _showCreateOrJoinDialog(context);
+              if (ref.read(isGuestProvider)) {
+                showLoginRequiredDialog(context, 'create or join personal rooms');
+              } else {
+                _showCreateOrJoinDialog(context);
+              }
             },
           ),
           IconButton(
             icon: const Icon(Icons.library_add_rounded),
             tooltip: 'Add Subject Rooms',
             onPressed: () {
-              _showAddSubjectRoomDialog(context);
+              if (ref.read(isGuestProvider)) {
+                showLoginRequiredDialog(context, 'add subject rooms');
+              } else {
+                _showAddSubjectRoomDialog(context);
+              }
             },
           ),
         ],
