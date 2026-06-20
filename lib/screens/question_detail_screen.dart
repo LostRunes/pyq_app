@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter/services.dart';
 import '../core/providers.dart';
 import '../widgets/solution_sheet.dart';
 
@@ -17,7 +18,36 @@ class QuestionDetailScreen extends ConsumerWidget {
 
     return Scaffold(
       extendBodyBehindAppBar: true,
-      appBar: AppBar(title: const Text('Question Detail')),
+      appBar: AppBar(
+        title: const Text('Question Detail'),
+        actions: [
+          questionAsync.when(
+            data: (question) => IconButton(
+              icon: const Icon(Icons.content_copy_rounded),
+              tooltip: 'Copy Question Text',
+              onPressed: () async {
+                await Clipboard.setData(ClipboardData(text: question.questionText));
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'Question text copied to clipboard!',
+                        style: GoogleFonts.outfit(),
+                      ),
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  );
+                }
+              },
+            ),
+            loading: () => const SizedBox.shrink(),
+            error: (_, __) => const SizedBox.shrink(),
+          ),
+        ],
+      ),
       body: Container(
         width: double.infinity,
         height: double.infinity,
