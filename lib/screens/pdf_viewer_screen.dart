@@ -5,7 +5,6 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../services/analytics_service.dart';
 
 class PdfViewerScreen extends StatefulWidget {
   final String pdfUrl;
@@ -32,7 +31,6 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
   void initState() {
     super.initState();
     _downloadPdf();
-    AnalyticsService.logNotesDownloaded(widget.title, 'Drive PDF');
   }
 
   Future<void> _downloadPdf() async {

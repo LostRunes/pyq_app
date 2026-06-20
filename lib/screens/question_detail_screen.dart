@@ -4,7 +4,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter/services.dart';
 import '../core/providers.dart';
 import '../widgets/solution_sheet.dart';
-import '../services/analytics_service.dart';
 
 class QuestionDetailScreen extends ConsumerWidget {
   final String questionId;
@@ -66,13 +65,9 @@ class QuestionDetailScreen extends ConsumerWidget {
             : null,
         child: SafeArea(
           child: questionAsync.when(
-            data: (question) {
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                AnalyticsService.logPyqViewed(question.difficulty, questionId);
-              });
-              return SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
-                child: Column(
+            data: (question) => SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   // Metadata Tags
@@ -257,9 +252,8 @@ class QuestionDetailScreen extends ConsumerWidget {
                   const SizedBox(height: 40),
                 ],
               ),
-            );
-          },
-          loading: () => const Center(child: CircularProgressIndicator()),
+            ),
+            loading: () => const Center(child: CircularProgressIndicator()),
             error: (e, _) => Center(child: Text('Error: $e')),
           ),
         ),

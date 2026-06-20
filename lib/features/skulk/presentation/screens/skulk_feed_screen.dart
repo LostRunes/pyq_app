@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/providers.dart';
-import '../../../../utils/auth_dialog.dart';
 import '../providers/skulk_providers.dart';
 import '../widgets/doubt_card.dart';
 import '../widgets/doubt_card_skeleton.dart';
@@ -214,18 +213,14 @@ class _SkulkFeedScreenState extends ConsumerState<SkulkFeedScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          if (ref.read(isGuestProvider)) {
-            showLoginRequiredDialog(context, 'ask a doubt');
-          } else {
-            Navigator.pushNamed(
-              context,
-              '/skulk_create',
-              arguments: {
-                'branchId': widget.branchId,
-                'semester': widget.semester,
-              },
-            );
-          }
+          Navigator.pushNamed(
+            context,
+            '/skulk_create',
+            arguments: {
+              'branchId': widget.branchId,
+              'semester': widget.semester,
+            },
+          );
         },
         backgroundColor: Theme.of(context).colorScheme.primary,
         elevation: 4,
@@ -527,19 +522,13 @@ class NotificationBell extends ConsumerWidget {
         ),
       ),
       onPressed: () {
-        if (ref.read(isGuestProvider)) {
-          showLoginRequiredDialog(context, 'view notifications');
-        } else {
-          Navigator.pushNamed(context, '/skulk_notifications');
-        }
+        Navigator.pushNamed(context, '/skulk_notifications');
       },
     );
   }
 }
 
 final unreadCountProvider = FutureProvider.autoDispose<int>((ref) async {
-  final isGuest = ref.watch(isGuestProvider);
-  if (isGuest) return 0;
   final repo = ref.watch(skulkRepositoryProvider);
   return repo.getUnreadNotificationCount();
 });
