@@ -8,9 +8,6 @@ import '../features/skulk/presentation/providers/skulk_providers.dart';
 import 'subjects_page.dart';
 import 'prep_zone_page.dart';
 import 'utilities_page.dart';
-import '../utils/auth_dialog.dart';
-import '../services/analytics_service.dart';
-
 
 class MainNavigationScreen extends ConsumerStatefulWidget {
   final String branchId;
@@ -70,7 +67,6 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
   Widget build(BuildContext context) {
     final activeSemester = ref.watch(selectedSemesterProvider);
     final activeBranchId = ref.watch(selectedBranchIdProvider);
-    final isGuest = ref.watch(isGuestProvider);
 
     if (_currentSemester != activeSemester) {
       _currentSemester = activeSemester;
@@ -185,11 +181,6 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
                         ref.read(skulkFeedSearchProvider.notifier).state = val;
                       }
                     },
-                    onSubmitted: (val) {
-                      if (val.trim().isNotEmpty) {
-                        AnalyticsService.logSearchPerformed(val.trim());
-                      }
-                    },
                   ),
                 ),
               )
@@ -285,20 +276,11 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
             ),
             onSelected: (value) {
               if (value == 'profile') {
-                if (isGuest) {
-                  showLoginRequiredDialog(context, "view your profile");
-                } else {
-                  Navigator.pushNamed(context, '/profile');
-                }
+                Navigator.pushNamed(context, '/profile');
               } else if (value == 'settings') {
                 Navigator.pushNamed(context, '/settings');
               } else if (value == 'logout') {
-                if (isGuest) {
-                  ref.read(isGuestProvider.notifier).state = false;
-                  Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
-                } else {
-                  _showLogoutDialog(context);
-                }
+                _showLogoutDialog(context);
               }
             },
             itemBuilder: (BuildContext context) => [
@@ -347,16 +329,16 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
                 value: 'logout',
                 child: Row(
                   children: [
-                    Icon(
-                      isGuest ? Icons.login_rounded : Icons.logout_rounded,
-                      color: isGuest ? Colors.green : Colors.redAccent,
+                    const Icon(
+                      Icons.logout_rounded,
+                      color: Colors.redAccent,
                       size: 20,
                     ),
                     const SizedBox(width: 12),
                     Text(
-                      isGuest ? 'Sign In' : 'Logout',
+                      'Logout',
                       style: GoogleFonts.outfit(
-                        color: isGuest ? Colors.green : Colors.redAccent,
+                        color: Colors.redAccent,
                         fontWeight: FontWeight.bold,
                         fontSize: 13,
                       ),

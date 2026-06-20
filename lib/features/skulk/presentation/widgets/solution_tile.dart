@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../../../core/providers.dart';
-import '../../../../utils/auth_dialog.dart';
 import '../../data/models/solution.dart';
 import '../providers/skulk_providers.dart';
 import 'report_bottom_sheet.dart';
@@ -182,15 +180,11 @@ class SolutionTile extends ConsumerWidget {
                   } else if (value == 'delete') {
                     onDelete();
                   } else if (value == 'report') {
-                    if (ref.read(isGuestProvider)) {
-                      showLoginRequiredDialog(context, 'report content');
-                    } else {
-                      ReportBottomSheet.show(
-                        context,
-                        target: ReportTarget.solution,
-                        targetId: solution.id,
-                      );
-                    }
+                    ReportBottomSheet.show(
+                      context,
+                      target: ReportTarget.solution,
+                      targetId: solution.id,
+                    );
                   }
                 },
                 itemBuilder: (context) => [
@@ -292,13 +286,9 @@ class SolutionTile extends ConsumerWidget {
                   // Upvote Toggle Button
                   InkWell(
                     onTap: () {
-                      if (ref.read(isGuestProvider)) {
-                        showLoginRequiredDialog(context, 'upvote solutions');
-                      } else {
-                        ref
-                            .read(userVotesProvider.notifier)
-                            .toggleSolutionVote(solution.id, solution.postId);
-                      }
+                      ref
+                          .read(userVotesProvider.notifier)
+                          .toggleSolutionVote(solution.id, solution.postId);
                     },
                     borderRadius: BorderRadius.circular(8),
                     child: Container(
