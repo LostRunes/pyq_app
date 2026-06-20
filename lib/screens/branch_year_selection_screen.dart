@@ -66,7 +66,7 @@ class _BranchYearSelectionScreenState
                 ),
                 const SizedBox(height: 32),
                 Text(
-                  'Welcome back! ✨',
+                  'Welcome! ✨',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.displaySmall?.copyWith(
                     fontWeight: FontWeight.w900,
