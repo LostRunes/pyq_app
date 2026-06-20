@@ -7,6 +7,8 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../services/analytics_service.dart';
+
 
 class LoginScreen extends ConsumerStatefulWidget {
   final bool showUsernameDialog;
@@ -94,6 +96,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _handlePostLogin(User user) async {
+    // Track user in Firebase Analytics
+    unawaited(AnalyticsService.setUser(user.id));
+    unawaited(AnalyticsService.logLogin());
+
     setState(() {
       _isLoading = true;
     });

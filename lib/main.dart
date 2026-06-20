@@ -29,9 +29,16 @@ import 'features/skulk/presentation/screens/notifications_screen.dart';
 import 'features/skulk/study_together/presentation/screens/study_together_screen.dart';
 import 'features/skulk/study_together/presentation/screens/study_room_chat_screen.dart';
 import 'features/skulk/study_together/data/models/study_room.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
+import 'services/analytics_service.dart';
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   await dotenv.load(fileName: ".env");
 
   await Supabase.initialize(
@@ -62,6 +69,7 @@ class PyqApp extends ConsumerWidget {
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
       themeMode: themeMode,
+      navigatorObservers: [AnalyticsService.observer],
       initialRoute: '/',
       routes: {
         '/': (context) => const SplashScreen(),
