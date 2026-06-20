@@ -62,7 +62,7 @@ class SubjectsPage extends ConsumerWidget {
                         ),
                         const Spacer(),
                         GestureDetector(
-                          onTap: () => Navigator.pop(context),
+                          onTap: () => Navigator.pushReplacementNamed(context, '/selection'),
                           behavior: HitTestBehavior.opaque,
                           child: Padding(
                             padding: const EdgeInsets.symmetric(
