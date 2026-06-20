@@ -94,10 +94,23 @@ class DriveService {
       ],
     );
 
-    final currentUser =
-        googleSignIn.currentUser ?? await googleSignIn.signInSilently();
+    GoogleSignInAccount? currentUser = googleSignIn.currentUser;
+    if (currentUser == null) {
+      currentUser = await googleSignIn.signInSilently();
+    }
+    if (currentUser == null) {
+      currentUser = await googleSignIn.signIn();
+    }
     if (currentUser == null) {
       throw Exception("User is not signed in to Google.");
+    }
+
+    // Request the Drive scope.
+    // On Android/iOS, if the scope is already granted, requestScopes resolves silently and returns true immediately.
+    // canAccessScopes() is not implemented on mobile platforms and throws UnimplementedError.
+    final granted = await googleSignIn.requestScopes(['https://www.googleapis.com/auth/drive.file']);
+    if (!granted) {
+      throw Exception("Google Drive permission was denied.");
     }
     final auth = await currentUser.authentication;
     final accessToken = auth.accessToken;
