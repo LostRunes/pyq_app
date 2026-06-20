@@ -12,6 +12,7 @@ import '../widgets/loading_overlay.dart';
 import '../utils/drive_utils.dart';
 import 'pdf_viewer_screen.dart';
 import 'image_viewer_screen.dart';
+import '../services/analytics_service.dart';
 
 class SubjectDashboardScreen extends ConsumerStatefulWidget {
   final Subject subject;
@@ -28,6 +29,7 @@ class _SubjectDashboardScreenState
   @override
   void initState() {
     super.initState();
+    AnalyticsService.logSubjectOpened(widget.subject.name);
   }
 
   @override
