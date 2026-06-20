@@ -306,3 +306,16 @@ final utilitiesSearchProvider = NotifierProvider<UtilitiesSearchNotifier, String
   UtilitiesSearchNotifier.new,
 );
 
+class GuestNotifier extends Notifier<bool> {
+  @override
+  bool build() => false;
+
+  @override
+  set state(bool value) => super.state = value;
+}
+
+final isGuestProvider = NotifierProvider<GuestNotifier, bool>(
+  GuestNotifier.new,
+);
+
+
