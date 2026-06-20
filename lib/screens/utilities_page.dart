@@ -34,6 +34,13 @@ class UtilitiesPage extends ConsumerWidget {
         'route': '/syllabus',
         'color': const Color(0xFFF59E0B), // Amber
       },
+      {
+        'title': 'Focus Timer',
+        'desc': 'Set a timer to stay focused',
+        'icon': Icons.timer_rounded,
+        'route': '/focus_timer',
+        'color': const Color(0xFFEC4899), // Pink
+      },
     ];
 
     final filteredUtils = utils.where((util) {

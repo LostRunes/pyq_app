@@ -20,6 +20,7 @@ import 'screens/gpa_calculator_screen.dart';
 import 'screens/syllabus_screen.dart';
 import 'screens/algo_code_screen.dart';
 import 'screens/gate_prep_screen.dart';
+import 'screens/focus_timer_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'features/skulk/presentation/screens/create_doubt_screen.dart';
@@ -136,6 +137,7 @@ class PyqApp extends ConsumerWidget {
         '/syllabus': (context) => const SyllabusScreen(),
         '/algo_code': (context) => const AlgoCodeScreen(),
         '/gate_prep': (context) => const GatePrepScreen(),
+        '/focus_timer': (context) => const FocusTimerScreen(),
       },
     );
   }
