@@ -7,6 +7,9 @@ import 'package:mime/mime.dart';
 import '../core/providers.dart';
 import '../models/subject.dart';
 import '../services/drive_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'upload_history_screen.dart';
+
 
 class UploadNotesScreen extends ConsumerStatefulWidget {
   const UploadNotesScreen({super.key});
@@ -55,7 +58,22 @@ class _UploadNotesScreenState extends ConsumerState<UploadNotesScreen> {
           'Upload Notes',
           style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.history_rounded),
+            tooltip: 'Upload History',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const UploadHistoryScreen(),
+                ),
+              );
+            },
+          ),
+        ],
       ),
+
       body: Container(
         width: double.infinity,
         height: double.infinity,
@@ -442,12 +460,21 @@ class _UploadNotesScreenState extends ConsumerState<UploadNotesScreen> {
                                   lookupMimeType(filePath) ??
                                   'application/octet-stream';
 
-                              await DriveService().uploadFile(
+                              final fileId = await DriveService().uploadFile(
                                 filename: file.name,
                                 mimeType: mimeType,
                                 fileBytes: fileBytes,
                                 subjectName: _uploadSubject!.name,
                               );
+
+                              if (fileId != null) {
+                                await Supabase.instance.client.from('uploaded_notes').insert({
+                                  'drive_file_id': fileId,
+                                  'filename': file.name,
+                                  'subject_name': _uploadSubject!.name,
+                                  'semester': _uploadSemester,
+                                });
+                              }
                             }
 
                             if (context.mounted) {
