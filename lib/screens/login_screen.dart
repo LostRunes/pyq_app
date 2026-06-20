@@ -346,11 +346,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     });
 
     try {
-      // Sign out any existing Google session first to always show account picker
-      await _googleSignIn.signOut();
+      // Silently try to get existing sign-in session first (avoids deadlock
+      // caused by calling signOut() while a previous signIn() is still
+      // resolving on the plugin's internal thread).
+      GoogleSignInAccount? googleUser = await _googleSignIn.signInSilently();
 
-      // This opens the NATIVE in-app Google account picker (no browser redirect)
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      // If no cached session, show the account picker
+      if (googleUser == null) {
+        googleUser = await _googleSignIn.signIn();
+      }
 
       if (googleUser == null) {
         // User dismissed the picker
@@ -386,7 +390,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       setState(() {
         _isLoading = false;
       });
-      _showErrorSnackBar('Google Sign In failed: $e');
+
+      // Deadlock error from google_sign_in plugin: a previous sign-in attempt
+      // is still resolving. Disconnect fully and ask user to try again.
+      final errStr = e.toString();
+      if (errStr.contains('deadlock') || errStr.contains('main thread')) {
+        try {
+          await _googleSignIn.disconnect();
+        } catch (_) {
+          // Ignore disconnect errors — we just want to clear state
+        }
+        _showErrorSnackBar(
+          'Sign-in initializing, please tap "Continue with Google" again.',
+        );
+      } else {
+        _showErrorSnackBar('Google Sign In failed: $e');
+      }
     }
   }
 
