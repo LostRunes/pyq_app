@@ -59,7 +59,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       scopes: [
         'email',
         'profile',
-        'https://www.googleapis.com/auth/drive.file',
       ],
     );
 
