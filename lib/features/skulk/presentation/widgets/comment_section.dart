@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../../../core/providers.dart';
-import '../../../../utils/auth_dialog.dart';
 import '../../data/models/comment.dart';
 import '../providers/skulk_providers.dart';
 import 'report_bottom_sheet.dart';
@@ -374,15 +372,11 @@ class _CommentSectionState extends ConsumerState<CommentSection> {
                                       .deleteComment(c.id);
                                 }
                               } else if (value == 'report') {
-                                if (ref.read(isGuestProvider)) {
-                                  showLoginRequiredDialog(context, 'report content');
-                                } else {
-                                  ReportBottomSheet.show(
-                                    context,
-                                    target: ReportTarget.comment,
-                                    targetId: c.id,
-                                  );
-                                }
+                                ReportBottomSheet.show(
+                                  context,
+                                  target: ReportTarget.comment,
+                                  targetId: c.id,
+                                );
                               }
                             },
                             itemBuilder: (context) => [
@@ -472,12 +466,6 @@ class _CommentSectionState extends ConsumerState<CommentSection> {
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: TextField(
                         controller: _commentController,
-                        readOnly: ref.read(isGuestProvider),
-                        onTap: () {
-                          if (ref.read(isGuestProvider)) {
-                            showLoginRequiredDialog(context, 'post a comment');
-                          }
-                        },
                         maxLines: null,
                         keyboardType: TextInputType.multiline,
                         style: GoogleFonts.outfit(fontSize: 13),
@@ -497,15 +485,7 @@ class _CommentSectionState extends ConsumerState<CommentSection> {
                   ),
                   const SizedBox(width: 8),
                   GestureDetector(
-                    onTap: _isSubmitting
-                        ? null
-                        : () {
-                            if (ref.read(isGuestProvider)) {
-                              showLoginRequiredDialog(context, 'post a comment');
-                            } else {
-                              _submitComment();
-                            }
-                          },
+                    onTap: _isSubmitting ? null : _submitComment,
                     child: CircleAvatar(
                       radius: 20,
                       backgroundColor: Theme.of(context).colorScheme.primary,
