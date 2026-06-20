@@ -9,6 +9,8 @@ import 'subjects_page.dart';
 import 'prep_zone_page.dart';
 import 'utilities_page.dart';
 import '../utils/auth_dialog.dart';
+import '../services/analytics_service.dart';
+
 
 class MainNavigationScreen extends ConsumerStatefulWidget {
   final String branchId;
@@ -181,6 +183,11 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
                         ref.read(utilitiesSearchProvider.notifier).state = val;
                       } else if (_currentIndex == 3) {
                         ref.read(skulkFeedSearchProvider.notifier).state = val;
+                      }
+                    },
+                    onSubmitted: (val) {
+                      if (val.trim().isNotEmpty) {
+                        AnalyticsService.logSearchPerformed(val.trim());
                       }
                     },
                   ),
