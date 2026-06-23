@@ -29,6 +29,7 @@ class SolutionTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final voteState = ref.watch(userVotesProvider);
+    final votesLoaded = voteState.hasValue;
     final isUpvoted = voteState.value?[solution.id] ?? false;
 
     final currentUserId = Supabase.instance.client.auth.currentUser?.id;
@@ -285,11 +286,13 @@ class SolutionTile extends ConsumerWidget {
                 children: [
                   // Upvote Toggle Button
                   InkWell(
-                    onTap: () {
-                      ref
-                          .read(userVotesProvider.notifier)
-                          .toggleSolutionVote(solution.id, solution.postId);
-                    },
+                    onTap: votesLoaded
+                        ? () {
+                            ref
+                                .read(userVotesProvider.notifier)
+                                .toggleSolutionVote(solution.id, solution.postId);
+                          }
+                        : null,
                     borderRadius: BorderRadius.circular(8),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
@@ -315,7 +318,7 @@ class SolutionTile extends ConsumerWidget {
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            '${solution.upvotesCount}',
+                            votesLoaded ? '${solution.upvotesCount}' : '…',
                             style: GoogleFonts.outfit(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,

@@ -218,10 +218,13 @@ class UserVotesNotifier extends AsyncNotifier<Map<String, bool>> {
     return voteMap;
   }
 
-  /// Optimistically toggles an upvote state for a doubt
+  /// Optimistically toggles an upvote state for a doubt.
+  /// Bails out early if votes haven't loaded yet to avoid incorrect toggling.
   Future<void> toggleDoubtVote(String doubtId) async {
+    // Guard: don't toggle if vote map isn't loaded yet (prevents wrong-direction toggle)
+    if (!state.hasValue) return;
     final repo = ref.read(skulkRepositoryProvider);
-    final previousState = state.value ?? {};
+    final previousState = state.value!;
     final isUpvoted = previousState[doubtId] ?? false;
 
     // 1. Optimistic UI update for user votes map
@@ -321,8 +324,10 @@ class UserVotesNotifier extends AsyncNotifier<Map<String, bool>> {
 
   /// Optimistically toggles an upvote state for a solution
   Future<void> toggleSolutionVote(String solutionId, String doubtId) async {
+    // Guard: don't toggle if vote map isn't loaded yet (prevents wrong-direction toggle)
+    if (!state.hasValue) return;
     final repo = ref.read(skulkRepositoryProvider);
-    final previousState = state.value ?? {};
+    final previousState = state.value!;
     final isUpvoted = previousState[solutionId] ?? false;
 
     // 1. Optimistic UI update for user votes map
