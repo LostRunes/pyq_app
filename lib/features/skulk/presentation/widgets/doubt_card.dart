@@ -16,6 +16,7 @@ class DoubtCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final voteState = ref.watch(userVotesProvider);
+    final votesLoaded = voteState.hasValue;
     final isUpvoted = voteState.value?[doubt.id] ?? false;
     final currentUserId = Supabase.instance.client.auth.currentUser?.id;
     final isOwnDoubt = currentUserId != null && currentUserId == doubt.userId;
@@ -422,11 +423,13 @@ class DoubtCard extends ConsumerWidget {
               children: [
                 // Upvote
                 InkWell(
-                  onTap: () {
-                    ref
-                        .read(userVotesProvider.notifier)
-                        .toggleDoubtVote(doubt.id);
-                  },
+                  onTap: votesLoaded
+                      ? () {
+                          ref
+                              .read(userVotesProvider.notifier)
+                              .toggleDoubtVote(doubt.id);
+                        }
+                      : null,
                   borderRadius: BorderRadius.circular(10),
                   child: Container(
                     padding: const EdgeInsets.symmetric(
@@ -452,7 +455,7 @@ class DoubtCard extends ConsumerWidget {
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          '${doubt.upvotesCount}',
+                          votesLoaded ? '${doubt.upvotesCount}' : '…',
                           style: GoogleFonts.outfit(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
