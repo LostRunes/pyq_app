@@ -1,4 +1,4 @@
-import '../../../../services/supabase_service.dart';
+import 'package:focus_fox/features/subjects/data/repositories/subjects_repository.dart';
 import '../models/comment.dart';
 import '../models/doubt.dart';
 import '../models/solution.dart';
@@ -6,16 +6,16 @@ import '../services/skulk_db_service.dart';
 
 class SkulkRepository {
   final SkulkDbService _dbService;
-  final SupabaseService _supabaseService;
+  final SubjectsRepository _subjectsRepository;
 
   // In-memory cache for mapping subject ID to subject name (sourced from Supabase 1)
   final Map<String, String> _subjectCache = {};
 
   SkulkRepository({
     required SkulkDbService dbService,
-    required SupabaseService supabaseService,
+    required SubjectsRepository subjectsRepository,
   }) : _dbService = dbService,
-       _supabaseService = supabaseService;
+       _subjectsRepository = subjectsRepository;
 
   /// Ensures that all curriculum subjects are cached in memory for quick name mapping.
   /// Sources from Supabase 1 (the academic DB). subject_id in doubt_posts is stored
@@ -23,7 +23,7 @@ class SkulkRepository {
   Future<void> _ensureSubjectCache() async {
     if (_subjectCache.isNotEmpty) return;
     try {
-      final subjects = await _supabaseService.getAllSubjects();
+      final subjects = await _subjectsRepository.getAllSubjects();
       for (var s in subjects) {
         _subjectCache[s.id] = s.name;
       }
