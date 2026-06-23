@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../../../core/providers.dart';
+import '../../../subjects/presentation/providers/subjects_providers.dart';
 import '../providers/skulk_providers.dart';
 import '../widgets/doubt_card.dart';
 import '../widgets/doubt_card_skeleton.dart';

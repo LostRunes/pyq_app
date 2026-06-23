@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/providers.dart';
+import '../../../subjects/presentation/providers/subjects_providers.dart';
 import '../../data/models/doubt.dart';
 import '../providers/skulk_providers.dart';
 import '../../data/services/cloudinary_service.dart';
@@ -131,14 +132,14 @@ class _CreateDoubtScreenState extends ConsumerState<CreateDoubtScreen> {
 
           if (match != null) {
             final rollNo = match.group(1)!;
-            final studentService = ref.read(supabaseServiceProvider);
-            final student = await studentService.getStudentByRollNo(rollNo);
+            final subjectsRepo = ref.read(subjectsRepositoryProvider);
+            final student = await subjectsRepo.getStudentByRollNo(rollNo);
 
             if (student != null) {
               final batch = student['batch']?.toString() ?? '';
               final section = student['section']?.toString() ?? '';
 
-              final fetchedBranchId = await studentService
+              final fetchedBranchId = await subjectsRepo
                   .getBranchIdFromSection(section);
               final fetchedSemester = _getSemesterFromBatch(batch);
               if (mounted) {
