@@ -5,8 +5,8 @@ import '../providers/study_together_providers.dart';
 import '../widgets/active_lobby_card.dart';
 import '../widgets/subject_room_card.dart';
 import '../widgets/community_space_tile.dart';
-import '../../../../../widgets/custom_search_bar.dart';
-import '../../../../../utils/fuzzy_search.dart';
+import 'package:focus_fox/shared/widgets/custom_search_bar.dart';
+import 'package:focus_fox/utils/fuzzy_search.dart';
 
 class StudyTogetherScreen extends ConsumerStatefulWidget {
   const StudyTogetherScreen({super.key});

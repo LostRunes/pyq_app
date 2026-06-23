@@ -5,7 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../data/models/solution.dart';
 import '../providers/skulk_providers.dart';
 import 'report_bottom_sheet.dart';
-import '../../../../widgets/common/cloudinary_image_gallery.dart';
+import 'package:focus_fox/shared/widgets/common/cloudinary_image_gallery.dart';
 
 class SolutionTile extends ConsumerWidget {
   final Solution solution;

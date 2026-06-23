@@ -11,13 +11,13 @@ final skulkDbServiceProvider = Provider<SkulkDbService>(
   (ref) => SkulkDbService(),
 );
 
-/// Repository Provider (depends on SupabaseService and SkulkDbService)
+/// Repository Provider (depends on SubjectsRepository and SkulkDbService)
 final skulkRepositoryProvider = Provider<SkulkRepository>((ref) {
   final dbService = ref.watch(skulkDbServiceProvider);
-  final supabaseService = ref.watch(supabaseServiceProvider);
+  final subjectsRepository = ref.watch(subjectsRepositoryProvider);
   return SkulkRepository(
     dbService: dbService,
-    supabaseService: supabaseService,
+    subjectsRepository: subjectsRepository,
   );
 });
 

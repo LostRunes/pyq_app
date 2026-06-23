@@ -82,11 +82,11 @@ class SkulkDbService {
         'user_id': userId,
         'type': type,
         'message': message,
-        if (postId != null) 'post_id': postId,
-        if (answerId != null) 'answer_id': answerId,
-        if (actorId != null) 'actor_id': actorId,
-        if (actorUsername != null) 'actor_username': actorUsername,
-        if (actorDisplayName != null) 'actor_display_name': actorDisplayName,
+        'post_id': ?postId,
+        'answer_id': ?answerId,
+        'actor_id': ?actorId,
+        'actor_username': ?actorUsername,
+        'actor_display_name': ?actorDisplayName,
       });
     } catch (_) {
       // Notifications are non-critical — fail silently
@@ -163,8 +163,9 @@ class SkulkDbService {
     List<String> imageUrls = const [],
   }) async {
     final userId = _client.auth.currentUser?.id;
-    if (userId == null)
+    if (userId == null) {
       throw Exception('User must be logged in to post doubts.');
+    }
 
     final res = await _client
         .from('doubt_posts')
@@ -240,8 +241,9 @@ class SkulkDbService {
     List<String> imageUrls = const [],
   }) async {
     final userId = _client.auth.currentUser?.id;
-    if (userId == null)
+    if (userId == null) {
       throw Exception('User must be logged in to solve doubts.');
+    }
 
     // 1. Insert answer
     final res = await _client
@@ -408,14 +410,15 @@ class SkulkDbService {
     required String reason,
   }) async {
     final userId = _client.auth.currentUser?.id;
-    if (userId == null)
+    if (userId == null) {
       throw Exception('User must be logged in to report content.');
+    }
 
     await _client.from('reports').insert({
       'reporter_id': userId,
-      if (postId != null) 'post_id': postId,
-      if (answerId != null) 'answer_id': answerId,
-      if (commentId != null) 'comment_id': commentId,
+      'post_id': ?postId,
+      'answer_id': ?answerId,
+      'comment_id': ?commentId,
       'reason': reason,
     });
   }

@@ -9,7 +9,7 @@ import '../providers/skulk_providers.dart';
 import '../widgets/comment_section.dart';
 import '../widgets/solution_tile.dart';
 import '../widgets/report_bottom_sheet.dart';
-import '../../../../widgets/common/cloudinary_image_gallery.dart';
+import 'package:focus_fox/shared/widgets/common/cloudinary_image_gallery.dart';
 import '../../data/services/cloudinary_service.dart';
 import '../../utils/image_utils.dart';
 
