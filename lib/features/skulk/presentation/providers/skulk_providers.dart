@@ -241,7 +241,7 @@ class UserVotesNotifier extends AsyncNotifier<Map<String, bool>> {
         list.map((d) {
           if (d.id == doubtId) {
             return d.copyWith(
-              upvotesCount: d.upvotesCount + (isUpvoted ? -1 : 1),
+              upvotesCount: (d.upvotesCount + (isUpvoted ? -1 : 1)).clamp(0, 999999),
             );
           }
           return d;
@@ -256,14 +256,36 @@ class UserVotesNotifier extends AsyncNotifier<Map<String, bool>> {
       if (d != null) {
         detailNotifier.state = AsyncData(
           d.copyWith(
-            upvotesCount: d.upvotesCount + (isUpvoted ? -1 : 1),
+            upvotesCount: (d.upvotesCount + (isUpvoted ? -1 : 1)).clamp(0, 999999),
           ),
         );
       }
     }
 
     try {
-      await repo.toggleDoubtUpvote(doubtId);
+      final realCount = await repo.toggleDoubtUpvote(doubtId);
+
+      // Update UI with actual synced count from server
+      if (feedNotifier.state.hasValue) {
+        final list = feedNotifier.state.value!;
+        feedNotifier.state = AsyncData(
+          list.map((d) {
+            if (d.id == doubtId) {
+              return d.copyWith(upvotesCount: realCount);
+            }
+            return d;
+          }).toList(),
+        );
+      }
+
+      if (detailNotifier.state.hasValue) {
+        final d = detailNotifier.state.value;
+        if (d != null) {
+          detailNotifier.state = AsyncData(
+            d.copyWith(upvotesCount: realCount),
+          );
+        }
+      }
     } catch (_) {
       // Revert on error
       state = AsyncData(previousState);
@@ -275,7 +297,7 @@ class UserVotesNotifier extends AsyncNotifier<Map<String, bool>> {
           list.map((d) {
             if (d.id == doubtId) {
               return d.copyWith(
-                upvotesCount: d.upvotesCount + (isUpvoted ? 1 : -1),
+                upvotesCount: (d.upvotesCount + (isUpvoted ? 1 : -1)).clamp(0, 999999),
               );
             }
             return d;
@@ -289,7 +311,7 @@ class UserVotesNotifier extends AsyncNotifier<Map<String, bool>> {
         if (d != null) {
           detailNotifier.state = AsyncData(
             d.copyWith(
-              upvotesCount: d.upvotesCount + (isUpvoted ? 1 : -1),
+              upvotesCount: (d.upvotesCount + (isUpvoted ? 1 : -1)).clamp(0, 999999),
             ),
           );
         }
@@ -318,14 +340,23 @@ class UserVotesNotifier extends AsyncNotifier<Map<String, bool>> {
     solutionsNotifier.state = solutionsList.map((s) {
       if (s.id == solutionId) {
         return s.copyWith(
-          upvotesCount: s.upvotesCount + (isUpvoted ? -1 : 1),
+          upvotesCount: (s.upvotesCount + (isUpvoted ? -1 : 1)).clamp(0, 999999),
         );
       }
       return s;
     }).toList();
 
     try {
-      await repo.toggleSolutionUpvote(solutionId);
+      final realCount = await repo.toggleSolutionUpvote(solutionId);
+
+      // Update UI with actual synced count from server
+      final currentList = solutionsNotifier.state;
+      solutionsNotifier.state = currentList.map((s) {
+        if (s.id == solutionId) {
+          return s.copyWith(upvotesCount: realCount);
+        }
+        return s;
+      }).toList();
     } catch (_) {
       // Revert on error
       state = AsyncData(previousState);
@@ -335,7 +366,7 @@ class UserVotesNotifier extends AsyncNotifier<Map<String, bool>> {
       solutionsNotifier.state = revertedList.map((s) {
         if (s.id == solutionId) {
           return s.copyWith(
-            upvotesCount: s.upvotesCount + (isUpvoted ? 1 : -1),
+            upvotesCount: (s.upvotesCount + (isUpvoted ? 1 : -1)).clamp(0, 999999),
           );
         }
         return s;

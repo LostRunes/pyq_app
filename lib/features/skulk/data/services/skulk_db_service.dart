@@ -426,94 +426,18 @@ class SkulkDbService {
 
   /// Toggles upvote on a doubt post
   Future<int> toggleDoubtUpvote(String doubtId) async {
-    final userId = _client.auth.currentUser?.id;
-    if (userId == null) throw Exception('User must be logged in to upvote.');
-
-    // Check if vote already exists
-    final existing = await _client
-        .from('votes')
-        .select()
-        .eq('user_id', userId)
-        .eq('post_id', doubtId)
-        .maybeSingle();
-
-    int diff = 0;
-    if (existing == null) {
-      // Insert vote
-      await _client.from('votes').insert({
-        'user_id': userId,
-        'post_id': doubtId,
-        'value': 1,
-      });
-      diff = 1;
-    } else {
-      // Remove vote
-      await _client.from('votes').delete().eq('id', existing['id']);
-      diff = -1;
-    }
-
-    // Update doubt_posts upvotes_count
-    final doubt = await _client
-        .from('doubt_posts')
-        .select('upvotes_count')
-        .eq('id', doubtId)
-        .single();
-    final newCount = ((doubt['upvotes_count'] as int? ?? 0) + diff).clamp(
-      0,
-      999999,
-    );
-    await _client
-        .from('doubt_posts')
-        .update({'upvotes_count': newCount})
-        .eq('id', doubtId);
-
-    return newCount;
+    final res = await _client.rpc('toggle_doubt_vote', params: {
+      'doubt_id': doubtId,
+    });
+    return res as int;
   }
 
   /// Toggles upvote on a solution
   Future<int> toggleSolutionUpvote(String solutionId) async {
-    final userId = _client.auth.currentUser?.id;
-    if (userId == null) throw Exception('User must be logged in to upvote.');
-
-    // Check if vote already exists
-    final existing = await _client
-        .from('votes')
-        .select()
-        .eq('user_id', userId)
-        .eq('answer_id', solutionId)
-        .maybeSingle();
-
-    int diff = 0;
-    if (existing == null) {
-      // Insert vote
-      await _client.from('votes').insert({
-        'user_id': userId,
-        'answer_id': solutionId,
-        'value': 1,
-      });
-      diff = 1;
-    } else {
-      // Remove vote
-      await _client.from('votes').delete().eq('id', existing['id']);
-      diff = -1;
-    }
-
-    // Update answers upvotes_count
-    final answer = await _client
-        .from('answers')
-        .select('upvotes_count')
-        .eq('id', solutionId)
-        .single();
-    final newCount = ((answer['upvotes_count'] as int? ?? 0) + diff).clamp(
-      0,
-      999999,
-    );
-    await _client
-        .from('answers')
-        .update({'upvotes_count': newCount})
-        .eq('id', solutionId);
-
-    return newCount;
+    final res = await _client.rpc('toggle_solution_vote', params: {
+      'solution_id': solutionId,
+    });
+    return res as int;
   }
 
   /// Fetches all active vote records for the current user
