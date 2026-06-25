@@ -23,6 +23,7 @@ import 'package:focus_fox/features/skulk/presentation/screens/notifications_scre
 import 'package:focus_fox/features/skulk/study_together/presentation/screens/study_together_screen.dart';
 import 'package:focus_fox/features/skulk/study_together/presentation/screens/study_room_chat_screen.dart';
 import 'package:focus_fox/features/skulk/study_together/data/models/study_room.dart';
+import 'package:focus_fox/shared/presentation/transitions/parallax_page_route.dart';
 
 class AppRouter {
   static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -36,21 +37,21 @@ class AppRouter {
         );
       case '/login':
         final args = settings.arguments as Map<String, dynamic>?;
-        return MaterialPageRoute(
-          builder: (_) => LoginScreen(
+        return ParallaxPageRoute(
+          child: LoginScreen(
             showUsernameDialog: args?['showUsernameDialog'] ?? false,
           ),
           settings: settings,
         );
       case '/selection':
-        return MaterialPageRoute(
-          builder: (_) => const BranchYearSelectionScreen(),
+        return ParallaxPageRoute(
+          child: const BranchYearSelectionScreen(),
           settings: settings,
         );
       case '/main_navigation':
         final args = settings.arguments as Map<String, dynamic>;
-        return MaterialPageRoute(
-          builder: (_) => MainNavigationScreen(
+        return ParallaxPageRoute(
+          child: MainNavigationScreen(
             branchId: args['branchId'],
             semester: args['semester'],
           ),
@@ -58,16 +59,16 @@ class AppRouter {
         );
       case '/subject_dashboard':
         final args = settings.arguments as Map<String, dynamic>;
-        return MaterialPageRoute(
-          builder: (_) => SubjectDashboardScreen(
+        return ParallaxPageRoute(
+          child: SubjectDashboardScreen(
             subject: args['subject'] as Subject,
           ),
           settings: settings,
         );
       case '/topics':
         final args = settings.arguments as Map<String, dynamic>;
-        return MaterialPageRoute(
-          builder: (_) => TopicListScreen(
+        return ParallaxPageRoute(
+          child: TopicListScreen(
             subjectId: args['subjectId'],
             subjectName: args['subjectName'] ?? 'Topics',
           ),
@@ -75,8 +76,8 @@ class AppRouter {
         );
       case '/questions':
         final args = settings.arguments as Map<String, dynamic>;
-        return MaterialPageRoute(
-          builder: (_) => QuestionListScreen(
+        return ParallaxPageRoute(
+          child: QuestionListScreen(
             topicId: args['topicId'],
             topicName: args['topicName'] ?? 'Questions',
           ),
@@ -84,83 +85,83 @@ class AppRouter {
         );
       case '/question_detail':
         final args = settings.arguments as Map<String, dynamic>;
-        return MaterialPageRoute(
-          builder: (_) => QuestionDetailScreen(questionId: args['questionId']),
+        return ParallaxPageRoute(
+          child: QuestionDetailScreen(questionId: args['questionId']),
           settings: settings,
         );
       case '/profile':
-        return MaterialPageRoute(
-          builder: (_) => const ProfileScreen(),
+        return ParallaxPageRoute(
+          child: const ProfileScreen(),
           settings: settings,
         );
       case '/settings':
-        return MaterialPageRoute(
-          builder: (_) => const SettingsScreen(),
+        return ParallaxPageRoute(
+          child: const SettingsScreen(),
           settings: settings,
         );
       case '/skulk_create':
-        return MaterialPageRoute(
-          builder: (_) => const CreateDoubtScreen(),
+        return ParallaxPageRoute(
+          child: const CreateDoubtScreen(),
           settings: settings,
         );
       case '/skulk_detail':
-        return MaterialPageRoute(
-          builder: (_) => const DoubtDetailScreen(),
+        return ParallaxPageRoute(
+          child: const DoubtDetailScreen(),
           settings: settings,
         );
       case '/skulk_notifications':
-        return MaterialPageRoute(
-          builder: (_) => const NotificationsScreen(),
+        return ParallaxPageRoute(
+          child: const NotificationsScreen(),
           settings: settings,
         );
       case '/study-together':
-        return MaterialPageRoute(
-          builder: (_) => const StudyTogetherScreen(),
+        return ParallaxPageRoute(
+          child: const StudyTogetherScreen(),
           settings: settings,
         );
       case '/study-together/chat':
         final room = settings.arguments as StudyRoom;
-        return MaterialPageRoute(
-          builder: (_) => StudyRoomChatScreen(room: room),
+        return ParallaxPageRoute(
+          child: StudyRoomChatScreen(room: room),
           settings: settings,
         );
       case '/youtube_resource':
         final args = settings.arguments as Map<String, dynamic>;
-        return MaterialPageRoute(
-          builder: (_) => YoutubeResourceScreen(
+        return ParallaxPageRoute(
+          child: YoutubeResourceScreen(
             url: args['url'] as String,
             title: args['title'] as String,
           ),
           settings: settings,
         );
       case '/upload_notes':
-        return MaterialPageRoute(
-          builder: (_) => const UploadNotesScreen(),
+        return ParallaxPageRoute(
+          child: const UploadNotesScreen(),
           settings: settings,
         );
       case '/gpa_calculator':
-        return MaterialPageRoute(
-          builder: (_) => const GpaCalculatorScreen(),
+        return ParallaxPageRoute(
+          child: const GpaCalculatorScreen(),
           settings: settings,
         );
       case '/syllabus':
-        return MaterialPageRoute(
-          builder: (_) => const SyllabusScreen(),
+        return ParallaxPageRoute(
+          child: const SyllabusScreen(),
           settings: settings,
         );
       case '/algo_code':
-        return MaterialPageRoute(
-          builder: (_) => const AlgoCodeScreen(),
+        return ParallaxPageRoute(
+          child: const AlgoCodeScreen(),
           settings: settings,
         );
       case '/gate_prep':
-        return MaterialPageRoute(
-          builder: (_) => const GatePrepScreen(),
+        return ParallaxPageRoute(
+          child: const GatePrepScreen(),
           settings: settings,
         );
       case '/focus_timer':
-        return MaterialPageRoute(
-          builder: (_) => const FocusTimerScreen(),
+        return ParallaxPageRoute(
+          child: const FocusTimerScreen(),
           settings: settings,
         );
       default:
