@@ -109,7 +109,7 @@ class UtilitiesPage extends ConsumerWidget {
                     crossAxisCount: 2,
                     crossAxisSpacing: 16,
                     mainAxisSpacing: 16,
-                    childAspectRatio: 1.0, // Force square boxes
+                    childAspectRatio: 0.95, // Prevent overflow on smaller screens
                   ),
                   itemBuilder: (context, index) {
                     final util = filteredUtils[index];
@@ -120,7 +120,7 @@ class UtilitiesPage extends ConsumerWidget {
                       },
                       borderRadius: BorderRadius.circular(28),
                       child: Container(
-                        padding: const EdgeInsets.all(20),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                         decoration: BoxDecoration(
                           color: isDark ? const Color(0xFF1E1B4B).withOpacity(0.2) : theme.colorScheme.surface,
                           borderRadius: BorderRadius.circular(28),
@@ -141,7 +141,7 @@ class UtilitiesPage extends ConsumerWidget {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Container(
-                              padding: const EdgeInsets.all(10),
+                              padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
                                 color: utilColor.withOpacity(0.1),
                                 shape: BoxShape.circle,
