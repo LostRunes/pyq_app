@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:focus_fox/core/providers/prefs_provider.dart';
 import 'package:focus_fox/core/providers/auth_provider.dart';
+import 'package:focus_fox/services/push_notification_service.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -58,6 +59,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       }
       return;
     }
+
+    // Register push notification token
+    unawaited(PushNotificationService.registerDeviceToken());
 
     final userId = session.user.id;
 
