@@ -27,7 +27,7 @@ class ShareDoubtSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final shareUrl = 'https://focusfox.app/skulk/doubt/$doubtId';
+    final shareUrl = 'https://focusfox-cc167.web.app/skulk/doubt/$doubtId';
 
     return Container(
       decoration: BoxDecoration(

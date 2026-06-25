@@ -1,1 +1,39 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"focusfox-cc167","appId":"1:359937070047:android:5ee191b5e1d6bcfa5d2a6a","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"focusfox-cc167","configurations":{"android":"1:359937070047:android:5ee191b5e1d6bcfa5d2a6a","ios":"1:359937070047:ios:729bda84dac60a4b5d2a6a","macos":"1:359937070047:ios:729bda84dac60a4b5d2a6a","web":"1:359937070047:web:0a36cc7313ea81ac5d2a6a","windows":"1:359937070047:web:385a2a878b2cf1fa5d2a6a"}}}}}}
+{
+  "hosting": {
+    "public": "build/web",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "focusfox-cc167",
+          "appId": "1:359937070047:android:5ee191b5e1d6bcfa5d2a6a",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "focusfox-cc167",
+          "configurations": {
+            "android": "1:359937070047:android:5ee191b5e1d6bcfa5d2a6a",
+            "ios": "1:359937070047:ios:729bda84dac60a4b5d2a6a",
+            "macos": "1:359937070047:ios:729bda84dac60a4b5d2a6a",
+            "web": "1:359937070047:web:0a36cc7313ea81ac5d2a6a",
+            "windows": "1:359937070047:web:385a2a878b2cf1fa5d2a6a"
+          }
+        }
+      }
+    }
+  }
+}

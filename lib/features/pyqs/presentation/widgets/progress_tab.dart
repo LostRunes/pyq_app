@@ -12,6 +12,7 @@ class ProgressTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final topicsAsync = ref.watch(dashboardTopicsProvider(subjectId));
     final progress = ref.watch(progressProvider);
+    final trackedTopics = ref.watch(trackedTopicsProvider);
     final theme = Theme.of(context);
 
     return RefreshIndicator(
@@ -31,10 +32,11 @@ class ProgressTab extends ConsumerWidget {
             );
           }
 
-          final completedCount = topics
+          final trackedTopicsList = topics.where((t) => trackedTopics.contains(t.id)).toList();
+          final completedCount = trackedTopicsList
               .where((t) => progress[t.id] ?? false)
               .length;
-          final totalCount = topics.length;
+          final totalCount = trackedTopicsList.length;
           final percent = totalCount == 0 ? 0.0 : completedCount / totalCount;
 
           return ListView(
@@ -76,7 +78,9 @@ class ProgressTab extends ConsumerWidget {
                       ),
                     ),
                     Text(
-                      '$completedCount of $totalCount topics completed',
+                      totalCount == 0
+                          ? 'Tap "+" to add topics to track progress'
+                          : '$completedCount of $totalCount topics completed',
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                       ),
@@ -84,8 +88,57 @@ class ProgressTab extends ConsumerWidget {
                   ],
                 ),
               ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Topics',
+                      style: GoogleFonts.outfit(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
+                      ),
+                    ),
+                    InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: () {
+                        final topicIds = topics.map((t) => t.id).toList();
+                        final allTracked = topics.every((t) => trackedTopics.contains(t.id));
+                        ref.read(trackedTopicsProvider.notifier).setAllTracked(topicIds, !allTracked);
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              topics.isNotEmpty && topics.every((t) => trackedTopics.contains(t.id))
+                                  ? Icons.check_box_rounded
+                                  : Icons.check_box_outline_blank_rounded,
+                              size: 18,
+                              color: theme.colorScheme.primary,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Select All',
+                              style: GoogleFonts.outfit(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: theme.colorScheme.primary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               ...topics.map((topic) {
                 final isDone = progress[topic.id] ?? false;
+                final isTracked = trackedTopics.contains(topic.id);
 
                 return Container(
                   margin: const EdgeInsets.only(
@@ -102,28 +155,67 @@ class ProgressTab extends ConsumerWidget {
                           : Colors.transparent,
                       width: 2,
                     ),
-                  ),
-                  child: CheckboxListTile(
-                    title: Text(
-                      topic.name,
-                      style: GoogleFonts.outfit(
-                        fontWeight: FontWeight.w700,
-                        decoration: isDone ? TextDecoration.lineThrough : null,
-                        color: isDone
-                            ? theme.colorScheme.onSurface.withValues(alpha: 0.5)
-                            : null,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.03),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
                       ),
+                    ],
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    child: Row(
+                      children: [
+                        IconButton(
+                          icon: Icon(
+                            isTracked
+                                ? Icons.remove_circle_outline_rounded
+                                : Icons.add_circle_outline_rounded,
+                            color: isTracked
+                                ? theme.colorScheme.error.withValues(alpha: 0.7)
+                                : theme.colorScheme.primary,
+                          ),
+                          tooltip: isTracked ? 'Remove topic' : 'Track topic',
+                          onPressed: () {
+                            ref
+                                .read(trackedTopicsProvider.notifier)
+                                .toggleTracked(topic.id);
+                          },
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            topic.name,
+                            style: GoogleFonts.outfit(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 16,
+                              decoration: isDone ? TextDecoration.lineThrough : null,
+                              color: !isTracked
+                                  ? theme.colorScheme.onSurface.withValues(alpha: 0.3)
+                                  : isDone
+                                      ? theme.colorScheme.onSurface.withValues(alpha: 0.5)
+                                      : theme.colorScheme.onSurface,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Checkbox(
+                          value: isDone,
+                          activeColor: theme.colorScheme.primary,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          onChanged: !isTracked
+                              ? null
+                              : (val) {
+                                  ref
+                                      .read(progressProvider.notifier)
+                                      .toggleProgress(topic.id);
+                                },
+                        ),
+                      ],
                     ),
-                    value: isDone,
-                    activeColor: theme.colorScheme.primary,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    onChanged: (val) {
-                      ref
-                          .read(progressProvider.notifier)
-                          .toggleProgress(topic.id);
-                    },
                   ),
                 );
               }),
