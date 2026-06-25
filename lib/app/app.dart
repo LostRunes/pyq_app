@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../theme/app_theme.dart';
-import '../core/providers.dart';
+import '../core/providers/theme_provider.dart';
 import '../services/analytics_service.dart';
 import 'router.dart';
 
@@ -14,6 +14,7 @@ class PyqApp extends ConsumerWidget {
 
     return MaterialApp(
       title: 'Focus Fox',
+      navigatorKey: AppRouter.navigatorKey,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,

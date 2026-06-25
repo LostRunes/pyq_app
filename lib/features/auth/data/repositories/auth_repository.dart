@@ -1,0 +1,201 @@
+import 'dart:async';
+import 'dart:math';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:focus_fox/features/subjects/data/models/branch.dart';
+import '../../../../services/analytics_service.dart';
+
+class RedirectResult {
+  final String routeName;
+  final Map<String, dynamic>? arguments;
+
+  RedirectResult(this.routeName, [this.arguments]);
+}
+
+class AuthRepository {
+  final SupabaseClient _supabase1;
+
+  late final GoogleSignIn _googleSignIn = GoogleSignIn(
+    serverClientId: dotenv.env['GOOGLE_WEB_CLIENT_ID'],
+    scopes: [
+      'email',
+      'profile',
+    ],
+  );
+
+  AuthRepository(this._supabase1);
+
+  Future<void> signInWithGoogle() async {
+    try {
+      GoogleSignInAccount? googleUser = await _googleSignIn.signInSilently();
+      googleUser ??= await _googleSignIn.signIn();
+
+      if (googleUser == null) {
+        // User dismissed the picker
+        return;
+      }
+
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+
+      if (googleAuth.idToken == null) {
+        throw Exception(
+          'Google Sign In failed: could not retrieve ID token. '
+          'Check that GOOGLE_WEB_CLIENT_ID in .env matches your Supabase Google provider.',
+        );
+      }
+
+      await Supabase.instance.client.auth.signInWithIdToken(
+        provider: OAuthProvider.google,
+        idToken: googleAuth.idToken!,
+        accessToken: googleAuth.accessToken,
+      );
+    } catch (e) {
+      final errStr = e.toString();
+      if (errStr.contains('deadlock') || errStr.contains('main thread')) {
+        try {
+          await _googleSignIn.disconnect();
+        } catch (_) {}
+        throw Exception('Sign-in initializing, please tap "Continue with Google" again.');
+      } else {
+        rethrow;
+      }
+    }
+  }
+
+  Future<Map<String, dynamic>?> handlePostLogin(User user) async {
+    unawaited(AnalyticsService.setUser(user.id));
+    unawaited(AnalyticsService.logLogin());
+
+    final profile = await Supabase.instance.client
+        .from('user_profiles')
+        .select()
+        .eq('id', user.id)
+        .maybeSingle();
+
+    return profile;
+  }
+
+  Future<Map<String, dynamic>?> _getStudentByRollNo(String rollNo) async {
+    try {
+      final res = await _supabase1
+          .from('students')
+          .select()
+          .eq('roll_no', rollNo)
+          .maybeSingle();
+      return res;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<String> _getBranchIdFromSection(String section) async {
+    try {
+      final res = await _supabase1.from('branches').select();
+      final branches = (res as List).map((e) => Branch.fromJson(e)).toList();
+      if (branches.isEmpty) return '';
+
+      final secUpper = section.toUpperCase();
+
+      for (var branch in branches) {
+        final nameUpper = branch.name.toUpperCase();
+        if (secUpper.contains(nameUpper) || nameUpper.contains(secUpper)) {
+          return branch.id;
+        }
+      }
+
+      if (secUpper.startsWith('B') && RegExp(r'^B\d+$').hasMatch(secUpper)) {
+        final cseBranch = branches.firstWhere(
+          (b) => b.name.toUpperCase().contains('CS'),
+          orElse: () => branches.first,
+        );
+        return cseBranch.id;
+      }
+
+      return branches.first.id;
+    } catch (e) {
+      return '';
+    }
+  }
+
+  Future<RedirectResult> getRedirectResult(String email) async {
+    final kiitRegex = RegExp(r'^(\d+)@kiit\.ac\.in$', caseSensitive: false);
+    final match = kiitRegex.firstMatch(email);
+
+    if (match != null) {
+      final rollNo = match.group(1)!;
+      final student = await _getStudentByRollNo(rollNo);
+
+      if (student != null) {
+        final batch = student['batch']?.toString() ?? '';
+        final section = student['section']?.toString() ?? '';
+
+        final branchId = await _getBranchIdFromSection(section);
+        final semester = _getSemesterFromBatch(batch);
+
+        return RedirectResult('/main_navigation', {
+          'branchId': branchId,
+          'semester': semester,
+        });
+      }
+    }
+
+    return RedirectResult('/selection');
+  }
+
+  int _getSemesterFromBatch(String batch) {
+    final match = RegExp(r'\d+').firstMatch(batch);
+    if (match == null) return 1;
+    final batchNum = int.parse(match.group(0)!);
+
+    final month = DateTime.now().month;
+    final isEvenSemester = month >= 1 && month <= 6;
+
+    if (isEvenSemester) {
+      return (2 * batchNum - 2).clamp(1, 8);
+    } else {
+      return (2 * batchNum - 1).clamp(1, 8);
+    }
+  }
+
+  Future<bool> checkUsernameUnique(String username) async {
+    final res = await Supabase.instance.client
+        .from('user_profiles')
+        .select('id')
+        .eq('username', username)
+        .maybeSingle();
+    return res == null;
+  }
+
+  Future<void> submitUsername({
+    required String userId,
+    required String username,
+    required String? displayName,
+    required String avatarUrl,
+  }) async {
+    await Supabase.instance.client.from('user_profiles').insert({
+      'id': userId,
+      'username': username,
+      'display_name': displayName,
+      'avatar_url': avatarUrl,
+    });
+  }
+
+  String generateCoolUsername() {
+    final adjectives = [
+      'smart', 'study', 'focus', 'epic', 'cyber', 'nerdy', 'sleepy', 'shadow',
+      'swift', 'clever', 'cosmic', 'pixel', 'bright', 'super', 'quick', 'bold',
+      'alpha', 'omega', 'zen', 'active', 'prime', 'stellar', 'happy', 'coding',
+    ];
+    final nouns = [
+      'fox', 'panda', 'pikachu', 'cat', 'octopus', 'owl', 'bear', 'raccoon',
+      'shark', 'dragon', 'scholar', 'coder', 'genius', 'learner', 'champion', 'wizard',
+    ];
+    final rand = Random();
+    final adj = adjectives[rand.nextInt(adjectives.length)];
+    final noun = nouns[rand.nextInt(nouns.length)];
+    final num = rand.nextInt(900) + 100; // 3 digit number: 100-999
+
+    return '${adj}_${noun}_$num';
+  }
+}

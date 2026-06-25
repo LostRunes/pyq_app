@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../data/models/study_room.dart';
 import '../../data/models/room_message.dart';
 import '../../../utils/image_utils.dart';
@@ -34,6 +35,10 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen> {
   final List<File> _selectedImages = [];
   final ImagePicker _picker = ImagePicker();
   final Map<String, GlobalKey> _messageKeys = {};
+
+  List<Map<String, dynamic>> _allUsers = [];
+  List<Map<String, dynamic>> _filteredUsers = [];
+  String? _tagQuery;
 
   void _showImageSourceBottomSheet() {
     final theme = Theme.of(context);
@@ -139,11 +144,14 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    _messageController.addListener(_onCursorChanged);
+    _fetchUsers();
   }
 
   @override
   void dispose() {
     _typingTimer?.cancel();
+    _messageController.removeListener(_onCursorChanged);
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -183,6 +191,106 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen> {
             _scrollController.position.maxScrollExtent - 200) {
       chatNotifier.loadMore();
     }
+  }
+
+  Future<void> _fetchUsers() async {
+    try {
+      final res = await Supabase.instance.client
+          .from('user_profiles')
+          .select('id, username, display_name, avatar_url');
+      if (mounted) {
+        setState(() {
+          _allUsers = List<Map<String, dynamic>>.from(res);
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching user profiles: $e');
+    }
+  }
+
+  void _onCursorChanged() {
+    final text = _messageController.text;
+    final selectionStart = _messageController.selection.start;
+    final query = _getTypingTagQuery(text, selectionStart);
+    
+    if (query != null) {
+      final lowercaseQuery = query.toLowerCase();
+      final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+      final filtered = _allUsers.where((user) {
+        if (user['id'] == currentUserId) return false;
+        final username = (user['username'] ?? '').toString().toLowerCase();
+        final displayName = (user['display_name'] ?? '').toString().toLowerCase();
+        return username.contains(lowercaseQuery) || displayName.contains(lowercaseQuery);
+      }).toList();
+
+      setState(() {
+        _tagQuery = query;
+        _filteredUsers = filtered;
+      });
+    } else {
+      if (_tagQuery != null) {
+        setState(() {
+          _tagQuery = null;
+          _filteredUsers = [];
+        });
+      }
+    }
+  }
+
+  String? _getTypingTagQuery(String text, int selectionStart) {
+    if (selectionStart < 0 || selectionStart > text.length) return null;
+    final textBeforeCursor = text.substring(0, selectionStart);
+    final lastAtIndex = textBeforeCursor.lastIndexOf('@');
+    if (lastAtIndex == -1) return null;
+
+    if (lastAtIndex > 0) {
+      final charBeforeAt = textBeforeCursor[lastAtIndex - 1];
+      if (charBeforeAt != ' ' && charBeforeAt != '\n') {
+        return null;
+      }
+    }
+
+    final query = textBeforeCursor.substring(lastAtIndex + 1);
+    if (query.contains(' ')) {
+      return null;
+    }
+    return query;
+  }
+
+  void _selectUserTag(String username) {
+    final text = _messageController.text;
+    final selection = _messageController.selection;
+    if (selection.start < 0) return;
+
+    final textBeforeCursor = text.substring(0, selection.start);
+    final lastAtIndex = textBeforeCursor.lastIndexOf('@');
+    if (lastAtIndex == -1) return;
+
+    final prefix = text.substring(0, lastAtIndex);
+    final suffix = text.substring(selection.end);
+
+    final insertText = '@$username ';
+    final newText = '$prefix$insertText$suffix';
+
+    _messageController.value = TextEditingValue(
+      text: newText,
+      selection: TextSelection.collapsed(offset: lastAtIndex + insertText.length),
+    );
+
+    setState(() {
+      _tagQuery = null;
+      _filteredUsers = [];
+    });
+  }
+
+  ImageProvider _getAvatarProvider(String? avatarUrl) {
+    if (avatarUrl == null || avatarUrl.isEmpty) {
+      return const AssetImage('assets/images/pikachu.png');
+    }
+    if (avatarUrl.startsWith('http://') || avatarUrl.startsWith('https://')) {
+      return NetworkImage(avatarUrl);
+    }
+    return AssetImage(avatarUrl);
   }
 
   void _scrollToMessage(String msgId) {
@@ -472,15 +580,76 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen> {
 
                      if (messages.length < 12) {
                       final oldestFirst = messages.reversed.toList();
-                      return ListView.builder(
+                      return RefreshIndicator(
+                        onRefresh: () => ref.read(roomChatProvider(widget.room.id).notifier).refresh(),
+                        color: Theme.of(context).colorScheme.primary,
+                        child: ListView.builder(
+                          controller: _scrollController,
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 12,
+                          ),
+                          reverse: false,
+                          itemCount: messages.length,
+                          itemBuilder: (context, index) {
+                            final msg = oldestFirst[index];
+                            final key = _messageKeys.putIfAbsent(msg.id, () => GlobalKey());
+                            return RoomMessageBubble(
+                              key: key,
+                              message: msg,
+                              dragOffset: offset,
+                              onReply: () {
+                                setState(() {
+                                  _replyingTo = msg;
+                                  _editingMessage = null;
+                                });
+                              },
+                              onRepliedMessageTap: _scrollToMessage,
+                              onEdit: () {
+                                setState(() {
+                                  _editingMessage = msg;
+                                  _replyingTo = null;
+                                  _messageController.text = msg.message
+                                      .replaceAll(RegExp(r'^\[reply:[^\]]*\]'), '')
+                                      .replaceAll(RegExp(r'\[image:[^\]]*\]'), '')
+                                      .trim();
+                                });
+                              },
+                              onDelete: () {
+                                ref.read(roomChatProvider(widget.room.id).notifier).deleteMessage(msg.id);
+                              },
+                              onReact: (emoji) {
+                                ref.read(roomChatProvider(widget.room.id).notifier).toggleReaction(msg.id, emoji);
+                              },
+                            );
+                          },
+                        ),
+                      );
+                    }
+
+                     return RefreshIndicator(
+                      onRefresh: () => ref.read(roomChatProvider(widget.room.id).notifier).refresh(),
+                      color: Theme.of(context).colorScheme.primary,
+                      child: ListView.builder(
                         controller: _scrollController,
                         padding: const EdgeInsets.symmetric(
                           vertical: 12,
                         ),
-                        reverse: false,
-                        itemCount: messages.length,
+                        reverse: true,
+                        itemCount:
+                            messages.length +
+                            (chatNotifier.isLoadingMore ? 1 : 0),
                         itemBuilder: (context, index) {
-                          final msg = oldestFirst[index];
+                          if (index == messages.length) {
+                            return const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 16),
+                              child: Center(
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              ),
+                            );
+                          }
+                          final msg = messages[index];
                           final key = _messageKeys.putIfAbsent(msg.id, () => GlobalKey());
                           return RoomMessageBubble(
                             key: key,
@@ -506,59 +675,12 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen> {
                             onDelete: () {
                               ref.read(roomChatProvider(widget.room.id).notifier).deleteMessage(msg.id);
                             },
+                            onReact: (emoji) {
+                              ref.read(roomChatProvider(widget.room.id).notifier).toggleReaction(msg.id, emoji);
+                            },
                           );
                         },
-                      );
-                    }
-
-                    return ListView.builder(
-                      controller: _scrollController,
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 12,
                       ),
-                      reverse: true,
-                      itemCount:
-                          messages.length +
-                          (chatNotifier.isLoadingMore ? 1 : 0),
-                      itemBuilder: (context, index) {
-                        if (index == messages.length) {
-                          return const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 16),
-                            child: Center(
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                              ),
-                            ),
-                          );
-                        }
-                        final msg = messages[index];
-                        final key = _messageKeys.putIfAbsent(msg.id, () => GlobalKey());
-                        return RoomMessageBubble(
-                          key: key,
-                          message: msg,
-                          dragOffset: offset,
-                          onReply: () {
-                            setState(() {
-                              _replyingTo = msg;
-                              _editingMessage = null;
-                            });
-                          },
-                          onRepliedMessageTap: _scrollToMessage,
-                          onEdit: () {
-                            setState(() {
-                              _editingMessage = msg;
-                              _replyingTo = null;
-                              _messageController.text = msg.message
-                                  .replaceAll(RegExp(r'^\[reply:[^\]]*\]'), '')
-                                  .replaceAll(RegExp(r'\[image:[^\]]*\]'), '')
-                                  .trim();
-                            });
-                          },
-                          onDelete: () {
-                            ref.read(roomChatProvider(widget.room.id).notifier).deleteMessage(msg.id);
-                          },
-                        );
-                      },
                     );
                   },
                 ),
@@ -761,6 +883,67 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen> {
                       ],
                     );
                   },
+                ),
+              ),
+
+            // Tag autocomplete suggestions overlay
+            if (_tagQuery != null && _filteredUsers.isNotEmpty)
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                constraints: const BoxConstraints(maxHeight: 200),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: isDark ? const Color(0xFF262626) : const Color(0xFFEFEFEF),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 10,
+                      offset: const Offset(0, -2),
+                    ),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: _filteredUsers.length,
+                    itemBuilder: (context, index) {
+                      final user = _filteredUsers[index];
+                      final username = user['username'] ?? '';
+                      final displayName = user['display_name'] ?? 'User';
+                      final avatarUrl = user['avatar_url'] as String?;
+
+                      return ListTile(
+                        dense: true,
+                        leading: CircleAvatar(
+                          radius: 14,
+                          backgroundColor: isDark
+                              ? const Color(0xFF383838)
+                              : const Color(0xFFE2E6EA),
+                          backgroundImage: _getAvatarProvider(avatarUrl),
+                        ),
+                        title: Text(
+                          displayName,
+                          style: GoogleFonts.outfit(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                            color: isDark ? Colors.white : Colors.black87,
+                          ),
+                        ),
+                        subtitle: Text(
+                          '@$username',
+                          style: GoogleFonts.outfit(
+                            fontSize: 11,
+                            color: Colors.grey,
+                          ),
+                        ),
+                        onTap: () => _selectUserTag(username),
+                      );
+                    },
+                  ),
                 ),
               ),
 

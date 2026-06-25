@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../../core/providers.dart';
+import '../../../../../core/providers/prefs_provider.dart';
+import '../../../../subjects/presentation/providers/subjects_providers.dart';
 import '../../data/models/study_room.dart';
 import '../../data/models/room_message.dart';
 import '../../data/services/study_together_service.dart';
@@ -169,7 +171,7 @@ final subjectRoomsProvider = Provider.autoDispose<AsyncValue<List<StudyRoom>>>((
             final isCore = typeLower.contains('core') || typeLower.isEmpty;
             final priority = sub.priority ?? 999;
             // Core subjects get weight 0..999, electives get 1000..1999
-            final int weight = (isCore ? 0 : 1000) + priority;
+            final int weight = (isCore ? 0 : 1000) + priority.toInt();
             subjectOrderMap[sub.id] = weight;
             subjectTypeMap[sub.id] = isCore ? 'core' : 'elective';
           }
@@ -358,6 +360,12 @@ class RoomChatNotifier extends Notifier<List<RoomMessage>> {
     } catch (_) {}
   }
 
+  Future<void> refresh() async {
+    _offset = 0;
+    _hasMore = true;
+    await _loadInitialMessages();
+  }
+
   /// Load older messages (pagination)
   Future<void> loadMore() async {
     if (!_hasMore || _isLoadingMore) return;
@@ -415,6 +423,17 @@ class RoomChatNotifier extends Notifier<List<RoomMessage>> {
     try {
       await repo.deleteMessage(messageId);
       state = state.where((m) => m.id != messageId).toList();
+    } catch (_) {
+      rethrow;
+    }
+  }
+
+  /// Toggle emoji reaction on message helper
+  Future<void> toggleReaction(String messageId, String emoji) async {
+    final repo = ref.read(studyTogetherRepositoryProvider);
+    try {
+      final updatedMsg = await repo.updateMessageReactions(messageId, emoji);
+      state = state.map((m) => m.id == messageId ? updatedMsg : m).toList();
     } catch (_) {
       rethrow;
     }
@@ -571,7 +590,7 @@ final roomTypingProvider =
     );
 
 final branchSubjectsMapProvider = FutureProvider<Map<String, List<({int semester, String branchId, String branchName, String code})>>>((ref) async {
-  final client = ref.watch(supabaseServiceProvider).supabase;
+  final client = ref.watch(supabase1ClientProvider);
   final res = await client
       .from('branch_subjects')
       .select('semester, branch_id, branches(name), subjects(code, id)');
