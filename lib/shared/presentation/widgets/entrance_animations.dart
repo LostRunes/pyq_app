@@ -297,3 +297,109 @@ class _ZoomInFlashState extends State<ZoomInFlash> with SingleTickerProviderStat
     );
   }
 }
+
+class ExpandingSubjectCard extends StatefulWidget {
+  final Widget child;
+  final bool isIconLeft;
+  final Duration delay;
+  final Duration duration;
+
+  const ExpandingSubjectCard({
+    super.key,
+    required this.child,
+    required this.isIconLeft,
+    this.delay = Duration.zero,
+    this.duration = const Duration(milliseconds: 1100), // slowly
+  });
+
+  @override
+  State<ExpandingSubjectCard> createState() => _ExpandingSubjectCardState();
+}
+
+class _ExpandingSubjectCardState extends State<ExpandingSubjectCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _expandAnimation;
+  
+  // Track the page load time using the first card's initialization time
+  static DateTime? _firstCardBuildTime;
+
+  @override
+  void initState() {
+    super.initState();
+    
+    final now = DateTime.now();
+    // Reset page load time if it's the first build or if we returned to the page after some time
+    if (_firstCardBuildTime == null || now.difference(_firstCardBuildTime!) > const Duration(seconds: 4)) {
+      _firstCardBuildTime = now;
+    }
+
+    _controller = AnimationController(
+      vsync: this,
+      duration: widget.duration,
+    );
+
+    _expandAnimation = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeInOutCubic,
+    );
+
+    // If the card is built after the initial page animations have settled (e.g. when scrolling down),
+    // skip the expand animation and display it fully expanded.
+    final timeSinceLoad = now.difference(_firstCardBuildTime!);
+    if (timeSinceLoad.inMilliseconds > 1200) {
+      _controller.value = 1.0;
+    } else {
+      Future.delayed(widget.delay, () {
+        if (mounted) {
+          _controller.forward();
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxWidth = constraints.maxWidth;
+        // Height of the card is 120 (64 icon + 56 padding) + 16 outer bottom padding = 136
+        const cardHeight = 120.0;
+        const outerHeight = cardHeight + 16.0;
+
+        return AnimatedBuilder(
+          animation: _expandAnimation,
+          builder: (context, child) {
+            // Animate width from cardHeight (square) to maxWidth
+            final currentWidth = cardHeight + (maxWidth - cardHeight) * _expandAnimation.value;
+
+            return Align(
+              alignment: widget.isIconLeft ? Alignment.centerLeft : Alignment.centerRight,
+              child: SizedBox(
+                width: currentWidth,
+                height: outerHeight,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(32),
+                  child: OverflowBox(
+                    minWidth: maxWidth,
+                    maxWidth: maxWidth,
+                    minHeight: outerHeight,
+                    maxHeight: outerHeight,
+                    alignment: widget.isIconLeft ? Alignment.centerLeft : Alignment.centerRight,
+                    child: widget.child,
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+}
