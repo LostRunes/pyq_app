@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../data/models/doubt.dart';
 import '../providers/skulk_providers.dart';
 import 'report_bottom_sheet.dart';
+import 'share_doubt_sheet.dart';
 
 class DoubtCard extends ConsumerWidget {
   final Doubt doubt;
@@ -515,6 +516,28 @@ class DoubtCard extends ConsumerWidget {
                       ),
                     ),
                   ],
+                ),
+                const Spacer(),
+                // Share button
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () {
+                      ShareDoubtSheet.show(context, doubt.id, doubt.title);
+                    },
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      child: const Icon(
+                        Icons.share_outlined,
+                        size: 16,
+                        color: Colors.grey,
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),
