@@ -19,6 +19,7 @@ import 'package:focus_fox/features/prep_zone/presentation/screens/gate_prep_scre
 import 'package:focus_fox/features/focus_timer/presentation/screens/focus_timer_screen.dart';
 import 'package:focus_fox/features/skulk/presentation/screens/create_doubt_screen.dart';
 import 'package:focus_fox/features/skulk/presentation/screens/doubt_detail_screen.dart';
+import 'package:focus_fox/features/skulk/presentation/screens/whiteboard_screen.dart';
 import 'package:focus_fox/features/skulk/presentation/screens/notifications_screen.dart';
 import 'package:focus_fox/features/skulk/study_together/presentation/screens/study_together_screen.dart';
 import 'package:focus_fox/features/skulk/study_together/presentation/screens/study_room_chat_screen.dart';
@@ -101,6 +102,11 @@ class AppRouter {
       case '/skulk_create':
         return MaterialPageRoute(
           builder: (_) => const CreateDoubtScreen(),
+          settings: settings,
+        );
+      case '/skulk_whiteboard':
+        return MaterialPageRoute(
+          builder: (_) => const WhiteboardScreen(),
           settings: settings,
         );
       case '/skulk_detail':
