@@ -7,6 +7,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:focus_fox/core/providers.dart';
 import 'package:focus_fox/core/providers/user_profile_provider.dart';
 import 'package:focus_fox/features/subjects/data/models/branch.dart';
+import 'package:focus_fox/features/pyqs/presentation/providers/pyq_providers.dart';
+import 'package:focus_fox/features/subjects/presentation/providers/subjects_providers.dart';
+import 'package:focus_fox/features/profile/presentation/widgets/balloon_donut_chart.dart';
+
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -258,6 +262,88 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
+    final trackedTopics = ref.watch(trackedTopicsProvider);
+    final topicProgress = ref.watch(progressProvider);
+    final completedTopics = trackedTopics.where((id) => topicProgress[id] == true).length;
+
+    final leetcodeProgress = ref.watch(leetCodeProgressProvider);
+    final completedLeetcode = leetcodeProgress.values.where((v) => v).length;
+
+    // Subjects segment aggregation
+    final allSubjects = ref.watch(allSubjectsProvider).value ?? [];
+    final allTopics = ref.watch(allTopicsListProvider).value ?? [];
+    final List<Color> subjectColors = [
+      const Color(0xFF10B981), // Green
+      const Color(0xFFF59E0B), // Yellow/Amber
+      const Color(0xFFEF4444), // Red
+      const Color(0xFF3B82F6), // Blue
+      const Color(0xFF8B5CF6), // Purple
+      const Color(0xFFEC4899), // Pink
+    ];
+    final subjectSegments = <DonutSegment>[];
+    for (int i = 0; i < allSubjects.length; i++) {
+      final subject = allSubjects[i];
+      final subjectTopicIds = allTopics
+          .where((t) => t.subjectId == subject.id)
+          .map((t) => t.id)
+          .toSet();
+      final trackedInSubject = trackedTopics.where((id) => subjectTopicIds.contains(id));
+      final completedCount = trackedInSubject.where((id) => topicProgress[id] == true).length;
+      if (completedCount > 0) {
+        subjectSegments.add(
+          DonutSegment(
+            label: subject.name,
+            value: completedCount,
+            color: subjectColors[i % subjectColors.length],
+          ),
+        );
+      }
+    }
+
+    // Algo & Code segment aggregation
+    final leetcodeQuestions = ref.watch(leetcodeQuestionsListProvider).value ?? [];
+    final List<Color> algoColors = [
+      const Color(0xFF6366F1), // Indigo
+      const Color(0xFF10B981), // Emerald
+      const Color(0xFFF59E0B), // Amber
+      const Color(0xFFEF4444), // Red
+      const Color(0xFFEC4899), // Pink
+      const Color(0xFF3B82F6), // Blue
+      const Color(0xFF8B5CF6), // Purple
+      const Color(0xFF06B6D4), // Cyan
+      const Color(0xFF14B8A6), // Teal
+    ];
+    final algoTopicNames = [
+      'Array',
+      'Searching',
+      'Recursion',
+      'String',
+      'Stack',
+      'Queue',
+      'Linked List',
+      'Tree',
+      'Graph'
+    ];
+    final algoSegments = <DonutSegment>[];
+    for (int i = 0; i < algoTopicNames.length; i++) {
+      final topicName = algoTopicNames[i];
+      final questionIds = leetcodeQuestions
+          .where((q) => q['parent_topic'] == topicName)
+          .map((q) => q['id'].toString())
+          .toSet();
+      final completedCount = questionIds.where((id) => leetcodeProgress[id] == true).length;
+      if (completedCount > 0) {
+        algoSegments.add(
+          DonutSegment(
+            label: topicName,
+            value: completedCount,
+            color: algoColors[i % algoColors.length],
+          ),
+        );
+      }
+    }
+
+
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
@@ -338,6 +424,28 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       const SizedBox(height: 20),
                       // Skulk Identity Card
                       _buildSkulkCard(context, isDark),
+                      const SizedBox(height: 20),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: InteractiveBalloonDonut(
+                              segments: subjectSegments,
+                              totalTarget: trackedTopics.isEmpty ? 1 : trackedTopics.length,
+                              title: 'Subjects',
+                              subtitle: '$completedTopics / ${trackedTopics.length}',
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: InteractiveBalloonDonut(
+                              segments: algoSegments,
+                              totalTarget: 150,
+                              title: 'Algo & Code',
+                              subtitle: '$completedLeetcode solved',
+                            ),
+                          ),
+                        ],
+                      ),
                       const SizedBox(height: 32),
                     ],
                   ),

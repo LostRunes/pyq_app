@@ -16,6 +16,13 @@ final supabase1ClientProvider = Provider<SupabaseClient>((ref) {
   );
 });
 
+final supabase2ClientProvider = Provider<SupabaseClient>((ref) {
+  return SupabaseClient(
+    dotenv.env['SUPABASE_2_URL']!,
+    dotenv.env['SUPABASE_2_KEY']!,
+  );
+});
+
 final subjectsRepositoryProvider = Provider<SubjectsRepository>((ref) {
   return SubjectsRepository(ref.watch(supabase1ClientProvider));
 });
