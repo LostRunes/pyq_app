@@ -23,6 +23,7 @@ import 'package:focus_fox/features/skulk/presentation/screens/notifications_scre
 import 'package:focus_fox/features/skulk/study_together/presentation/screens/study_together_screen.dart';
 import 'package:focus_fox/features/skulk/study_together/presentation/screens/study_room_chat_screen.dart';
 import 'package:focus_fox/features/skulk/study_together/data/models/study_room.dart';
+import 'package:focus_fox/features/utilities/presentation/screens/scientific_calculator_screen.dart';
 import 'package:focus_fox/shared/presentation/transitions/parallax_page_route.dart';
 
 class AppRouter {
@@ -142,6 +143,11 @@ class AppRouter {
       case '/gpa_calculator':
         return ParallaxPageRoute(
           child: const GpaCalculatorScreen(),
+          settings: settings,
+        );
+      case '/scientific_calculator':
+        return ParallaxPageRoute(
+          child: const ScientificCalculatorScreen(),
           settings: settings,
         );
       case '/syllabus':

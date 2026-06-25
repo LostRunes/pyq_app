@@ -15,6 +15,13 @@ class UtilitiesPage extends ConsumerWidget {
 
     final utils = [
       {
+        'title': 'Scientific Calculator',
+        'desc': 'Casio-style advanced math tool',
+        'icon': Icons.calculate_rounded,
+        'route': '/scientific_calculator',
+        'color': const Color(0xFF8B5CF6), // Purple
+      },
+      {
         'title': 'GPA Calculator',
         'desc': 'Track grades & semester GPA',
         'icon': Icons.calculate_rounded,
