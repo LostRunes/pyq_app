@@ -45,4 +45,10 @@ class StudyTogetherRepository {
     final rawMessage = await _service.deleteMessage(messageId);
     return RoomMessage.fromJson(rawMessage);
   }
+
+  /// Updates message reactions and returns mapped RoomMessage
+  Future<RoomMessage> updateMessageReactions(String messageId, String emoji) async {
+    final rawMessage = await _service.updateMessageReactions(messageId, emoji);
+    return RoomMessage.fromJson(rawMessage);
+  }
 }
