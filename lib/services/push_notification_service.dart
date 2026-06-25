@@ -3,6 +3,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../app/router.dart';
 import '../features/skulk/study_together/data/models/study_room.dart';
 
@@ -163,6 +164,13 @@ class PushNotificationService {
   /// Retrieves device FCM token and registers it to Supabase user_fcm_tokens
   static Future<void> registerDeviceToken() async {
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final notificationsEnabled = prefs.getBool('push_notifications') ?? true;
+      if (!notificationsEnabled) {
+        await deleteDeviceToken();
+        return;
+      }
+
       final user = Supabase.instance.client.auth.currentUser;
       if (user == null) return;
 
