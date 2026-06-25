@@ -421,11 +421,15 @@ class _RoomMessageBubbleState extends State<RoomMessageBubble> with SingleTicker
   }
 
   Widget _buildMessageText(String text, TextStyle baseStyle) {
-    final urlRegex = RegExp(r'(https?://[^\s]+)');
-    final matches = urlRegex.allMatches(text);
+    final combinedRegex = RegExp(r'(https?://[^\s]+)|(@[a-zA-Z0-9_]+)');
+    final matches = combinedRegex.allMatches(text);
     if (matches.isEmpty) {
       return Text(text, style: baseStyle);
     }
+
+    final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+    final isMe = widget.message.userId == currentUserId;
+    final tagColor = isMe ? Colors.white.withOpacity(0.9) : Theme.of(context).colorScheme.primary;
 
     final List<TextSpan> spans = [];
     int start = 0;
@@ -433,23 +437,36 @@ class _RoomMessageBubbleState extends State<RoomMessageBubble> with SingleTicker
       if (match.start > start) {
         spans.add(TextSpan(text: text.substring(start, match.start)));
       }
-      final url = match.group(0)!;
-      spans.add(
-        TextSpan(
-          text: url,
-          style: baseStyle.copyWith(
-            color: Colors.blueAccent,
-            decoration: TextDecoration.underline,
+      final url = match.group(1);
+      final mention = match.group(2);
+      if (url != null) {
+        spans.add(
+          TextSpan(
+            text: url,
+            style: baseStyle.copyWith(
+              color: isMe ? Colors.white.withOpacity(0.9) : Colors.blueAccent,
+              decoration: TextDecoration.underline,
+            ),
+            recognizer: TapGestureRecognizer()
+              ..onTap = () async {
+                final uri = Uri.parse(url);
+                if (await canLaunchUrl(uri)) {
+                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                }
+              },
           ),
-          recognizer: TapGestureRecognizer()
-            ..onTap = () async {
-              final uri = Uri.parse(url);
-              if (await canLaunchUrl(uri)) {
-                await launchUrl(uri, mode: LaunchMode.externalApplication);
-              }
-            },
-        ),
-      );
+        );
+      } else if (mention != null) {
+        spans.add(
+          TextSpan(
+            text: mention,
+            style: baseStyle.copyWith(
+              fontWeight: FontWeight.bold,
+              color: tagColor,
+            ),
+          ),
+        );
+      }
       start = match.end;
     }
     if (start < text.length) {

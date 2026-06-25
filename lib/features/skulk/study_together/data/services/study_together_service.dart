@@ -59,6 +59,52 @@ class StudyTogetherService {
         .select()
         .single();
 
+    // Insert mention notifications if any users are tagged in the text
+    try {
+      final cleanedText = text
+          .replaceAll(RegExp(r'^\[reply:[^\]]*\]'), '')
+          .replaceAll(RegExp(r'\[image:[^\]]*\]'), '')
+          .trim();
+
+      final mentionRegex = RegExp(r'@([a-zA-Z0-9_]+)');
+      final matches = mentionRegex.allMatches(cleanedText);
+      final usernames = matches.map((m) => m.group(1)!).toSet().toList();
+
+      if (usernames.isNotEmpty) {
+        final usersRes = await _client
+            .from('user_profiles')
+            .select('id, username')
+            .inFilter('username', usernames);
+
+        final taggedUsers = List<Map<String, dynamic>>.from(usersRes);
+        final senderName = profile?['display_name'] ?? profile?['username'] ?? 'User';
+
+        final roomRes = await _client
+            .from('study_rooms')
+            .select('name')
+            .eq('id', roomId)
+            .maybeSingle();
+        final roomName = roomRes?['name'] ?? 'Study Room';
+
+        for (final taggedUser in taggedUsers) {
+          final taggedUserId = taggedUser['id'] as String?;
+          if (taggedUserId != null && taggedUserId != user.id) {
+            await _client.from('notifications').insert({
+              'user_id': taggedUserId,
+              'type': 'mention',
+              'message': '$senderName tagged you in "$roomName"',
+              'post_id': roomId,
+              'actor_id': user.id,
+              'actor_username': profile?['username'],
+              'actor_display_name': profile?['display_name'],
+            });
+          }
+        }
+      }
+    } catch (_) {
+      // Fail silently to ensure message sending doesn't break if notification table insert fails
+    }
+
     return res;
   }
 

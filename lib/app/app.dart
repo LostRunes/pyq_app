@@ -14,6 +14,7 @@ class PyqApp extends ConsumerWidget {
 
     return MaterialApp(
       title: 'Focus Fox',
+      navigatorKey: AppRouter.navigatorKey,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
