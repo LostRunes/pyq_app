@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:focus_fox/core/providers/prefs_provider.dart';
 import 'package:focus_fox/features/subjects/presentation/providers/subjects_providers.dart';
 import 'package:focus_fox/utils/fuzzy_search.dart';
+import 'package:focus_fox/shared/presentation/widgets/entrance_animations.dart';
 
 class SubjectsPage extends ConsumerWidget {
   const SubjectsPage({super.key});
@@ -45,88 +46,96 @@ class SubjectsPage extends ConsumerWidget {
             itemCount: filtered.isEmpty ? 2 : filtered.length + 1,
             itemBuilder: (context, i) {
               if (i == 0) {
-              return Container(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Text(
-                          'Subjects',
-                          style: GoogleFonts.outfit(
-                            fontSize: 32,
-                            fontWeight: FontWeight.w900,
-                            color: Theme.of(context).colorScheme.onSurface,
-                          ),
-                        ),
-                        const Spacer(),
-                        GestureDetector(
-                          onTap: () => Navigator.pushReplacementNamed(context, '/selection'),
-                          behavior: HitTestBehavior.opaque,
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              vertical: 4,
-                              horizontal: 8,
+              return FadeInSlide(
+                duration: const Duration(milliseconds: 500),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            'Subjects',
+                            style: GoogleFonts.outfit(
+                              fontSize: 32,
+                              fontWeight: FontWeight.w900,
+                              color: Theme.of(context).colorScheme.onSurface,
                             ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.arrow_back_ios_new_rounded,
-                                  size: 16,
-                                  color: Theme.of(context).colorScheme.primary,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Back',
-                                  style: GoogleFonts.outfit(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.primary,
+                          ),
+                          const Spacer(),
+                          GestureDetector(
+                            onTap: () => Navigator.pushReplacementNamed(context, '/selection'),
+                            behavior: HitTestBehavior.opaque,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 4,
+                                horizontal: 8,
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.arrow_back_ios_new_rounded,
+                                    size: 16,
+                                    color: Theme.of(context).colorScheme.primary,
                                   ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Back',
+                                    style: GoogleFonts.outfit(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.primary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                GhostText(
+                                  text: 'Choose your path!',
+                                  style: Theme.of(context).textTheme.headlineSmall
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.w900,
+                                        color: isDark
+                                            ? const Color(0xFFFFFFFF)
+                                            : Colors.black,
+                                      ),
+                                ),
+                                const SizedBox(height: 4),
+                                GhostText(
+                                  text: 'Select a subject to begin.',
+                                  delay: const Duration(milliseconds: 350),
+                                  style: Theme.of(context).textTheme.bodyMedium,
                                 ),
                               ],
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Choose your path!',
-                                style: Theme.of(context).textTheme.headlineSmall
-                                    ?.copyWith(
-                                      fontWeight: FontWeight.w900,
-                                      color: isDark
-                                          ? const Color(0xFFFFFFFF)
-                                          : Colors.black,
-                                    ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Select a subject to begin.',
-                                style: Theme.of(context).textTheme.bodyMedium,
-                              ),
-                            ],
+                          ZoomInFlash(
+                            delay: const Duration(milliseconds: 600),
+                            duration: const Duration(milliseconds: 750),
+                            child: SizedBox(
+                              height: 140,
+                              width: 140,
+                              child: Image.asset('assets/images/panda.png'),
+                            ),
                           ),
-                        ),
-                        SizedBox(
-                          height: 140,
-                          width: 140,
-                          child: Image.asset('assets/images/panda.png'),
-                        ),
-                      ],
-                    ),
-                  ],
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               );
             }
@@ -245,44 +254,48 @@ class SubjectsPage extends ConsumerWidget {
               ],
             );
 
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: InkWell(
-                onTap: () {
-                  Navigator.pushNamed(
-                    context,
-                    '/subject_dashboard',
-                    arguments: {'subject': subject},
-                  );
-                },
-                borderRadius: BorderRadius.circular(32),
-                child: Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface,
-                    borderRadius: BorderRadius.circular(32),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.primary.withValues(alpha: 0.08),
-                        blurRadius: 20,
-                        offset: const Offset(0, 10),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      if (isIconLeft) ...[
-                        iconWidget,
-                        const SizedBox(width: 20),
+            return FadeInSlide(
+              delay: Duration(milliseconds: (i - 1).clamp(0, 6) * 100),
+              duration: const Duration(milliseconds: 550),
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: InkWell(
+                  onTap: () {
+                    Navigator.pushNamed(
+                      context,
+                      '/subject_dashboard',
+                      arguments: {'subject': subject},
+                    );
+                  },
+                  borderRadius: BorderRadius.circular(32),
+                  child: Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surface,
+                      borderRadius: BorderRadius.circular(32),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.primary.withValues(alpha: 0.08),
+                          blurRadius: 20,
+                          offset: const Offset(0, 10),
+                        ),
                       ],
-                      Expanded(child: textWidget),
-                      if (!isIconLeft) ...[
-                        const SizedBox(width: 20),
-                        iconWidget,
+                    ),
+                    child: Row(
+                      children: [
+                        if (isIconLeft) ...[
+                          iconWidget,
+                          const SizedBox(width: 20),
+                        ],
+                        Expanded(child: textWidget),
+                        if (!isIconLeft) ...[
+                          const SizedBox(width: 20),
+                          iconWidget,
+                        ],
                       ],
-                    ],
+                    ),
                   ),
                 ),
               ),
