@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -185,8 +186,10 @@ class SubjectsPage extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 6),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
+                Wrap(
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 8,
+                  runSpacing: 4,
                   children: [
                     Text(
                       'Code: ${subject.code}',
@@ -197,12 +200,10 @@ class SubjectsPage extends ConsumerWidget {
                     ),
                     if (subject.subjectCredit != null ||
                         subject.subjectType != null) ...[
-                      const SizedBox(width: 8),
                       Text(
                         '•',
                         style: TextStyle(color: Colors.grey[400], fontSize: 12),
                       ),
-                      const SizedBox(width: 8),
                     ],
                     if (subject.subjectCredit != null) ...[
                       Container(
@@ -225,7 +226,6 @@ class SubjectsPage extends ConsumerWidget {
                           ),
                         ),
                       ),
-                      if (subject.subjectType != null) const SizedBox(width: 6),
                     ],
                     if (subject.subjectType != null) ...[
                       Container(
@@ -272,32 +272,56 @@ class SubjectsPage extends ConsumerWidget {
                   },
                   borderRadius: BorderRadius.circular(32),
                   child: Container(
-                    padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surface,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white.withOpacity(0.08)
+                          : Colors.white.withOpacity(0.65),
                       borderRadius: BorderRadius.circular(32),
+                      border: Border.all(
+                        color: (Theme.of(context).brightness == Brightness.dark
+                                ? Colors.white.withOpacity(0.15)
+                                : const Color(0xFFFF9F0A).withOpacity(0.28)),
+                        width: 1.5,
+                      ),
                       boxShadow: [
+                        // Soft Apple system orange glow from behind
                         BoxShadow(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.primary.withValues(alpha: 0.08),
-                          blurRadius: 20,
-                          offset: const Offset(0, 10),
+                          color: const Color(0xFFFF9F0A).withOpacity(0.12),
+                          blurRadius: 24,
+                          spreadRadius: 1,
+                          offset: const Offset(0, 8),
+                        ),
+                        BoxShadow(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .primary
+                              .withValues(alpha: 0.04),
+                          blurRadius: 16,
+                          offset: const Offset(0, 4),
                         ),
                       ],
                     ),
-                    child: Row(
-                      children: [
-                        if (isIconLeft) ...[
-                          iconWidget,
-                          const SizedBox(width: 20),
-                        ],
-                        Expanded(child: textWidget),
-                        if (!isIconLeft) ...[
-                          const SizedBox(width: 20),
-                          iconWidget,
-                        ],
-                      ],
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(32),
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Row(
+                            children: [
+                              if (isIconLeft) ...[
+                                iconWidget,
+                                const SizedBox(width: 20),
+                              ],
+                              Expanded(child: textWidget),
+                              if (!isIconLeft) ...[
+                                const SizedBox(width: 20),
+                                iconWidget,
+                              ],
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 ),
