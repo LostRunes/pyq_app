@@ -12,6 +12,7 @@ class UtilitiesPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final searchQuery = ref.watch(utilitiesSearchProvider);
+    final isDark = theme.brightness == Brightness.dark;
 
     final utils = [
       {
@@ -49,6 +50,13 @@ class UtilitiesPage extends ConsumerWidget {
         'route': '/focus_timer',
         'color': const Color(0xFFEC4899), // Pink
       },
+      {
+        'title': 'To Do Dashboard',
+        'desc': 'Track study activity & custom tasks',
+        'icon': Icons.playlist_add_check_rounded,
+        'route': '/todo_dashboard',
+        'color': const Color(0xFF6366F1), // Indigo
+      }
     ];
 
     final filteredUtils = utils.where((util) {
@@ -63,24 +71,29 @@ class UtilitiesPage extends ConsumerWidget {
         children: [
           FadeInSlide(
             duration: const Duration(milliseconds: 500),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'Utilities',
-                  style: GoogleFonts.outfit(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w900,
-                    color: theme.colorScheme.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Access all essential tools and resources',
-                  style: GoogleFonts.outfit(
-                    fontSize: 14,
-                    color: theme.colorScheme.onSurface.withOpacity(0.6),
-                  ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Utilities',
+                      style: GoogleFonts.outfit(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w900,
+                        color: theme.colorScheme.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Access essential tools & plan your day',
+                      style: GoogleFonts.outfit(
+                        fontSize: 13,
+                        color: theme.colorScheme.onSurface.withOpacity(0.6),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -107,7 +120,7 @@ class UtilitiesPage extends ConsumerWidget {
                     crossAxisCount: 2,
                     crossAxisSpacing: 16,
                     mainAxisSpacing: 16,
-                    childAspectRatio: 0.85, 
+                    childAspectRatio: 0.95, // Prevent overflow on smaller screens
                   ),
                   itemBuilder: (context, index) {
                     final util = filteredUtils[index];
@@ -121,9 +134,9 @@ class UtilitiesPage extends ConsumerWidget {
                         },
                         borderRadius: BorderRadius.circular(28),
                         child: Container(
-                          padding: const EdgeInsets.all(16),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                           decoration: BoxDecoration(
-                            color: theme.colorScheme.surface,
+                            color: isDark ? const Color(0xFF1E1B4B).withOpacity(0.2) : theme.colorScheme.surface,
                             borderRadius: BorderRadius.circular(28),
                             border: Border.all(
                               color: utilColor.withOpacity(0.12),
@@ -142,7 +155,7 @@ class UtilitiesPage extends ConsumerWidget {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Container(
-                                padding: const EdgeInsets.all(10),
+                                padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
                                   color: utilColor.withOpacity(0.1),
                                   shape: BoxShape.circle,

@@ -24,6 +24,7 @@ import 'package:focus_fox/features/skulk/presentation/screens/notifications_scre
 import 'package:focus_fox/features/skulk/study_together/presentation/screens/study_together_screen.dart';
 import 'package:focus_fox/features/skulk/study_together/presentation/screens/study_room_chat_screen.dart';
 import 'package:focus_fox/features/skulk/study_together/data/models/study_room.dart';
+import 'package:focus_fox/features/utilities/presentation/screens/todo_dashboard_screen.dart';
 import 'package:focus_fox/features/utilities/presentation/screens/scientific_calculator_screen.dart';
 import 'package:focus_fox/shared/presentation/transitions/parallax_page_route.dart';
 
@@ -31,6 +32,17 @@ class AppRouter {
   static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
+    if (settings.name != null && settings.name!.startsWith('/skulk/doubt/')) {
+      final doubtId = settings.name!.substring('/skulk/doubt/'.length);
+      return MaterialPageRoute(
+        builder: (_) => const DoubtDetailScreen(),
+        settings: RouteSettings(
+          name: '/skulk_detail',
+          arguments: doubtId,
+        ),
+      );
+    }
+
     switch (settings.name) {
       case '/':
         return MaterialPageRoute(
@@ -154,6 +166,11 @@ class AppRouter {
       case '/scientific_calculator':
         return ParallaxPageRoute(
           child: const ScientificCalculatorScreen(),
+          settings: settings,
+        );
+      case '/todo_dashboard':
+        return MaterialPageRoute(
+          builder: (_) => const ToDoDashboardScreen(),
           settings: settings,
         );
       case '/syllabus':

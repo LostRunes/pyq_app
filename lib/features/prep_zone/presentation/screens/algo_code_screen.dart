@@ -1,18 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:focus_fox/features/pyqs/presentation/providers/pyq_providers.dart';
 import 'leetcode_webview_screen.dart';
 import 'package:focus_fox/features/pyqs/presentation/screens/solution_viewer_screen.dart';
 
-class AlgoCodeScreen extends StatefulWidget {
+class AlgoCodeScreen extends ConsumerStatefulWidget {
   const AlgoCodeScreen({super.key});
 
   @override
-  State<AlgoCodeScreen> createState() => _AlgoCodeScreenState();
+  ConsumerState<AlgoCodeScreen> createState() => _AlgoCodeScreenState();
 }
 
-class _AlgoCodeScreenState extends State<AlgoCodeScreen> {
+class _AlgoCodeScreenState extends ConsumerState<AlgoCodeScreen> {
   final _supabase = SupabaseClient(
     dotenv.env['SUPABASE_URL']!,
     dotenv.env['SUPABASE_KEY']!,
@@ -469,23 +471,44 @@ class _AlgoCodeScreenState extends State<AlgoCodeScreen> {
             itemCount: questions.length,
             itemBuilder: (context, index) {
               final q = questions[index];
-              return ListTile(
-                leading: Text(
-                  '${index + 1}',
-                  style: GoogleFonts.outfit(
-                    fontWeight: FontWeight.w600,
-                    color: isDark ? Colors.white38 : Colors.black38,
-                  ),
-                ),
-                title: Text(
-                  q['question_name'] ?? '',
-                  style: GoogleFonts.outfit(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: isDark ? Colors.white : Colors.black87,
-                  ),
-                ),
-                onTap: () => _showOptionsModal(q),
+              final qId = q['id'].toString();
+              return Consumer(
+                builder: (context, ref, child) {
+                  final isCompleted = ref.watch(leetCodeProgressProvider)[qId] ?? false;
+                  return ListTile(
+                    leading: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Checkbox(
+                          value: isCompleted,
+                          onChanged: (val) {
+                            ref.read(leetCodeProgressProvider.notifier).toggleProgress(qId);
+                          },
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                          activeColor: const Color(0xFF6366F1),
+                        ),
+                        Text(
+                          '${index + 1}',
+                          style: GoogleFonts.outfit(
+                            fontWeight: FontWeight.w600,
+                            color: isDark ? Colors.white38 : Colors.black38,
+                          ),
+                        ),
+                      ],
+                    ),
+                    title: Text(
+                      q['question_name'] ?? '',
+                      style: GoogleFonts.outfit(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? Colors.white : Colors.black87,
+                        decoration: isCompleted ? TextDecoration.lineThrough : null,
+                        decorationColor: isDark ? Colors.white54 : Colors.black54,
+                      ),
+                    ),
+                    onTap: () => _showOptionsModal(q),
+                  );
+                },
               );
             },
           ),
