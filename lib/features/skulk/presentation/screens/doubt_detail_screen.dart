@@ -224,7 +224,7 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
 
   void _submitSolution(String doubtId) async {
     final body = _solutionController.text.trim();
-    if (body.isEmpty) return;
+    if (body.isEmpty && selectedSolutionImages.isEmpty) return;
 
     setState(() {
       _isSubmittingSolution = true;
