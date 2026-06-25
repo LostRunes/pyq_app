@@ -205,7 +205,7 @@ class QuestionDetailScreen extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: 40),
-                  // AI Solve Button
+                  // Ask in Skulk Button
                   Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
@@ -229,20 +229,21 @@ class QuestionDetailScreen extends ConsumerWidget {
                     ),
                     child: ElevatedButton.icon(
                       onPressed: () {
-                        showModalBottomSheet(
-                          context: context,
-                          isScrollControlled: true,
-                          backgroundColor: Colors.transparent,
-                          builder: (context) =>
-                              SolutionSheet(question: question.questionText),
+                        Navigator.pushNamed(
+                          context,
+                          '/skulk_create',
+                          arguments: {
+                            'prefilledTitle': 'PYQ Doubt: ${question.questionText.length > 30 ? "${question.questionText.substring(0, 30)}..." : question.questionText}',
+                            'prefilledBody': question.questionText,
+                          },
                         );
                       },
                       icon: const Icon(
-                        Icons.auto_awesome_rounded,
+                        Icons.forum_rounded,
                         color: Colors.white,
                       ),
                       label: Text(
-                        'Solve with AI Buddy',
+                        'Ask in Skulk',
                         style: GoogleFonts.outfit(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,

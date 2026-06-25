@@ -580,15 +580,76 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen> {
 
                      if (messages.length < 12) {
                       final oldestFirst = messages.reversed.toList();
-                      return ListView.builder(
+                      return RefreshIndicator(
+                        onRefresh: () => ref.read(roomChatProvider(widget.room.id).notifier).refresh(),
+                        color: Theme.of(context).colorScheme.primary,
+                        child: ListView.builder(
+                          controller: _scrollController,
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 12,
+                          ),
+                          reverse: false,
+                          itemCount: messages.length,
+                          itemBuilder: (context, index) {
+                            final msg = oldestFirst[index];
+                            final key = _messageKeys.putIfAbsent(msg.id, () => GlobalKey());
+                            return RoomMessageBubble(
+                              key: key,
+                              message: msg,
+                              dragOffset: offset,
+                              onReply: () {
+                                setState(() {
+                                  _replyingTo = msg;
+                                  _editingMessage = null;
+                                });
+                              },
+                              onRepliedMessageTap: _scrollToMessage,
+                              onEdit: () {
+                                setState(() {
+                                  _editingMessage = msg;
+                                  _replyingTo = null;
+                                  _messageController.text = msg.message
+                                      .replaceAll(RegExp(r'^\[reply:[^\]]*\]'), '')
+                                      .replaceAll(RegExp(r'\[image:[^\]]*\]'), '')
+                                      .trim();
+                                });
+                              },
+                              onDelete: () {
+                                ref.read(roomChatProvider(widget.room.id).notifier).deleteMessage(msg.id);
+                              },
+                              onReact: (emoji) {
+                                ref.read(roomChatProvider(widget.room.id).notifier).toggleReaction(msg.id, emoji);
+                              },
+                            );
+                          },
+                        ),
+                      );
+                    }
+
+                     return RefreshIndicator(
+                      onRefresh: () => ref.read(roomChatProvider(widget.room.id).notifier).refresh(),
+                      color: Theme.of(context).colorScheme.primary,
+                      child: ListView.builder(
                         controller: _scrollController,
                         padding: const EdgeInsets.symmetric(
                           vertical: 12,
                         ),
-                        reverse: false,
-                        itemCount: messages.length,
+                        reverse: true,
+                        itemCount:
+                            messages.length +
+                            (chatNotifier.isLoadingMore ? 1 : 0),
                         itemBuilder: (context, index) {
-                          final msg = oldestFirst[index];
+                          if (index == messages.length) {
+                            return const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 16),
+                              child: Center(
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              ),
+                            );
+                          }
+                          final msg = messages[index];
                           final key = _messageKeys.putIfAbsent(msg.id, () => GlobalKey());
                           return RoomMessageBubble(
                             key: key,
@@ -614,59 +675,12 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen> {
                             onDelete: () {
                               ref.read(roomChatProvider(widget.room.id).notifier).deleteMessage(msg.id);
                             },
+                            onReact: (emoji) {
+                              ref.read(roomChatProvider(widget.room.id).notifier).toggleReaction(msg.id, emoji);
+                            },
                           );
                         },
-                      );
-                    }
-
-                    return ListView.builder(
-                      controller: _scrollController,
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 12,
                       ),
-                      reverse: true,
-                      itemCount:
-                          messages.length +
-                          (chatNotifier.isLoadingMore ? 1 : 0),
-                      itemBuilder: (context, index) {
-                        if (index == messages.length) {
-                          return const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 16),
-                            child: Center(
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                              ),
-                            ),
-                          );
-                        }
-                        final msg = messages[index];
-                        final key = _messageKeys.putIfAbsent(msg.id, () => GlobalKey());
-                        return RoomMessageBubble(
-                          key: key,
-                          message: msg,
-                          dragOffset: offset,
-                          onReply: () {
-                            setState(() {
-                              _replyingTo = msg;
-                              _editingMessage = null;
-                            });
-                          },
-                          onRepliedMessageTap: _scrollToMessage,
-                          onEdit: () {
-                            setState(() {
-                              _editingMessage = msg;
-                              _replyingTo = null;
-                              _messageController.text = msg.message
-                                  .replaceAll(RegExp(r'^\[reply:[^\]]*\]'), '')
-                                  .replaceAll(RegExp(r'\[image:[^\]]*\]'), '')
-                                  .trim();
-                            });
-                          },
-                          onDelete: () {
-                            ref.read(roomChatProvider(widget.room.id).notifier).deleteMessage(msg.id);
-                          },
-                        );
-                      },
                     );
                   },
                 ),

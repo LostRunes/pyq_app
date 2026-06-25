@@ -314,7 +314,15 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final args = ModalRoute.of(context)!.settings.arguments;
+    final route = ModalRoute.of(context);
+    final args = route?.settings.arguments;
+    if (args == null) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
     final String doubtId;
     final String? branchId;
     final int? semester;
