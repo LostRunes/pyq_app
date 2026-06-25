@@ -1,11 +1,10 @@
-import 'dart:typed_data';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:http/http.dart' as http;
 import 'package:printing/printing.dart';
 import 'package:flutter/services.dart';
-import '../models/question_full.dart';
-import '../models/topic_with_questions.dart';
+import '../features/pyqs/data/models/question_full.dart';
+import '../features/pyqs/data/models/topic_with_questions.dart';
 
 class PdfService {
   static final PdfColor primaryColor = PdfColor.fromHex(

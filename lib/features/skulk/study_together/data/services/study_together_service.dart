@@ -33,8 +33,9 @@ class StudyTogetherService {
   /// Sends a message, fetching current user profile to create a snapshot
   Future<Map<String, dynamic>> sendMessage(String roomId, String text) async {
     final user = _client.auth.currentUser;
-    if (user == null)
+    if (user == null) {
       throw Exception('User must be logged in to send messages.');
+    }
 
     // Fetch user profile info for snapshotting
     final profileRes = await _client
@@ -57,7 +58,6 @@ class StudyTogetherService {
         })
         .select()
         .single();
-
     return res;
   }
 
@@ -84,6 +84,20 @@ class StudyTogetherService {
         })
         .eq('id', messageId)
         .select()
+        .single();
+    return res;
+  }
+
+  /// Updates message reactions map by calling the secure toggle RPC function
+  Future<Map<String, dynamic>> updateMessageReactions(String messageId, String emoji) async {
+    await _client.rpc('toggle_message_reaction', params: {
+      'p_message_id': messageId,
+      'p_emoji': emoji,
+    });
+    final res = await _client
+        .from('room_messages')
+        .select()
+        .eq('id', messageId)
         .single();
     return res;
   }

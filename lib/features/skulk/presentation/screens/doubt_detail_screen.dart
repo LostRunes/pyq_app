@@ -9,7 +9,8 @@ import '../providers/skulk_providers.dart';
 import '../widgets/comment_section.dart';
 import '../widgets/solution_tile.dart';
 import '../widgets/report_bottom_sheet.dart';
-import '../../../../widgets/common/cloudinary_image_gallery.dart';
+import '../widgets/share_doubt_sheet.dart';
+import 'package:focus_fox/shared/widgets/common/cloudinary_image_gallery.dart';
 import '../../data/services/cloudinary_service.dart';
 import '../../utils/image_utils.dart';
 
@@ -106,7 +107,7 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (context) {
+      builder: (sheetContext) {
         return SafeArea(
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
@@ -126,7 +127,7 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
                 const SizedBox(height: 20),
                 ListTile(
                   leading: Icon(
-                    Icons.camera_alt_outlined,
+                    Icons.camera_alt_outlined, //add a + symbol here instead
                     color: theme.colorScheme.primary,
                   ),
                   title: Text(
@@ -134,7 +135,7 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
                     style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
                   ),
                   onTap: () async {
-                    Navigator.pop(context);
+                    Navigator.pop(sheetContext);
                     try {
                       final image = await _picker.pickImage(
                         source: ImageSource.camera,
@@ -156,7 +157,7 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
                         )..add(compressed);
                       });
                     } catch (e) {
-                      ScaffoldMessenger.of(this.context).showSnackBar(
+                      ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text('Failed to capture photo: $e')),
                       );
                     }
@@ -173,8 +174,33 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
                     style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
                   ),
                   onTap: () {
-                    Navigator.pop(context);
+                    Navigator.pop(sheetContext);
                     pickSolutionImages();
+                  },
+                ),
+                Divider(color: isDark ? Colors.grey[850] : Colors.grey[200]),
+                ListTile(
+                  leading: Icon(
+                    Icons.gesture_rounded,
+                    color: theme.colorScheme.primary,
+                  ),
+                  title: Text(
+                    'Draw on Whiteboard',
+                    style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+                  ),
+                  onTap: () async {
+                    Navigator.pop(sheetContext);
+                    final File? drawnFile = await Navigator.pushNamed<File?>(
+                      context,
+                      '/skulk_whiteboard',
+                    );
+                    if (drawnFile != null) {
+                      setState(() {
+                        selectedSolutionImages = List.from(
+                          selectedSolutionImages,
+                        )..add(drawnFile);
+                      });
+                    }
                   },
                 ),
               ],
@@ -314,7 +340,11 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final args = ModalRoute.of(context)!.settings.arguments;
+    final route = ModalRoute.of(context);
+    final args = route?.settings.arguments;
+    if (args == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
     final String doubtId;
     final String? branchId;
     final int? semester;
@@ -836,6 +866,39 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
                                             fontWeight: FontWeight.w600,
                                             color: Colors.grey,
                                           ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                const Spacer(),
+                                // Share Button
+                                InkWell(
+                                  onTap: () {
+                                    ShareDoubtSheet.show(
+                                      context,
+                                      doubt.id,
+                                      doubt.title,
+                                    );
+                                  },
+                                  borderRadius: BorderRadius.circular(10),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 14,
+                                      vertical: 8,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: isDark
+                                          ? const Color(0xFF262626)
+                                          : Colors.grey[100],
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: const Row(
+                                      children: [
+                                        Icon(
+                                          Icons.share_outlined,
+                                          size: 16,
+                                          color: Colors.grey,
                                         ),
                                       ],
                                     ),

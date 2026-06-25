@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../data/models/doubt.dart';
 import '../providers/skulk_providers.dart';
 import 'report_bottom_sheet.dart';
+import 'share_doubt_sheet.dart';
 
 class DoubtCard extends ConsumerWidget {
   final Doubt doubt;
@@ -16,6 +17,7 @@ class DoubtCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final voteState = ref.watch(userVotesProvider);
+    final votesLoaded = voteState.hasValue;
     final isUpvoted = voteState.value?[doubt.id] ?? false;
     final currentUserId = Supabase.instance.client.auth.currentUser?.id;
     final isOwnDoubt = currentUserId != null && currentUserId == doubt.userId;
@@ -422,11 +424,13 @@ class DoubtCard extends ConsumerWidget {
               children: [
                 // Upvote
                 InkWell(
-                  onTap: () {
-                    ref
-                        .read(userVotesProvider.notifier)
-                        .toggleDoubtVote(doubt.id);
-                  },
+                  onTap: votesLoaded
+                      ? () {
+                          ref
+                              .read(userVotesProvider.notifier)
+                              .toggleDoubtVote(doubt.id);
+                        }
+                      : null,
                   borderRadius: BorderRadius.circular(10),
                   child: Container(
                     padding: const EdgeInsets.symmetric(
@@ -452,7 +456,7 @@ class DoubtCard extends ConsumerWidget {
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          '${doubt.upvotesCount}',
+                          votesLoaded ? '${doubt.upvotesCount}' : '…',
                           style: GoogleFonts.outfit(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
@@ -512,6 +516,28 @@ class DoubtCard extends ConsumerWidget {
                       ),
                     ),
                   ],
+                ),
+                const Spacer(),
+                // Share button
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () {
+                      ShareDoubtSheet.show(context, doubt.id, doubt.title);
+                    },
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      child: const Icon(
+                        Icons.share_outlined,
+                        size: 16,
+                        color: Colors.grey,
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),

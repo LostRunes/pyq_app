@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/providers.dart';
+import '../../../subjects/presentation/providers/subjects_providers.dart';
 import '../../data/models/doubt.dart';
 import '../providers/skulk_providers.dart';
 import '../../data/services/cloudinary_service.dart';
@@ -35,6 +36,8 @@ class _CreateDoubtScreenState extends ConsumerState<CreateDoubtScreen> {
   String? _branchId;
   int? _semester;
   Doubt? _doubtToEdit;
+  String? _prefilledTitle;
+  String? _prefilledBody;
   bool _argsParsed = false;
 
   int _getSemesterFromBatch(String batch) {
@@ -95,12 +98,14 @@ class _CreateDoubtScreenState extends ConsumerState<CreateDoubtScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (!_argsParsed) {
-      final args =
-          ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
+      final route = ModalRoute.of(context);
+      final args = route?.settings.arguments as Map<String, dynamic>?;
       if (args != null) {
         _branchId = args['branchId'] as String?;
         _semester = args['semester'] as int?;
         _doubtToEdit = args['doubtToEdit'] as Doubt?;
+        _prefilledTitle = args['prefilledTitle'] as String?;
+        _prefilledBody = args['prefilledBody'] as String?;
       }
       _argsParsed = true;
       _initFields();
@@ -113,6 +118,13 @@ class _CreateDoubtScreenState extends ConsumerState<CreateDoubtScreen> {
       _bodyController.text = _doubtToEdit!.body;
       _tagsController.text = _doubtToEdit!.tags.join(', ');
       _selectedSubjectId = _doubtToEdit!.subjectId;
+    } else {
+      if (_prefilledTitle != null) {
+        _titleController.text = _prefilledTitle!;
+      }
+      if (_prefilledBody != null) {
+        _bodyController.text = _prefilledBody!;
+      }
     }
 
     if (_branchId == null ||
@@ -131,14 +143,14 @@ class _CreateDoubtScreenState extends ConsumerState<CreateDoubtScreen> {
 
           if (match != null) {
             final rollNo = match.group(1)!;
-            final studentService = ref.read(supabaseServiceProvider);
-            final student = await studentService.getStudentByRollNo(rollNo);
+            final subjectsRepo = ref.read(subjectsRepositoryProvider);
+            final student = await subjectsRepo.getStudentByRollNo(rollNo);
 
             if (student != null) {
               final batch = student['batch']?.toString() ?? '';
               final section = student['section']?.toString() ?? '';
 
-              final fetchedBranchId = await studentService
+              final fetchedBranchId = await subjectsRepo
                   .getBranchIdFromSection(section);
               final fetchedSemester = _getSemesterFromBatch(batch);
               if (mounted) {

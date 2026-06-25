@@ -95,12 +95,8 @@ class DriveService {
     );
 
     GoogleSignInAccount? currentUser = googleSignIn.currentUser;
-    if (currentUser == null) {
-      currentUser = await googleSignIn.signInSilently();
-    }
-    if (currentUser == null) {
-      currentUser = await googleSignIn.signIn();
-    }
+    currentUser ??= await googleSignIn.signInSilently();
+    currentUser ??= await googleSignIn.signIn();
     if (currentUser == null) {
       throw Exception("User is not signed in to Google.");
     }
@@ -124,13 +120,11 @@ class DriveService {
       centralUploadFolderId,
       accessToken,
     );
-    if (subjectFolderId == null) {
-      subjectFolderId = await createFolder(
+    subjectFolderId ??= await createFolder(
         subjectName,
         centralUploadFolderId,
         accessToken,
       );
-    }
 
     final url =
         "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart";
