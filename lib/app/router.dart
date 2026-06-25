@@ -29,6 +29,17 @@ class AppRouter {
   static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
+    if (settings.name != null && settings.name!.startsWith('/skulk/doubt/')) {
+      final doubtId = settings.name!.substring('/skulk/doubt/'.length);
+      return MaterialPageRoute(
+        builder: (_) => const DoubtDetailScreen(),
+        settings: RouteSettings(
+          name: '/skulk_detail',
+          arguments: doubtId,
+        ),
+      );
+    }
+
     switch (settings.name) {
       case '/':
         return MaterialPageRoute(
