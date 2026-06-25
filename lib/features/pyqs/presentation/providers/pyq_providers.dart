@@ -8,6 +8,7 @@ import '../../data/models/pyq_source.dart';
 import '../../data/models/image_item.dart';
 import '../../data/models/topic_with_questions.dart';
 import '../../data/models/question_full.dart';
+import '../../../utilities/presentation/providers/activity_providers.dart';
 
 final topicsProvider = FutureProvider.family<List<Topic>, String>((
   ref,
@@ -146,6 +147,13 @@ class ProgressNotifier extends Notifier<Map<String, bool>> {
 
     final encoded = state.entries.map((e) => '${e.key}:${e.value}').join(',');
     await prefs.setString(_key, Uri.encodeComponent(encoded));
+
+    // Record activity completion
+    if (isCompleted) {
+      ref.read(activityProvider.notifier).recordTodayCompletion();
+    } else {
+      ref.read(activityProvider.notifier).removeTodayCompletion();
+    }
 
     // Sync to Supabase
     final supabase = ref.read(supabase1ClientProvider);
@@ -345,6 +353,13 @@ class LeetCodeProgressNotifier extends Notifier<Map<String, bool>> {
 
     final encoded = state.entries.map((e) => '${e.key}:${e.value}').join(',');
     await prefs.setString(_key, Uri.encodeComponent(encoded));
+
+    // Record activity completion
+    if (isCompleted) {
+      ref.read(activityProvider.notifier).recordTodayCompletion();
+    } else {
+      ref.read(activityProvider.notifier).removeTodayCompletion();
+    }
 
     // Sync to Supabase
     final supabase = ref.read(supabase1ClientProvider);

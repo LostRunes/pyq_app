@@ -10,6 +10,7 @@ import 'package:focus_fox/features/subjects/data/models/branch.dart';
 import 'package:focus_fox/features/pyqs/presentation/providers/pyq_providers.dart';
 import 'package:focus_fox/features/subjects/presentation/providers/subjects_providers.dart';
 import 'package:focus_fox/features/profile/presentation/widgets/balloon_donut_chart.dart';
+import 'package:focus_fox/features/profile/presentation/widgets/heatmap_widget.dart';
 
 
 class ProfileScreen extends ConsumerStatefulWidget {
@@ -446,6 +447,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           ),
                         ],
                       ),
+                      const SizedBox(height: 20),
+                      const StudyActivityHeatmap(),
                       const SizedBox(height: 32),
                     ],
                   ),
