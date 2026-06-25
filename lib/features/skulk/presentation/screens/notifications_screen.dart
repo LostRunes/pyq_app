@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../study_together/data/models/study_room.dart';
 import '../providers/skulk_providers.dart';
 
 // ---------------------------------------------------------------------------
@@ -114,7 +116,7 @@ class NotificationsScreen extends ConsumerWidget {
                       n: n,
                       isDark: isDark,
                       onTap: () {
-                        _navigateToDoubt(context, n);
+                        _handleNotificationTap(context, n);
                       },
                     ),
                   ),
@@ -126,7 +128,7 @@ class NotificationsScreen extends ConsumerWidget {
                       n: n,
                       isDark: isDark,
                       onTap: () {
-                        _navigateToDoubt(context, n);
+                        _handleNotificationTap(context, n);
                       },
                     ),
                   ),
@@ -154,9 +156,45 @@ class NotificationsScreen extends ConsumerWidget {
     );
   }
 
-  void _navigateToDoubt(BuildContext context, Map<String, dynamic> n) {
+  void _handleNotificationTap(BuildContext context, Map<String, dynamic> n) async {
+    final type = n['type']?.toString();
     final postId = n['post_id']?.toString();
-    if (postId != null && postId.isNotEmpty) {
+    if (postId == null || postId.isEmpty) return;
+
+    if (type == 'mention' || type == 'tag') {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator()),
+      );
+      try {
+        final client = Supabase.instance.client;
+        final res = await client
+            .from('study_rooms')
+            .select()
+            .eq('id', postId)
+            .maybeSingle();
+        
+        if (context.mounted) {
+          Navigator.pop(context); // Dismiss loading spinner
+          if (res != null) {
+            final room = StudyRoom.fromJson(res);
+            Navigator.pushNamed(context, '/study-together/chat', arguments: room);
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Study room not found or deleted.')),
+            );
+          }
+        }
+      } catch (e) {
+        if (context.mounted) {
+          Navigator.pop(context); // Dismiss loading spinner
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error joining room: $e')),
+          );
+        }
+      }
+    } else {
       Navigator.pushNamed(context, '/skulk_detail', arguments: postId);
     }
   }
@@ -195,6 +233,15 @@ class _NotificationTile extends StatelessWidget {
       case 'accepted':
         icon = Icons.emoji_events_rounded;
         iconColor = Colors.amber;
+        break;
+      case 'mention':
+      case 'tag':
+        icon = Icons.alternate_email_rounded;
+        iconColor = Colors.orange;
+        break;
+      case 'upvote':
+        icon = Icons.thumb_up_alt_outlined;
+        iconColor = Colors.pink;
         break;
       default:
         icon = Icons.notifications_outlined;
