@@ -1,11 +1,6 @@
 import 'package:flutter/material.dart';
 
-enum SlideDirection {
-  up,
-  down,
-  left,
-  right,
-}
+enum SlideDirection { up, down, left, right }
 
 class FadeInSlide extends StatefulWidget {
   final Widget child;
@@ -38,17 +33,12 @@ class _FadeInSlideState extends State<FadeInSlide>
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: widget.duration,
-    );
+    _controller = AnimationController(vsync: this, duration: widget.duration);
 
-    _opacityAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: widget.curve,
-      ),
-    );
+    _opacityAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: widget.curve));
 
     Offset startOffset;
     switch (widget.direction) {
@@ -69,12 +59,7 @@ class _FadeInSlideState extends State<FadeInSlide>
     _slideAnimation = Tween<Offset>(
       begin: startOffset,
       end: Offset.zero,
-    ).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: widget.curve,
-      ),
-    );
+    ).animate(CurvedAnimation(parent: _controller, curve: widget.curve));
 
     if (widget.delay == Duration.zero) {
       _controller.forward();
@@ -128,16 +113,14 @@ class GhostText extends StatefulWidget {
   State<GhostText> createState() => _GhostTextState();
 }
 
-class _GhostTextState extends State<GhostText> with SingleTickerProviderStateMixin {
+class _GhostTextState extends State<GhostText>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: widget.duration,
-    );
+    _controller = AnimationController(vsync: this, duration: widget.duration);
 
     if (widget.delay == Duration.zero) {
       _controller.forward();
@@ -173,9 +156,18 @@ class _GhostTextState extends State<GhostText> with SingleTickerProviderStateMix
               curve: Interval(start, end, curve: Curves.easeOut),
             );
 
-            final opacity = Tween<double>(begin: 0.0, end: 1.0).animate(anim).value;
-            final slide = Tween<double>(begin: 8.0, end: 0.0).animate(anim).value;
-            final letterSpacing = Tween<double>(begin: 4.0, end: 0.0).animate(anim).value;
+            final opacity = Tween<double>(
+              begin: 0.0,
+              end: 1.0,
+            ).animate(anim).value;
+            final slide = Tween<double>(
+              begin: 8.0,
+              end: 0.0,
+            ).animate(anim).value;
+            final letterSpacing = Tween<double>(
+              begin: 4.0,
+              end: 0.0,
+            ).animate(anim).value;
 
             return Opacity(
               opacity: opacity,
@@ -212,7 +204,8 @@ class ZoomInFlash extends StatefulWidget {
   State<ZoomInFlash> createState() => _ZoomInFlashState();
 }
 
-class _ZoomInFlashState extends State<ZoomInFlash> with SingleTickerProviderStateMixin {
+class _ZoomInFlashState extends State<ZoomInFlash>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
   late Animation<double> _flashAnimation;
@@ -220,33 +213,38 @@ class _ZoomInFlashState extends State<ZoomInFlash> with SingleTickerProviderStat
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: widget.duration,
-    );
+    _controller = AnimationController(vsync: this, duration: widget.duration);
 
     _scaleAnimation = TweenSequence<double>([
       TweenSequenceItem(
-        tween: Tween<double>(begin: 0.0, end: 1.15)
-            .chain(CurveTween(curve: Curves.easeOutCubic)),
+        tween: Tween<double>(
+          begin: 0.0,
+          end: 1.15,
+        ).chain(CurveTween(curve: Curves.easeOutCubic)),
         weight: 70,
       ),
       TweenSequenceItem(
-        tween: Tween<double>(begin: 1.15, end: 1.0)
-            .chain(CurveTween(curve: Curves.easeInCubic)),
+        tween: Tween<double>(
+          begin: 1.15,
+          end: 1.0,
+        ).chain(CurveTween(curve: Curves.easeInCubic)),
         weight: 30,
       ),
     ]).animate(_controller);
 
     _flashAnimation = TweenSequence<double>([
       TweenSequenceItem(
-        tween: Tween<double>(begin: 0.0, end: 0.8)
-            .chain(CurveTween(curve: Curves.easeOut)),
+        tween: Tween<double>(
+          begin: 0.0,
+          end: 0.8,
+        ).chain(CurveTween(curve: Curves.easeOut)),
         weight: 30,
       ),
       TweenSequenceItem(
-        tween: Tween<double>(begin: 0.8, end: 0.0)
-            .chain(CurveTween(curve: Curves.easeIn)),
+        tween: Tween<double>(
+          begin: 0.8,
+          end: 0.0,
+        ).chain(CurveTween(curve: Curves.easeIn)),
         weight: 70,
       ),
     ]).animate(_controller);
@@ -274,10 +272,7 @@ class _ZoomInFlashState extends State<ZoomInFlash> with SingleTickerProviderStat
         return Stack(
           alignment: Alignment.center,
           children: [
-            Transform.scale(
-              scale: _scaleAnimation.value,
-              child: widget.child,
-            ),
+            Transform.scale(scale: _scaleAnimation.value, child: widget.child),
             Positioned.fill(
               child: IgnorePointer(
                 child: Opacity(
@@ -320,24 +315,22 @@ class _ExpandingSubjectCardState extends State<ExpandingSubjectCard>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _expandAnimation;
-  
+
   // Track the page load time using the first card's initialization time
   static DateTime? _firstCardBuildTime;
 
   @override
   void initState() {
     super.initState();
-    
+
     final now = DateTime.now();
     // Reset page load time if it's the first build or if we returned to the page after some time
-    if (_firstCardBuildTime == null || now.difference(_firstCardBuildTime!) > const Duration(seconds: 4)) {
+    if (_firstCardBuildTime == null ||
+        now.difference(_firstCardBuildTime!) > const Duration(seconds: 4)) {
       _firstCardBuildTime = now;
     }
 
-    _controller = AnimationController(
-      vsync: this,
-      duration: widget.duration,
-    );
+    _controller = AnimationController(vsync: this, duration: widget.duration);
 
     _expandAnimation = CurvedAnimation(
       parent: _controller,
@@ -369,18 +362,21 @@ class _ExpandingSubjectCardState extends State<ExpandingSubjectCard>
     return LayoutBuilder(
       builder: (context, constraints) {
         final maxWidth = constraints.maxWidth;
-        // Height of the card is 120 (64 icon + 56 padding) + 16 outer bottom padding = 136
-        const cardHeight = 120.0;
+        // Height of the card is 128 (64 icon + 64 padding) + 16 outer bottom padding = 144
+        const cardHeight = 128.0;
         const outerHeight = cardHeight + 16.0;
 
         return AnimatedBuilder(
           animation: _expandAnimation,
           builder: (context, child) {
             // Animate width from cardHeight (square) to maxWidth
-            final currentWidth = cardHeight + (maxWidth - cardHeight) * _expandAnimation.value;
+            final currentWidth =
+                cardHeight + (maxWidth - cardHeight) * _expandAnimation.value;
 
             return Align(
-              alignment: widget.isIconLeft ? Alignment.centerLeft : Alignment.centerRight,
+              alignment: widget.isIconLeft
+                  ? Alignment.centerLeft
+                  : Alignment.centerRight,
               child: SizedBox(
                 width: currentWidth,
                 height: outerHeight,
@@ -391,7 +387,9 @@ class _ExpandingSubjectCardState extends State<ExpandingSubjectCard>
                     maxWidth: maxWidth,
                     minHeight: outerHeight,
                     maxHeight: outerHeight,
-                    alignment: widget.isIconLeft ? Alignment.centerLeft : Alignment.centerRight,
+                    alignment: widget.isIconLeft
+                        ? Alignment.centerLeft
+                        : Alignment.centerRight,
                     child: widget.child,
                   ),
                 ),
