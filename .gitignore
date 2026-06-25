@@ -52,3 +52,8 @@ app.*.map.json
 # Environment secrets
 .env
 
+# Platform-specific generated plugin registrants
+**/generated_plugin_registrant.cc
+**/generated_plugin_registrant.h
+**/generated_plugins.cmake
+**/GeneratedPluginRegistrant.swift
