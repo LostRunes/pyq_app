@@ -1,18 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:focus_fox/features/pyqs/presentation/providers/pyq_providers.dart';
 import 'leetcode_webview_screen.dart';
 import 'package:focus_fox/features/pyqs/presentation/screens/solution_viewer_screen.dart';
 
-class AlgoCodeScreen extends StatefulWidget {
+class AlgoCodeScreen extends ConsumerStatefulWidget {
   const AlgoCodeScreen({super.key});
 
   @override
-  State<AlgoCodeScreen> createState() => _AlgoCodeScreenState();
+  ConsumerState<AlgoCodeScreen> createState() => _AlgoCodeScreenState();
 }
 
-class _AlgoCodeScreenState extends State<AlgoCodeScreen> {
+class _AlgoCodeScreenState extends ConsumerState<AlgoCodeScreen> {
   final _supabase = SupabaseClient(
     dotenv.env['SUPABASE_URL']!,
     dotenv.env['SUPABASE_KEY']!,
@@ -46,7 +48,9 @@ class _AlgoCodeScreenState extends State<AlgoCodeScreen> {
     try {
       final response = await _supabase
           .from('leetcode')
-          .select('id, parent_topic, difficulty, question_name, question_link, priority_order')
+          .select(
+            'id, parent_topic, difficulty, question_name, question_link, priority_order',
+          )
           .eq('parent_topic', topic)
           .order('priority_order', ascending: true);
 
@@ -77,14 +81,21 @@ class _AlgoCodeScreenState extends State<AlgoCodeScreen> {
     final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF0F0C20) : theme.scaffoldBackgroundColor,
+      backgroundColor: isDark
+          ? const Color(0xFF0F0C20)
+          : theme.scaffoldBackgroundColor,
       appBar: _selectedTopic == null
           ? null
           : AppBar(
-              backgroundColor: isDark ? const Color(0xFF171330) : theme.appBarTheme.backgroundColor,
+              backgroundColor: isDark
+                  ? const Color(0xFF171330)
+                  : theme.appBarTheme.backgroundColor,
               elevation: 0,
               leading: IconButton(
-                icon: Icon(Icons.arrow_back, color: isDark ? Colors.white : Colors.black87),
+                icon: Icon(
+                  Icons.arrow_back,
+                  color: isDark ? Colors.white : Colors.black87,
+                ),
                 onPressed: () {
                   setState(() {
                     _selectedTopic = null;
@@ -111,9 +122,7 @@ class _AlgoCodeScreenState extends State<AlgoCodeScreen> {
                   ),
                 ],
               ),
-              actions: const [
-                SizedBox(width: 16),
-              ],
+              actions: const [SizedBox(width: 16)],
             ),
       body: Container(
         width: double.infinity,
@@ -145,7 +154,10 @@ class _AlgoCodeScreenState extends State<AlgoCodeScreen> {
           child: Row(
             children: [
               IconButton(
-                icon: Icon(Icons.arrow_back, color: isDark ? Colors.white : Colors.black87),
+                icon: Icon(
+                  Icons.arrow_back,
+                  color: isDark ? Colors.white : Colors.black87,
+                ),
                 onPressed: () => Navigator.pop(context),
               ),
               const SizedBox(width: 8),
@@ -173,12 +185,15 @@ class _AlgoCodeScreenState extends State<AlgoCodeScreen> {
         const SizedBox(height: 24),
         Expanded(
           child: GridView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 24.0,
+              vertical: 8.0,
+            ),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 2,
               crossAxisSpacing: 16,
               mainAxisSpacing: 16,
-              childAspectRatio: 1.4,
+              childAspectRatio: 1.2,
             ),
             itemCount: _topics.length,
             itemBuilder: (context, index) {
@@ -196,12 +211,19 @@ class _AlgoCodeScreenState extends State<AlgoCodeScreen> {
                 },
                 borderRadius: BorderRadius.circular(24),
                 child: Container(
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
                   decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF1E1B4B).withOpacity(0.3) : Colors.indigo.withOpacity(0.04),
+                    color: isDark
+                        ? const Color(0xFF1E1B4B).withOpacity(0.3)
+                        : Colors.indigo.withOpacity(0.04),
                     borderRadius: BorderRadius.circular(24),
                     border: Border.all(
-                      color: isDark ? const Color(0xFF6366F1).withOpacity(0.15) : Colors.indigo.withOpacity(0.1),
+                      color: isDark
+                          ? const Color(0xFF6366F1).withOpacity(0.15)
+                          : Colors.indigo.withOpacity(0.1),
                       width: 1.5,
                     ),
                   ),
@@ -212,7 +234,9 @@ class _AlgoCodeScreenState extends State<AlgoCodeScreen> {
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: isDark ? const Color(0xFF312E81).withOpacity(0.5) : Colors.indigo.withOpacity(0.08),
+                          color: isDark
+                              ? const Color(0xFF312E81).withOpacity(0.5)
+                              : Colors.indigo.withOpacity(0.08),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Icon(
@@ -242,49 +266,62 @@ class _AlgoCodeScreenState extends State<AlgoCodeScreen> {
 
   // SCREEN 2: Question List columns by difficulty (Easy, Medium, Hard)
   Widget _buildQuestionListScreen(bool isDark) {
-    final easyQuestions = _questions.where((q) => q['difficulty'].toString().toLowerCase() == 'easy').toList();
-    final mediumQuestions = _questions.where((q) => q['difficulty'].toString().toLowerCase() == 'medium').toList();
-    final hardQuestions = _questions.where((q) => q['difficulty'].toString().toLowerCase() == 'hard').toList();
+    final easyQuestions = _questions
+        .where((q) => q['difficulty'].toString().toLowerCase() == 'easy')
+        .toList();
+    final mediumQuestions = _questions
+        .where((q) => q['difficulty'].toString().toLowerCase() == 'medium')
+        .toList();
+    final hardQuestions = _questions
+        .where((q) => q['difficulty'].toString().toLowerCase() == 'hard')
+        .toList();
 
     return _isLoadingQuestions
         ? const Center(child: CircularProgressIndicator())
         : _fetchError != null
-            ? Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24.0),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.error_outline, color: Colors.redAccent, size: 48),
-                      const SizedBox(height: 12),
-                      Text(
-                        'Failed to load questions',
-                        style: GoogleFonts.outfit(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.redAccent,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        _fetchError!,
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.outfit(fontSize: 12, color: Colors.white54),
-                      ),
-                      const SizedBox(height: 16),
-                      ElevatedButton.icon(
-                        onPressed: () => _fetchQuestions(_selectedTopic!),
-                        icon: const Icon(Icons.refresh),
-                        label: const Text('Retry'),
-                      ),
-                    ],
+        ? Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.error_outline,
+                    color: Colors.redAccent,
+                    size: 48,
                   ),
-                ),
-              )
-            : LayoutBuilder(
-                builder: (context, constraints) {
+                  const SizedBox(height: 12),
+                  Text(
+                    'Failed to load questions',
+                    style: GoogleFonts.outfit(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.redAccent,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    _fetchError!,
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.outfit(
+                      fontSize: 12,
+                      color: Colors.white54,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    onPressed: () => _fetchQuestions(_selectedTopic!),
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Retry'),
+                  ),
+                ],
+              ),
+            ),
+          )
+        : LayoutBuilder(
+            builder: (context, constraints) {
               final useHorizontalScroll = constraints.maxWidth < 700;
-              
+
               final content = [
                 _buildDifficultyColumn(
                   title: 'Easy',
@@ -312,33 +349,47 @@ class _AlgoCodeScreenState extends State<AlgoCodeScreen> {
               if (useHorizontalScroll) {
                 return SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16.0,
+                    vertical: 16.0,
+                  ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: content.map((col) => SizedBox(
-                      width: constraints.maxWidth * 0.85,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                        child: SingleChildScrollView(
-                          child: col,
-                        ),
-                      ),
-                    )).toList(),
+                    children: content
+                        .map(
+                          (col) => SizedBox(
+                            width: constraints.maxWidth * 0.85,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8.0,
+                              ),
+                              child: SingleChildScrollView(child: col),
+                            ),
+                          ),
+                        )
+                        .toList(),
                   ),
                 );
               } else {
                 return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 24.0),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24.0,
+                    vertical: 24.0,
+                  ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: content.map((col) => Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                        child: SingleChildScrollView(
-                          child: col,
-                        ),
-                      ),
-                    )).toList(),
+                    children: content
+                        .map(
+                          (col) => Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8.0,
+                              ),
+                              child: SingleChildScrollView(child: col),
+                            ),
+                          ),
+                        )
+                        .toList(),
                   ),
                 );
               }
@@ -355,9 +406,15 @@ class _AlgoCodeScreenState extends State<AlgoCodeScreen> {
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF171330).withOpacity(0.4) : Colors.indigo.withOpacity(0.02),
+        color: isDark
+            ? const Color(0xFF171330).withOpacity(0.4)
+            : Colors.indigo.withOpacity(0.02),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey.withOpacity(0.15)),
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withOpacity(0.05)
+              : Colors.grey.withOpacity(0.15),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -380,7 +437,10 @@ class _AlgoCodeScreenState extends State<AlgoCodeScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: accentColor.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(20),
@@ -411,23 +471,44 @@ class _AlgoCodeScreenState extends State<AlgoCodeScreen> {
             itemCount: questions.length,
             itemBuilder: (context, index) {
               final q = questions[index];
-              return ListTile(
-                leading: Text(
-                  '${index + 1}',
-                  style: GoogleFonts.outfit(
-                    fontWeight: FontWeight.w600,
-                    color: isDark ? Colors.white38 : Colors.black38,
-                  ),
-                ),
-                title: Text(
-                  q['question_name'] ?? '',
-                  style: GoogleFonts.outfit(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: isDark ? Colors.white : Colors.black87,
-                  ),
-                ),
-                onTap: () => _showOptionsModal(q),
+              final qId = q['id'].toString();
+              return Consumer(
+                builder: (context, ref, child) {
+                  final isCompleted = ref.watch(leetCodeProgressProvider)[qId] ?? false;
+                  return ListTile(
+                    leading: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Checkbox(
+                          value: isCompleted,
+                          onChanged: (val) {
+                            ref.read(leetCodeProgressProvider.notifier).toggleProgress(qId);
+                          },
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                          activeColor: const Color(0xFF6366F1),
+                        ),
+                        Text(
+                          '${index + 1}',
+                          style: GoogleFonts.outfit(
+                            fontWeight: FontWeight.w600,
+                            color: isDark ? Colors.white38 : Colors.black38,
+                          ),
+                        ),
+                      ],
+                    ),
+                    title: Text(
+                      q['question_name'] ?? '',
+                      style: GoogleFonts.outfit(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? Colors.white : Colors.black87,
+                        decoration: isCompleted ? TextDecoration.lineThrough : null,
+                        decorationColor: isDark ? Colors.white54 : Colors.black54,
+                      ),
+                    ),
+                    onTap: () => _showOptionsModal(q),
+                  );
+                },
               );
             },
           ),
@@ -463,7 +544,9 @@ class _AlgoCodeScreenState extends State<AlgoCodeScreen> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(28),
             side: BorderSide(
-              color: isDark ? Colors.white.withOpacity(0.08) : Colors.indigo.withOpacity(0.08),
+              color: isDark
+                  ? Colors.white.withOpacity(0.08)
+                  : Colors.indigo.withOpacity(0.08),
               width: 1.5,
             ),
           ),
@@ -480,7 +563,10 @@ class _AlgoCodeScreenState extends State<AlgoCodeScreen> {
                     Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
                             color: const Color(0xFF10B981).withOpacity(0.15),
                             borderRadius: BorderRadius.circular(12),
@@ -496,7 +582,10 @@ class _AlgoCodeScreenState extends State<AlgoCodeScreen> {
                         ),
                         const SizedBox(width: 8),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
                             color: const Color(0xFF6366F1).withOpacity(0.15),
                             borderRadius: BorderRadius.circular(12),
@@ -513,7 +602,11 @@ class _AlgoCodeScreenState extends State<AlgoCodeScreen> {
                       ],
                     ),
                     IconButton(
-                      icon: const Icon(Icons.close, size: 18, color: Colors.white54),
+                      icon: const Icon(
+                        Icons.close,
+                        size: 18,
+                        color: Colors.white54,
+                      ),
                       onPressed: () => Navigator.pop(context),
                     ),
                   ],
@@ -544,7 +637,8 @@ class _AlgoCodeScreenState extends State<AlgoCodeScreen> {
                   children: [
                     _buildOptionCard(
                       title: 'View Question',
-                      description: 'Open the problem in the interactive webview solver.',
+                      description:
+                          'Open the problem in the interactive webview solver.',
                       icon: Icons.open_in_new_rounded,
                       iconColor: const Color(0xFF10B981),
                       isDark: isDark,
@@ -554,7 +648,9 @@ class _AlgoCodeScreenState extends State<AlgoCodeScreen> {
                           context,
                           MaterialPageRoute(
                             builder: (_) => LeetCodeWebViewScreen(
-                              url: question['question_link'] ?? 'https://leetcode.com/',
+                              url:
+                                  question['question_link'] ??
+                                  'https://leetcode.com/',
                               title: question['question_name'] ?? 'LeetCode',
                             ),
                           ),
@@ -563,11 +659,15 @@ class _AlgoCodeScreenState extends State<AlgoCodeScreen> {
                     ),
                     const SizedBox(height: 12),
                     _buildOptionCard(
-                      title: solutionExists ? 'View Solution' : 'Generate Solution',
-                      description: solutionExists 
-                          ? 'Check existing step-by-step optimal answers.' 
+                      title: solutionExists
+                          ? 'View Solution'
+                          : 'Generate Solution',
+                      description: solutionExists
+                          ? 'Check existing step-by-step optimal answers.'
                           : 'Create a new AI-guided solution walkthrough.',
-                      icon: solutionExists ? Icons.code_rounded : Icons.auto_awesome_rounded,
+                      icon: solutionExists
+                          ? Icons.code_rounded
+                          : Icons.auto_awesome_rounded,
                       iconColor: const Color(0xFF8B5CF6),
                       isDark: isDark,
                       onTap: () {
@@ -580,7 +680,9 @@ class _AlgoCodeScreenState extends State<AlgoCodeScreen> {
                               questionName: question['question_name'] ?? '',
                               difficulty: question['difficulty'] ?? 'Easy',
                               parentTopic: question['parent_topic'] ?? 'Array',
-                              leetcodeUrl: question['question_link'] ?? 'https://leetcode.com/',
+                              leetcodeUrl:
+                                  question['question_link'] ??
+                                  'https://leetcode.com/',
                             ),
                           ),
                         );
@@ -612,10 +714,14 @@ class _AlgoCodeScreenState extends State<AlgoCodeScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF1E1B4B).withOpacity(0.25) : Colors.indigo.withOpacity(0.03),
+            color: isDark
+                ? const Color(0xFF1E1B4B).withOpacity(0.25)
+                : Colors.indigo.withOpacity(0.03),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: isDark ? Colors.white.withOpacity(0.08) : Colors.indigo.withOpacity(0.08),
+              color: isDark
+                  ? Colors.white.withOpacity(0.08)
+                  : Colors.indigo.withOpacity(0.08),
               width: 1.5,
             ),
           ),
@@ -627,11 +733,7 @@ class _AlgoCodeScreenState extends State<AlgoCodeScreen> {
                   color: iconColor.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(14),
                 ),
-                child: Icon(
-                  icon,
-                  color: iconColor,
-                  size: 22,
-                ),
+                child: Icon(icon, color: iconColor, size: 22),
               ),
               const SizedBox(width: 16),
               Expanded(

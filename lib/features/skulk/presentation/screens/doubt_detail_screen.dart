@@ -13,6 +13,7 @@ import '../widgets/share_doubt_sheet.dart';
 import 'package:focus_fox/shared/widgets/common/cloudinary_image_gallery.dart';
 import '../../data/services/cloudinary_service.dart';
 import '../../utils/image_utils.dart';
+import 'whiteboard_screen.dart';
 
 class DoubtDetailScreen extends ConsumerStatefulWidget {
   const DoubtDetailScreen({super.key});
@@ -97,11 +98,11 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
     }
   }
 
-  void _showSolutionImageSourceBottomSheet() {
+  void _showSolutionImageSourceBottomSheet() async {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    showModalBottomSheet(
+    final String? action = await showModalBottomSheet<String>(
       context: context,
       backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
       shape: const RoundedRectangleBorder(
@@ -134,33 +135,8 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
                     'Take Photo',
                     style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
                   ),
-                  onTap: () async {
-                    Navigator.pop(sheetContext);
-                    try {
-                      final image = await _picker.pickImage(
-                        source: ImageSource.camera,
-                        maxWidth: 1800,
-                        maxHeight: 1800,
-                        imageQuality: 85,
-                      );
-                      if (image == null) return;
-
-                      final compressed = await ImageUtils.compressImage(
-                        File(image.path),
-                      );
-                      if (compressed == null) return;
-
-                      if (!mounted) return;
-                      setState(() {
-                        selectedSolutionImages = List.from(
-                          selectedSolutionImages,
-                        )..add(compressed);
-                      });
-                    } catch (e) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Failed to capture photo: $e')),
-                      );
-                    }
+                  onTap: () {
+                    Navigator.pop(sheetContext, 'camera');
                   },
                 ),
                 Divider(color: isDark ? Colors.grey[850] : Colors.grey[200]),
@@ -174,8 +150,7 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
                     style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
                   ),
                   onTap: () {
-                    Navigator.pop(sheetContext);
-                    pickSolutionImages();
+                    Navigator.pop(sheetContext, 'gallery');
                   },
                 ),
                 Divider(color: isDark ? Colors.grey[850] : Colors.grey[200]),
@@ -188,19 +163,8 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
                     'Draw on Whiteboard',
                     style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
                   ),
-                  onTap: () async {
-                    Navigator.pop(sheetContext);
-                    final File? drawnFile = await Navigator.pushNamed<File?>(
-                      context,
-                      '/skulk_whiteboard',
-                    );
-                    if (drawnFile != null) {
-                      setState(() {
-                        selectedSolutionImages = List.from(
-                          selectedSolutionImages,
-                        )..add(drawnFile);
-                      });
-                    }
+                  onTap: () {
+                    Navigator.pop(sheetContext, 'whiteboard');
                   },
                 ),
               ],
@@ -209,6 +173,47 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
         );
       },
     );
+
+    if (action == null || !mounted) return;
+
+    if (action == 'camera') {
+      try {
+        final image = await _picker.pickImage(
+          source: ImageSource.camera,
+          maxWidth: 1800,
+          maxHeight: 1800,
+          imageQuality: 85,
+        );
+        if (image == null) return;
+
+        final compressed = await ImageUtils.compressImage(
+          File(image.path),
+        );
+        if (compressed == null) return;
+
+        if (!mounted) return;
+        setState(() {
+          selectedSolutionImages = List.from(
+            selectedSolutionImages,
+          )..add(compressed);
+        });
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to capture photo: $e')),
+        );
+      }
+    } else if (action == 'gallery') {
+      pickSolutionImages();
+    } else if (action == 'whiteboard') {
+      final File? drawnFile = await WhiteboardScreen.show(context);
+      if (drawnFile != null && mounted) {
+        setState(() {
+          selectedSolutionImages = List.from(
+            selectedSolutionImages,
+          )..add(drawnFile);
+        });
+      }
+    }
   }
 
   @override
@@ -219,7 +224,7 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
 
   void _submitSolution(String doubtId) async {
     final body = _solutionController.text.trim();
-    if (body.isEmpty) return;
+    if (body.isEmpty && selectedSolutionImages.isEmpty) return;
 
     setState(() {
       _isSubmittingSolution = true;
