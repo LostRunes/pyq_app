@@ -24,6 +24,7 @@ import 'package:focus_fox/features/skulk/presentation/screens/notifications_scre
 import 'package:focus_fox/features/skulk/study_together/presentation/screens/study_together_screen.dart';
 import 'package:focus_fox/features/skulk/study_together/presentation/screens/study_room_chat_screen.dart';
 import 'package:focus_fox/features/skulk/study_together/data/models/study_room.dart';
+import 'package:focus_fox/features/utilities/presentation/screens/todo_dashboard_screen.dart';
 
 class AppRouter {
   static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -158,6 +159,11 @@ class AppRouter {
       case '/gpa_calculator':
         return MaterialPageRoute(
           builder: (_) => const GpaCalculatorScreen(),
+          settings: settings,
+        );
+      case '/todo_dashboard':
+        return MaterialPageRoute(
+          builder: (_) => const ToDoDashboardScreen(),
           settings: settings,
         );
       case '/syllabus':
