@@ -19,6 +19,23 @@ class DrawnLine {
 class WhiteboardScreen extends StatefulWidget {
   const WhiteboardScreen({super.key});
 
+  /// Opens the whiteboard as a full-screen dialog. Returns the drawn [File] or null.
+  static Future<File?> show(BuildContext context) {
+    return showGeneralDialog<File?>(
+      context: context,
+      barrierDismissible: false,
+      barrierLabel: 'Whiteboard',
+      transitionDuration: const Duration(milliseconds: 300),
+      transitionBuilder: (ctx, anim, secAnim, child) {
+        return FadeTransition(
+          opacity: CurvedAnimation(parent: anim, curve: Curves.easeOut),
+          child: child,
+        );
+      },
+      pageBuilder: (ctx, anim, secAnim) => const WhiteboardScreen(),
+    );
+  }
+
   @override
   State<WhiteboardScreen> createState() => _WhiteboardScreenState();
 }

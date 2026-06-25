@@ -13,6 +13,7 @@ import '../widgets/share_doubt_sheet.dart';
 import 'package:focus_fox/shared/widgets/common/cloudinary_image_gallery.dart';
 import '../../data/services/cloudinary_service.dart';
 import '../../utils/image_utils.dart';
+import 'whiteboard_screen.dart';
 
 class DoubtDetailScreen extends ConsumerStatefulWidget {
   const DoubtDetailScreen({super.key});
@@ -204,10 +205,7 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
     } else if (action == 'gallery') {
       pickSolutionImages();
     } else if (action == 'whiteboard') {
-      final File? drawnFile = await Navigator.pushNamed<File?>(
-        context,
-        '/skulk_whiteboard',
-      );
+      final File? drawnFile = await WhiteboardScreen.show(context);
       if (drawnFile != null && mounted) {
         setState(() {
           selectedSolutionImages = List.from(
