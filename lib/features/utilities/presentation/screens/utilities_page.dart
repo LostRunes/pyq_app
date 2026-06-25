@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:focus_fox/features/utilities/presentation/providers/utilities_providers.dart';
 import 'package:focus_fox/utils/fuzzy_search.dart';
+import 'package:focus_fox/shared/presentation/widgets/entrance_animations.dart';
 
 class UtilitiesPage extends ConsumerWidget {
   const UtilitiesPage({super.key});
@@ -15,11 +16,11 @@ class UtilitiesPage extends ConsumerWidget {
 
     final utils = [
       {
-        'title': 'To Do Dashboard',
-        'desc': 'Track study activity & custom tasks',
-        'icon': Icons.playlist_add_check_rounded,
-        'route': '/todo_dashboard',
-        'color': const Color(0xFF6366F1), // Indigo
+        'title': 'Scientific Calculator',
+        'desc': 'Casio-style advanced math tool',
+        'icon': Icons.calculate_rounded,
+        'route': '/scientific_calculator',
+        'color': const Color(0xFF8B5CF6), // Purple
       },
       {
         'title': 'GPA Calculator',
@@ -49,6 +50,13 @@ class UtilitiesPage extends ConsumerWidget {
         'route': '/focus_timer',
         'color': const Color(0xFFEC4899), // Pink
       },
+      {
+        'title': 'To Do Dashboard',
+        'desc': 'Track study activity & custom tasks',
+        'icon': Icons.playlist_add_check_rounded,
+        'route': '/todo_dashboard',
+        'color': const Color(0xFF6366F1), // Indigo
+      }
     ];
 
     final filteredUtils = utils.where((util) {
@@ -61,31 +69,34 @@ class UtilitiesPage extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Utilities',
-                    style: GoogleFonts.outfit(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w900,
-                      color: theme.colorScheme.onSurface,
+          FadeInSlide(
+            duration: const Duration(milliseconds: 500),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Utilities',
+                      style: GoogleFonts.outfit(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w900,
+                        color: theme.colorScheme.onSurface,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Access essential tools & plan your day',
-                    style: GoogleFonts.outfit(
-                      fontSize: 13,
-                      color: theme.colorScheme.onSurface.withOpacity(0.6),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Access essential tools & plan your day',
+                      style: GoogleFonts.outfit(
+                        fontSize: 13,
+                        color: theme.colorScheme.onSurface.withOpacity(0.6),
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            ],
+                  ],
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 32),
           filteredUtils.isEmpty
@@ -114,68 +125,72 @@ class UtilitiesPage extends ConsumerWidget {
                   itemBuilder: (context, index) {
                     final util = filteredUtils[index];
                     final Color utilColor = util['color'] as Color;
-                    return InkWell(
-                      onTap: () {
-                        Navigator.pushNamed(context, util['route'] as String);
-                      },
-                      borderRadius: BorderRadius.circular(28),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                        decoration: BoxDecoration(
-                          color: isDark ? const Color(0xFF1E1B4B).withOpacity(0.2) : theme.colorScheme.surface,
-                          borderRadius: BorderRadius.circular(28),
-                          border: Border.all(
-                            color: utilColor.withOpacity(0.12),
-                            width: 1.5,
+                    return FadeInSlide(
+                      delay: Duration(milliseconds: index * 100),
+                      duration: const Duration(milliseconds: 500),
+                      child: InkWell(
+                        onTap: () {
+                          Navigator.pushNamed(context, util['route'] as String);
+                        },
+                        borderRadius: BorderRadius.circular(28),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          decoration: BoxDecoration(
+                            color: isDark ? const Color(0xFF1E1B4B).withOpacity(0.2) : theme.colorScheme.surface,
+                            borderRadius: BorderRadius.circular(28),
+                            border: Border.all(
+                              color: utilColor.withOpacity(0.12),
+                              width: 1.5,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: utilColor.withOpacity(0.06),
+                                blurRadius: 16,
+                                offset: const Offset(0, 8),
+                              ),
+                            ],
                           ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: utilColor.withOpacity(0.06),
-                              blurRadius: 16,
-                              offset: const Offset(0, 8),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: utilColor.withOpacity(0.1),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                util['icon'] as IconData,
-                                color: utilColor,
-                                size: 26,
-                              ),
-                            ),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  util['title'] as String,
-                                  style: GoogleFonts.outfit(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w800,
-                                    color: theme.colorScheme.onSurface,
-                                  ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: utilColor.withOpacity(0.1),
+                                  shape: BoxShape.circle,
                                 ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  util['desc'] as String,
-                                  style: GoogleFonts.outfit(
-                                    fontSize: 11,
-                                    color: theme.colorScheme.onSurface.withOpacity(0.5),
-                                  ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
+                                child: Icon(
+                                  util['icon'] as IconData,
+                                  color: utilColor,
+                                  size: 26,
                                 ),
-                              ],
-                            ),
-                          ],
+                              ),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    util['title'] as String,
+                                    style: GoogleFonts.outfit(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w800,
+                                      color: theme.colorScheme.onSurface,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    util['desc'] as String,
+                                    style: GoogleFonts.outfit(
+                                      fontSize: 11,
+                                      color: theme.colorScheme.onSurface.withOpacity(0.5),
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     );
