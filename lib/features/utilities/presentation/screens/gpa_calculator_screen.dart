@@ -265,6 +265,7 @@ class _GpaCalculatorScreenState extends State<GpaCalculatorScreen> {
                               Expanded(
                                 flex: 3,
                                 child: DropdownButtonFormField<double>(
+                                  isExpanded: true,
                                   initialValue: (course['credits'] as num?)?.toDouble(),
                                   decoration: InputDecoration(
                                     labelText: 'Credits',
@@ -301,6 +302,7 @@ class _GpaCalculatorScreenState extends State<GpaCalculatorScreen> {
                               Expanded(
                                 flex: 4,
                                 child: DropdownButtonFormField<double>(
+                                  isExpanded: true,
                                   initialValue: (course['gradePoint'] as num?)?.toDouble(),
                                   decoration: InputDecoration(
                                     labelText: 'Grade',

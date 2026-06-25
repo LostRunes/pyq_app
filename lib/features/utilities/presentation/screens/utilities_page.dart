@@ -91,18 +91,18 @@ class UtilitiesPage extends ConsumerWidget {
                     crossAxisCount: 2,
                     crossAxisSpacing: 16,
                     mainAxisSpacing: 16,
-                    childAspectRatio: 1.0, // Force square boxes
+                    childAspectRatio: 0.85, 
                   ),
                   itemBuilder: (context, index) {
                     final util = filteredUtils[index];
                     final Color utilColor = util['color'] as Color;
-              return InkWell(
-                onTap: () {
-                  Navigator.pushNamed(context, util['route'] as String);
-                },
-                borderRadius: BorderRadius.circular(28),
-                child: Container(
-                  padding: const EdgeInsets.all(20),
+                    return InkWell(
+                      onTap: () {
+                        Navigator.pushNamed(context, util['route'] as String);
+                      },
+                      borderRadius: BorderRadius.circular(28),
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: theme.colorScheme.surface,
                     borderRadius: BorderRadius.circular(28),
