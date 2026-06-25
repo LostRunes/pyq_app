@@ -6,6 +6,7 @@ import 'package:focus_fox/core/providers/prefs_provider.dart';
 import 'package:focus_fox/core/providers/theme_provider.dart';
 import 'package:focus_fox/features/subjects/presentation/providers/subjects_providers.dart';
 import 'package:focus_fox/features/subjects/data/models/branch.dart';
+import 'package:focus_fox/services/push_notification_service.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -27,6 +28,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     super.initState();
     _tempSemester = ref.read(selectedSemesterProvider);
     _tempBranchId = ref.read(selectedBranchIdProvider);
+    _pushNotifications =
+        ref.read(sharedPrefsProvider).getBool('push_notifications') ?? true;
   }
 
   @override
@@ -420,10 +423,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             trailing: Switch.adaptive(
               value: _pushNotifications,
               activeColor: const Color(0xFFC0A6FF),
-              onChanged: (val) {
+              onChanged: (val) async {
                 setState(() {
                   _pushNotifications = val;
                 });
+                final prefs = ref.read(sharedPrefsProvider);
+                await prefs.setBool('push_notifications', val);
+                if (val) {
+                  await PushNotificationService.registerDeviceToken();
+                } else {
+                  await PushNotificationService.deleteDeviceToken();
+                }
               },
             ),
           ),
