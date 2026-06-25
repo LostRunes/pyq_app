@@ -15,6 +15,7 @@ class PushNotificationService {
 
   /// Initialize Firebase Messaging and local notifications
   static Future<void> initialize() async {
+    if (kIsWeb) return;
     if (_isInitialized) return;
 
     // 1. Request permissions (essential for iOS and Android 13+)
@@ -163,6 +164,7 @@ class PushNotificationService {
 
   /// Retrieves device FCM token and registers it to Supabase user_fcm_tokens
   static Future<void> registerDeviceToken() async {
+    if (kIsWeb) return;
     try {
       final prefs = await SharedPreferences.getInstance();
       final notificationsEnabled = prefs.getBool('push_notifications') ?? true;
@@ -209,6 +211,7 @@ class PushNotificationService {
 
   /// Discards the FCM token from Supabase upon logout
   static Future<void> deleteDeviceToken() async {
+    if (kIsWeb) return;
     try {
       String? token = await _fcm.getToken();
       if (token == null) return;
