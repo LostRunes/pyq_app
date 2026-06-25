@@ -360,6 +360,12 @@ class RoomChatNotifier extends Notifier<List<RoomMessage>> {
     } catch (_) {}
   }
 
+  Future<void> refresh() async {
+    _offset = 0;
+    _hasMore = true;
+    await _loadInitialMessages();
+  }
+
   /// Load older messages (pagination)
   Future<void> loadMore() async {
     if (!_hasMore || _isLoadingMore) return;
@@ -417,6 +423,17 @@ class RoomChatNotifier extends Notifier<List<RoomMessage>> {
     try {
       await repo.deleteMessage(messageId);
       state = state.where((m) => m.id != messageId).toList();
+    } catch (_) {
+      rethrow;
+    }
+  }
+
+  /// Toggle emoji reaction on message helper
+  Future<void> toggleReaction(String messageId, String emoji) async {
+    final repo = ref.read(studyTogetherRepositoryProvider);
+    try {
+      final updatedMsg = await repo.updateMessageReactions(messageId, emoji);
+      state = state.map((m) => m.id == messageId ? updatedMsg : m).toList();
     } catch (_) {
       rethrow;
     }

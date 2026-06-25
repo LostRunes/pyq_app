@@ -11,6 +11,7 @@ class RoomMessage {
   final String? senderUsername;
   final String? senderDisplayName;
   final String? senderAvatarUrl;
+  final Map<String, dynamic> reactions;
 
   RoomMessage({
     required this.id,
@@ -23,6 +24,7 @@ class RoomMessage {
     this.senderUsername,
     this.senderDisplayName,
     this.senderAvatarUrl,
+    this.reactions = const {},
   });
 
   factory RoomMessage.fromJson(Map<String, dynamic> json) {
@@ -41,6 +43,7 @@ class RoomMessage {
       senderUsername: json['sender_username'] as String?,
       senderDisplayName: json['sender_display_name'] as String?,
       senderAvatarUrl: json['sender_avatar_url'] as String?,
+      reactions: json['reactions'] as Map<String, dynamic>? ?? const {},
     );
   }
 }

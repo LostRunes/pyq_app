@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../study_together/data/models/study_room.dart';
 import '../providers/skulk_providers.dart';
+import 'skulk_feed_screen.dart';
 
 // ---------------------------------------------------------------------------
 // Provider
@@ -42,6 +43,7 @@ class NotificationsScreen extends ConsumerWidget {
               final repo = ref.read(skulkRepositoryProvider);
               await repo.markAllNotificationsRead();
               ref.invalidate(notificationsProvider);
+              ref.invalidate(unreadCountProvider);
             },
             child: Text(
               'Mark all read',
@@ -105,7 +107,10 @@ class NotificationsScreen extends ConsumerWidget {
           }
 
           return RefreshIndicator(
-            onRefresh: () async => ref.invalidate(notificationsProvider),
+            onRefresh: () async {
+              ref.invalidate(notificationsProvider);
+              ref.invalidate(unreadCountProvider);
+            },
             child: ListView(
               padding: const EdgeInsets.symmetric(vertical: 8),
               children: [

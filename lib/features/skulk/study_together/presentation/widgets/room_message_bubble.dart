@@ -14,6 +14,7 @@ class RoomMessageBubble extends StatefulWidget {
   final ValueChanged<String>? onRepliedMessageTap;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
+  final ValueChanged<String>? onReact;
 
   const RoomMessageBubble({
     super.key,
@@ -23,6 +24,7 @@ class RoomMessageBubble extends StatefulWidget {
     this.onRepliedMessageTap,
     this.onEdit,
     this.onDelete,
+    this.onReact,
   });
 
   @override
@@ -384,6 +386,8 @@ class _RoomMessageBubbleState extends State<RoomMessageBubble> with SingleTicker
                                   ),
                                 ),
                               ),
+                              if (widget.message.reactions.isNotEmpty)
+                                _buildReactionsRow(context, currentUserId),
                             ],
                           ),
                         ),
@@ -416,6 +420,77 @@ class _RoomMessageBubbleState extends State<RoomMessageBubble> with SingleTicker
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildReactionsRow(BuildContext context, String? currentUserId) {
+    if (widget.message.reactions.isEmpty) return const SizedBox.shrink();
+
+    final Map<String, List<String>> grouped = {};
+    widget.message.reactions.forEach((userId, emoji) {
+      if (emoji is String) {
+        grouped.putIfAbsent(emoji, () => []).add(userId);
+      }
+    });
+
+    if (grouped.isEmpty) return const SizedBox.shrink();
+
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 4, left: 4, right: 4),
+      child: Wrap(
+        spacing: 4,
+        runSpacing: 4,
+        children: grouped.entries.map((entry) {
+          final emoji = entry.key;
+          final userIds = entry.value;
+          final hasReacted = currentUserId != null && userIds.contains(currentUserId);
+
+          return GestureDetector(
+            onTap: () {
+              if (widget.onReact != null) {
+                widget.onReact!(emoji);
+              }
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: hasReacted
+                    ? theme.colorScheme.primary.withOpacity(0.15)
+                    : (isDark ? const Color(0xFF2D2D2D) : const Color(0xFFF0F0F0)),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: hasReacted
+                      ? theme.colorScheme.primary.withOpacity(0.3)
+                      : Colors.transparent,
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(emoji, style: const TextStyle(fontSize: 12)),
+                  if (userIds.length > 1) ...[
+                    const SizedBox(width: 4),
+                    Text(
+                      '${userIds.length}',
+                      style: GoogleFonts.outfit(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: hasReacted
+                            ? theme.colorScheme.primary
+                            : (isDark ? Colors.grey[400] : Colors.grey[600]),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          );
+        }).toList(),
       ),
     );
   }
@@ -502,6 +577,39 @@ class _RoomMessageBubbleState extends State<RoomMessageBubble> with SingleTicker
                 ),
               ),
               const SizedBox(height: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: ['👍', '❤️', '😂', '😮', '😢', '🙏'].map((emoji) {
+                    final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+                    final hasReacted = currentUserId != null && widget.message.reactions[currentUserId] == emoji;
+                    return GestureDetector(
+                      onTap: () {
+                        Navigator.pop(context);
+                        if (widget.onReact != null) {
+                          widget.onReact!(emoji);
+                        }
+                      },
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 150),
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: hasReacted
+                              ? theme.colorScheme.primary.withOpacity(0.15)
+                              : Colors.transparent,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Text(
+                          emoji,
+                          style: const TextStyle(fontSize: 26),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+              Divider(color: isDark ? Colors.grey[800] : Colors.grey[300], thickness: 0.5),
               ListTile(
                 leading: const Icon(Icons.copy_rounded),
                 title: Text('Copy Text', style: GoogleFonts.outfit()),

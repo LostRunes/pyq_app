@@ -109,16 +109,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
                 : Row(
                     children: [
                       const SizedBox(width: 8),
-                      IconButton(
-                        icon: const Icon(Icons.notifications_none_rounded),
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('No new notifications. 🔔'),
-                            ),
-                          );
-                        },
-                      ),
+                      const NotificationBell(),
                       IconButton(
                         icon: const Icon(Icons.search_rounded),
                         onPressed: () {
