@@ -178,6 +178,8 @@ class SubjectsPage extends ConsumerWidget {
               children: [
                 Text(
                   subject.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w800,
                   ),
@@ -254,9 +256,10 @@ class SubjectsPage extends ConsumerWidget {
               ],
             );
 
-            return FadeInSlide(
-              delay: Duration(milliseconds: (i - 1).clamp(0, 6) * 100),
-              duration: const Duration(milliseconds: 550),
+            return ExpandingSubjectCard(
+              isIconLeft: isIconLeft,
+              delay: Duration(milliseconds: (i - 1).clamp(0, 6) * 150),
+              duration: const Duration(milliseconds: 900),
               child: Padding(
                 padding: const EdgeInsets.only(bottom: 16),
                 child: InkWell(
