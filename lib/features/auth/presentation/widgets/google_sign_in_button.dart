@@ -42,6 +42,7 @@ class GoogleSignInButton extends StatelessWidget {
             )
           : Row(
               mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Image.asset(
                   'assets/images/google_logo.png',
@@ -54,9 +55,13 @@ class GoogleSignInButton extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 12),
-                Text(
-                  'Continue with Google',
-                  style: AppTextStyles.button(context),
+                Flexible(
+                  child: Text(
+                    'Continue with Google',
+                    style: AppTextStyles.button(context),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                  ),
                 ),
               ],
             ),

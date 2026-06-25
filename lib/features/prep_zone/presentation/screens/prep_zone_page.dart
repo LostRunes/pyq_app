@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:focus_fox/features/prep_zone/presentation/providers/prep_zone_providers.dart';
 import 'package:focus_fox/utils/fuzzy_search.dart';
+import 'package:focus_fox/shared/presentation/widgets/entrance_animations.dart';
 
 class PrepZonePage extends ConsumerWidget {
   const PrepZonePage({super.key});
@@ -51,20 +52,28 @@ class PrepZonePage extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            'Prep Zone',
-            style: GoogleFonts.outfit(
-              fontSize: 32,
-              fontWeight: FontWeight.w900,
-              color: theme.colorScheme.onSurface,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Sharpen your coding skills and prepare for core engineering exams.',
-            style: GoogleFonts.outfit(
-              fontSize: 14,
-              color: theme.colorScheme.onSurface.withOpacity(0.6),
+          FadeInSlide(
+            duration: const Duration(milliseconds: 500),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Prep Zone',
+                  style: GoogleFonts.outfit(
+                    fontSize: 32,
+                    fontWeight: FontWeight.w900,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Sharpen your coding skills and prepare for core engineering exams.',
+                  style: GoogleFonts.outfit(
+                    fontSize: 14,
+                    color: theme.colorScheme.onSurface.withOpacity(0.6),
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 32),
@@ -95,77 +104,81 @@ class PrepZonePage extends ConsumerWidget {
                     final item = filteredItems[index];
                     final Color itemColor = item['color'] as Color;
                     final bool isComingSoon = item['isComingSoon'] as bool? ?? false;
-              return InkWell(
-                onTap: isComingSoon
-                    ? null
-                    : () {
-                        Navigator.pushNamed(context, item['route'] as String);
-                      },
-                borderRadius: BorderRadius.circular(28),
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.surface,
-                    borderRadius: BorderRadius.circular(28),
-                    border: Border.all(
-                      color: itemColor.withOpacity(0.12),
-                      width: 1.5,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: itemColor.withOpacity(0.06),
-                        blurRadius: 16,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: itemColor.withOpacity(0.1),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          item['icon'] as IconData,
-                          color: itemColor,
-                          size: 26,
-                        ),
-                      ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            item['title'] as String,
-                            style: GoogleFonts.outfit(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w800,
-                              color: theme.colorScheme.onSurface,
+                    return FadeInSlide(
+                      delay: Duration(milliseconds: index * 100),
+                      duration: const Duration(milliseconds: 500),
+                      child: InkWell(
+                        onTap: isComingSoon
+                            ? null
+                            : () {
+                                Navigator.pushNamed(context, item['route'] as String);
+                              },
+                        borderRadius: BorderRadius.circular(28),
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.surface,
+                            borderRadius: BorderRadius.circular(28),
+                            border: Border.all(
+                              color: itemColor.withOpacity(0.12),
+                              width: 1.5,
                             ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            item['desc'] as String,
-                            style: GoogleFonts.outfit(
-                              fontSize: 11,
-                              color: theme.colorScheme.onSurface.withOpacity(
-                                0.5,
+                            boxShadow: [
+                              BoxShadow(
+                                color: itemColor.withOpacity(0.06),
+                                blurRadius: 16,
+                                offset: const Offset(0, 8),
                               ),
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
+                            ],
                           ),
-                        ],
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: itemColor.withOpacity(0.1),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  item['icon'] as IconData,
+                                  color: itemColor,
+                                  size: 26,
+                                ),
+                              ),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    item['title'] as String,
+                                    style: GoogleFonts.outfit(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w800,
+                                      color: theme.colorScheme.onSurface,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    item['desc'] as String,
+                                    style: GoogleFonts.outfit(
+                                      fontSize: 11,
+                                      color: theme.colorScheme.onSurface.withOpacity(
+                                        0.5,
+                                      ),
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
-                    ],
-                  ),
+                    );
+                  },
                 ),
-              );
-            },
-          ),
         ],
       ),
     );
