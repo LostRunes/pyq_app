@@ -25,6 +25,8 @@ import 'package:focus_fox/features/skulk/study_together/presentation/screens/stu
 import 'package:focus_fox/features/skulk/study_together/data/models/study_room.dart';
 
 class AppRouter {
+  static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
       case '/':

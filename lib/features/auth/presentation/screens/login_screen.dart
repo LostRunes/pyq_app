@@ -179,6 +179,61 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     _onUsernameChanged(newUsername);
   }
 
+  Future<void> _skipProfileSetup() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user == null) throw Exception('No logged in user found');
+
+      final repository = ref.read(authRepositoryProvider);
+      
+      // 1. Generate unique username
+      String username = repository.generateCoolUsername();
+      bool isUnique = await repository.checkUsernameUnique(username);
+      int attempts = 0;
+      while (!isUnique && attempts < 15) {
+        username = repository.generateCoolUsername();
+        isUnique = await repository.checkUsernameUnique(username);
+        attempts++;
+      }
+
+      // 2. Default display name (from Google full_name, name, or fallback)
+      String? displayName = user.userMetadata?['full_name'] ?? user.userMetadata?['name'];
+      if (displayName == null || displayName.trim().isEmpty) {
+        displayName = user.email?.split('@')[0];
+      }
+      if (displayName == null || displayName.trim().isEmpty) {
+        displayName = 'User';
+      }
+
+      // 3. Default avatar
+      const defaultAvatar = 'assets/images/pikachu.png';
+
+      await repository.submitUsername(
+        userId: user.id,
+        username: username,
+        displayName: displayName,
+        avatarUrl: defaultAvatar,
+      );
+
+      setState(() {
+        _isLoading = false;
+        _showUsernamePopup = false;
+      });
+
+      _showSuccessSnackBar('Welcome to Focus Fox! 🦊');
+      await _checkEmailAndRedirect(user.email ?? '');
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      _showErrorSnackBar('Failed to save profile: $e');
+    }
+  }
+
   Future<void> _submitUsername() async {
     final username = _usernameController.text.trim();
     final displayName = _displayNameController.text.trim();
@@ -423,10 +478,24 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Text(
-                          'Setup Your Skulk Profile 🦊',
-                          textAlign: TextAlign.center,
-                          style: AppTextStyles.popupTitle(context),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const SizedBox(width: 48), // spacer to center the title
+                            Expanded(
+                              child: Text(
+                                'Setup Your Skulk Profile 🦊',
+                                textAlign: TextAlign.center,
+                                style: AppTextStyles.popupTitle(context),
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.close_rounded),
+                              onPressed: _skipProfileSetup,
+                              splashRadius: 20,
+                              tooltip: 'Skip and use defaults',
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 6),
                         Text(

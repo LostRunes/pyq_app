@@ -6,6 +6,7 @@ import 'package:focus_fox/features/subjects/data/repositories/subjects_repositor
 import 'package:focus_fox/features/pyqs/data/repositories/pyq_repository.dart';
 import '../services/ai_service.dart';
 import '../services/drive_service.dart';
+import '../services/push_notification_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 final supabase1ClientProvider = Provider<SupabaseClient>((ref) {
@@ -30,6 +31,9 @@ final driveServiceProvider = Provider((ref) => DriveService());
 /// Call this from any logout button. After this, the next Google sign-in
 /// will always show the account picker (no silent re-auth).
 Future<void> signOutCompletely() async {
+  try {
+    await PushNotificationService.deleteDeviceToken();
+  } catch (_) {}
   try {
     // 1. Revoke Google token so account picker shows next time
     final googleSignIn = GoogleSignIn();
