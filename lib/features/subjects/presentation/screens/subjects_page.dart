@@ -280,72 +280,76 @@ class SubjectsPage extends ConsumerWidget {
                   ],
                 );
 
-                return ExpandingSubjectCard(
-                  isIconLeft: isIconLeft,
-                  delay: Duration(milliseconds: (i - 1).clamp(0, 6) * 150),
-                  duration: const Duration(milliseconds: 900),
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: InkWell(
-                      onTap: () {
-                        Navigator.pushNamed(
-                          context,
-                          '/subject_dashboard',
-                          arguments: {'subject': subject},
-                        );
-                      },
-                      borderRadius: BorderRadius.circular(32),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? Colors.white.withOpacity(0.03)
-                              : Colors.white.withOpacity(0.65),
-                          borderRadius: BorderRadius.circular(32),
-                          border: Border.all(
-                            color:
-                                (Theme.of(context).brightness == Brightness.dark
-                                ? Colors.white.withOpacity(0.08)
-                                : const Color(0xFFFF9F0A).withOpacity(0.28)),
-                            width: 1.5,
-                          ),
-                          boxShadow: [
-                            // Soft Apple system orange glow from behind
-                            if (!isDark)
-                              BoxShadow(
-                                color: const Color(
-                                  0xFFFF9F0A,
-                                ).withOpacity(0.12),
-                                blurRadius: 24,
-                                spreadRadius: 1,
-                                offset: const Offset(0, 8),
-                              ),
-                            BoxShadow(
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.primary.withValues(alpha: 0.04),
-                              blurRadius: 16,
-                              offset: const Offset(0, 4),
+                return SubjectCardFade(
+                  delay: Duration(
+                    milliseconds: (i - 1).clamp(0, 5) * 60,
+                  ),
+                  child: ExpandingSubjectCard(
+                    isIconLeft: isIconLeft,
+                    delay: Duration(milliseconds: (i - 1).clamp(0, 6) * 150),
+                    duration: const Duration(milliseconds: 900),
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: InkWell(
+                        onTap: () {
+                          Navigator.pushNamed(
+                            context,
+                            '/subject_dashboard',
+                            arguments: {'subject': subject},
+                          );
+                        },
+                        borderRadius: BorderRadius.circular(32),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.white.withOpacity(0.03)
+                                : Colors.white.withOpacity(0.65),
+                            borderRadius: BorderRadius.circular(32),
+                            border: Border.all(
+                              color:
+                                  (Theme.of(context).brightness == Brightness.dark
+                                  ? Colors.white.withOpacity(0.08)
+                                  : const Color(0xFFFF9F0A).withOpacity(0.28)),
+                              width: 1.5,
                             ),
-                          ],
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(32),
-                          child: BackdropFilter(
-                            filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-                            child: Padding(
-                              padding: const EdgeInsets.all(24),
-                              child: Row(
-                                children: [
-                                  if (isIconLeft) ...[
-                                    iconWidget,
-                                    const SizedBox(width: 20),
+                            boxShadow: [
+                              if (!isDark)
+                                BoxShadow(
+                                  color: const Color(
+                                    0xFFFF9F0A,
+                                  ).withOpacity(0.12),
+                                  blurRadius: 24,
+                                  spreadRadius: 1,
+                                  offset: const Offset(0, 8),
+                                ),
+                              BoxShadow(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.primary.withValues(alpha: 0.04),
+                                blurRadius: 16,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(32),
+                            child: BackdropFilter(
+                              filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                              child: Padding(
+                                padding: const EdgeInsets.all(24),
+                                child: Row(
+                                  children: [
+                                    if (isIconLeft) ...[
+                                      iconWidget,
+                                      const SizedBox(width: 20),
+                                    ],
+                                    Expanded(child: textWidget),
+                                    if (!isIconLeft) ...[
+                                      const SizedBox(width: 20),
+                                      iconWidget,
+                                    ],
                                   ],
-                                  Expanded(child: textWidget),
-                                  if (!isIconLeft) ...[
-                                    const SizedBox(width: 20),
-                                    iconWidget,
-                                  ],
-                                ],
+                                ),
                               ),
                             ),
                           ),

@@ -17,6 +17,7 @@ import 'package:focus_fox/features/prep_zone/presentation/screens/prep_zone_page
 import 'package:focus_fox/features/utilities/presentation/screens/utilities_page.dart';
 import 'package:focus_fox/services/analytics_service.dart';
 import 'package:focus_fox/shared/widgets/theme_toggle_button.dart';
+import 'package:focus_fox/shared/presentation/widgets/entrance_animations.dart';
 
 class MainNavigationScreen extends ConsumerStatefulWidget {
   final String branchId;
@@ -63,6 +64,9 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
     )..repeat(reverse: true);
 
     _pageController = PageController(initialPage: _currentIndex);
+
+    // Subjects tab is active on startup — open the fade animation window
+    SubjectCardFade.onPageActivated();
   }
 
   @override
@@ -530,6 +534,8 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
                 ref.read(utilitiesSearchProvider.notifier).state = '';
                 ref.read(skulkFeedSearchProvider.notifier).state = '';
               });
+              // When swiping to subjects tab, open the fade animation window
+              if (index == 0) SubjectCardFade.onPageActivated();
             },
             children: [
               const SubjectsPage(),
@@ -676,6 +682,8 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
 
     return GestureDetector(
       onTap: () {
+        // When tapping subjects tab, open the fade animation window
+        if (index == 0) SubjectCardFade.onPageActivated();
         setState(() {
           _currentIndex = index;
           if (index != 3) {
