@@ -286,24 +286,25 @@ class SubjectsPage extends ConsumerWidget {
                     child: Container(
                       decoration: BoxDecoration(
                         color: Theme.of(context).brightness == Brightness.dark
-                            ? Colors.white.withOpacity(0.08)
+                            ? Colors.white.withOpacity(0.03)
                             : Colors.white.withOpacity(0.65),
                         borderRadius: BorderRadius.circular(32),
                         border: Border.all(
                           color:
                               (Theme.of(context).brightness == Brightness.dark
-                              ? Colors.white.withOpacity(0.15)
+                              ? Colors.white.withOpacity(0.08)
                               : const Color(0xFFFF9F0A).withOpacity(0.28)),
                           width: 1.5,
                         ),
                         boxShadow: [
                           // Soft Apple system orange glow from behind
-                          BoxShadow(
-                            color: const Color(0xFFFF9F0A).withOpacity(0.12),
-                            blurRadius: 24,
-                            spreadRadius: 1,
-                            offset: const Offset(0, 8),
-                          ),
+                          if (!isDark)
+                            BoxShadow(
+                              color: const Color(0xFFFF9F0A).withOpacity(0.12),
+                              blurRadius: 24,
+                              spreadRadius: 1,
+                              offset: const Offset(0, 8),
+                            ),
                           BoxShadow(
                             color: Theme.of(
                               context,
