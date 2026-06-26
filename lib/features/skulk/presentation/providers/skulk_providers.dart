@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/providers.dart';
+import '../../../../core/providers/prefs_provider.dart';
+import '../../../subjects/presentation/providers/subjects_providers.dart';
 import '../../data/models/comment.dart';
 import '../../data/models/doubt.dart';
 import '../../data/models/solution.dart';
@@ -8,7 +10,7 @@ import '../../data/repositories/skulk_repository.dart';
 
 /// Raw Db Service Provider
 final skulkDbServiceProvider = Provider<SkulkDbService>(
-  (ref) => SkulkDbService(),
+  (ref) => SkulkDbService(ref.watch(supabase2ClientProvider)),
 );
 
 /// Repository Provider (depends on SubjectsRepository and SkulkDbService)
@@ -26,14 +28,13 @@ class SkulkFeedFilterNotifier extends Notifier<String> {
   @override
   String build() => 'all';
 
-  @override
-  set state(String value) => super.state = value;
+  void updateFilter(String filter) => state = filter;
 }
 
+// Not autoDispose — we want the filter to survive navigation to a detail screen
 final skulkFeedFilterProvider =
     NotifierProvider<SkulkFeedFilterNotifier, String>(
       SkulkFeedFilterNotifier.new,
-      isAutoDispose: true,
     );
 
 /// Current search query string
@@ -41,14 +42,13 @@ class SkulkFeedSearchNotifier extends Notifier<String> {
   @override
   String build() => '';
 
-  @override
-  set state(String value) => super.state = value;
+  void updateSearch(String query) => state = query;
 }
 
+// Not autoDispose — preserve search query when navigating away
 final skulkFeedSearchProvider =
     NotifierProvider<SkulkFeedSearchNotifier, String>(
       SkulkFeedSearchNotifier.new,
-      isAutoDispose: true,
     );
 
 /// Selected subject filter for Skulk feed
@@ -56,14 +56,13 @@ class SkulkFeedSubjectNotifier extends Notifier<String?> {
   @override
   String? build() => null;
 
-  @override
-  set state(String? value) => super.state = value;
+  void updateSubject(String? subjectId) => state = subjectId;
 }
 
+// Not autoDispose — preserve subject filter when navigating away
 final skulkFeedSubjectProvider =
     NotifierProvider<SkulkFeedSubjectNotifier, String?>(
       SkulkFeedSubjectNotifier.new,
-      isAutoDispose: true,
     );
 
 /// Selected tag filter
@@ -71,13 +70,12 @@ class SkulkFeedTagNotifier extends Notifier<String?> {
   @override
   String? build() => null;
 
-  @override
-  set state(String? value) => super.state = value;
+  void updateTag(String? tag) => state = tag;
 }
 
+// Not autoDispose — preserve tag filter when navigating away
 final skulkFeedTagProvider = NotifierProvider<SkulkFeedTagNotifier, String?>(
   SkulkFeedTagNotifier.new,
-  isAutoDispose: true,
 );
 
 // ---------------------------------------------------------------------------
@@ -96,10 +94,19 @@ class SkulkFeedNotifier extends AsyncNotifier<List<Doubt>> {
   @override
   Future<List<Doubt>> build() async {
     // Re-run when any filter changes
-    ref.watch(skulkFeedFilterProvider);
+    final filter = ref.watch(skulkFeedFilterProvider);
     ref.watch(skulkFeedSearchProvider);
     ref.watch(skulkFeedSubjectProvider);
     ref.watch(skulkFeedTagProvider);
+
+    // Also watch subjects provider if filter is 'subjects' to trigger automatic rebuilds
+    if (filter == 'subjects') {
+      final branchId = ref.watch(selectedBranchIdProvider);
+      final semester = ref.watch(selectedSemesterProvider);
+      if (branchId.isNotEmpty) {
+        ref.watch(subjectsProvider((branchId: branchId, semester: semester)));
+      }
+    }
 
     // Reset pagination on filter change
     _offset = 0;
@@ -116,11 +123,26 @@ class SkulkFeedNotifier extends AsyncNotifier<List<Doubt>> {
     final subjectId = ref.read(skulkFeedSubjectProvider);
     final tag = ref.read(skulkFeedTagProvider);
 
+    List<String>? mySubjectIds;
+    if (filter == 'subjects') {
+      final branchId = ref.read(selectedBranchIdProvider);
+      final semester = ref.read(selectedSemesterProvider);
+      if (branchId.isNotEmpty) {
+        try {
+          final subjects = await ref.read(subjectsProvider((branchId: branchId, semester: semester)).future);
+          mySubjectIds = subjects.map((s) => s.id).toList();
+        } catch (_) {
+          mySubjectIds = [];
+        }
+      }
+    }
+
     final page = await repo.getDoubts(
       filterType: filter,
       searchQuery: search,
       subjectId: subjectId,
       tagFilter: tag,
+      subjectIds: mySubjectIds,
       limit: _pageSize,
       offset: _offset,
     );

@@ -5,6 +5,11 @@ import '../core/providers/theme_provider.dart';
 import '../services/analytics_service.dart';
 import 'router.dart';
 
+/// A single global RouteObserver for the app.
+/// Used by MainNavigationScreen to pause animations when a child route is active.
+final RouteObserver<PageRoute<dynamic>> appRouteObserver =
+    RouteObserver<PageRoute<dynamic>>();
+
 class PyqApp extends ConsumerWidget {
   const PyqApp({super.key});
 
@@ -21,6 +26,7 @@ class PyqApp extends ConsumerWidget {
       themeMode: themeMode,
       navigatorObservers: [
         AnalyticsService.observer,
+        appRouteObserver,
       ],
       onGenerateRoute: AppRouter.generateRoute,
       initialRoute: '/',

@@ -125,8 +125,8 @@ class AppRouter {
           settings: settings,
         );
       case '/skulk_whiteboard':
-        return MaterialPageRoute(
-          builder: (_) => const WhiteboardScreen(),
+        return ParallaxPageRoute(
+          child: const WhiteboardScreen(),
           settings: settings,
         );
       case '/skulk_detail':
@@ -175,8 +175,8 @@ class AppRouter {
           settings: settings,
         );
       case '/todo_dashboard':
-        return MaterialPageRoute(
-          builder: (_) => const ToDoDashboardScreen(),
+        return ParallaxPageRoute(
+          child: const ToDoDashboardScreen(),
           settings: settings,
         );
       case '/syllabus':

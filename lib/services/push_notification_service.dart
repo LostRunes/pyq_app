@@ -199,13 +199,9 @@ class PushNotificationService {
         'updated_at': DateTime.now().toUtc().toIso8601String(),
       }, onConflict: 'token');
       
-      if (kDebugMode) {
-        print('FCM Token registered successfully: $token');
-      }
+      print('FCM Token registered successfully: $token');
     } catch (e) {
-      if (kDebugMode) {
-        print('Failed to register FCM token: $e');
-      }
+      print('Failed to register FCM token: $e');
     }
   }
 
