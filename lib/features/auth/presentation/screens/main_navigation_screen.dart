@@ -6,6 +6,7 @@ import 'package:focus_fox/core/providers.dart';
 import 'package:focus_fox/core/providers/prefs_provider.dart';
 import 'package:focus_fox/core/providers/user_profile_provider.dart';
 import 'package:focus_fox/core/providers/theme_provider.dart';
+import 'package:focus_fox/core/providers/bee_provider.dart';
 import 'package:focus_fox/features/subjects/presentation/providers/subjects_providers.dart';
 import 'package:focus_fox/features/prep_zone/presentation/providers/prep_zone_providers.dart';
 import 'package:focus_fox/features/utilities/presentation/providers/utilities_providers.dart';
@@ -83,6 +84,8 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
     _currentBranchId = activeBranchId;
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final beeCount = ref.watch(beeTapCountProvider);
+    final beeEnabled = ref.watch(beeEnabledProvider);
 
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -255,11 +258,14 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
                 Navigator.pushNamed(context, '/about');
               } else if (value == 'theme_toggle') {
                 ref.read(themeModeProvider.notifier).toggle();
+              } else if (value == 'bee_toggle') {
+                ref.read(beeEnabledProvider.notifier).toggle();
               } else if (value == 'logout') {
                 _showLogoutDialog(context);
               }
             },
-            itemBuilder: (BuildContext context) => [
+            itemBuilder: (BuildContext context) {
+              return [
               PopupMenuItem(
                 value: 'profile',
                 child: Row(
@@ -320,6 +326,103 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
                   ],
                 ),
               ),
+              // ── Quest Item (bee counter + toggle) ─────────────────────
+              PopupMenuItem<String>(
+                value: 'bee_toggle',
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 4,
+                ),
+                child: Row(
+                  children: [
+                    // Bee emoji + golden count badge
+                    Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Text('🐝', style: GoogleFonts.outfit(fontSize: 18)),
+                        Positioned(
+                          top: -6,
+                          right: -10,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 5,
+                              vertical: 1,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFF9F0A),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              '$beeCount',
+                              style: GoogleFonts.outfit(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w900,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Quest',
+                            style: GoogleFonts.outfit(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                            ),
+                          ),
+                          Text(
+                            beeEnabled ? 'Bee is active' : 'Bee is off',
+                            style: GoogleFonts.outfit(
+                              fontSize: 10,
+                              color: beeEnabled
+                                  ? const Color(0xFFFF9F0A)
+                                  : Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Animated pill toggle (visual only — tap on row triggers onSelected)
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 250),
+                      curve: Curves.easeInOut,
+                      width: 40,
+                      height: 22,
+                      decoration: BoxDecoration(
+                        color: beeEnabled
+                            ? const Color(0xFFFF9F0A)
+                            : Colors.grey.shade400,
+                        borderRadius: BorderRadius.circular(11),
+                      ),
+                      child: AnimatedAlign(
+                        duration: const Duration(milliseconds: 250),
+                        curve: Curves.easeInOut,
+                        alignment: beeEnabled
+                            ? Alignment.centerRight
+                            : Alignment.centerLeft,
+                        child: Padding(
+                          padding: const EdgeInsets.all(3),
+                          child: Container(
+                            width: 16,
+                            height: 16,
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               PopupMenuItem(
                 value: 'theme_toggle',
                 child: Row(
@@ -364,7 +467,8 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
                   ],
                 ),
               ),
-            ],
+            ];
+            },
           ),
           const SizedBox(width: 16),
         ],

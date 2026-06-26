@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:focus_fox/core/providers/prefs_provider.dart';
+import 'package:focus_fox/core/providers/bee_provider.dart';
 import 'package:focus_fox/features/subjects/presentation/providers/subjects_providers.dart';
 import 'package:focus_fox/utils/fuzzy_search.dart';
 import 'package:focus_fox/shared/presentation/widgets/entrance_animations.dart';
@@ -25,7 +26,10 @@ class SubjectsPage extends ConsumerWidget {
 
     final searchQuery = ref.watch(subjectsSearchProvider);
 
+    final beeEnabled = ref.watch(beeEnabledProvider);
+
     return FlyingBeeOverlay(
+      beeEnabled: beeEnabled,
       child: RefreshIndicator(
         onRefresh: () async {
           final _ = await ref.refresh(
@@ -377,15 +381,20 @@ class SubjectsPage extends ConsumerWidget {
   }
 }
 
-class FlyingBeeOverlay extends StatefulWidget {
+class FlyingBeeOverlay extends ConsumerStatefulWidget {
   final Widget child;
-  const FlyingBeeOverlay({super.key, required this.child});
+  final bool beeEnabled;
+  const FlyingBeeOverlay({
+    super.key,
+    required this.child,
+    required this.beeEnabled,
+  });
 
   @override
-  State<FlyingBeeOverlay> createState() => _FlyingBeeOverlayState();
+  ConsumerState<FlyingBeeOverlay> createState() => _FlyingBeeOverlayState();
 }
 
-class _FlyingBeeOverlayState extends State<FlyingBeeOverlay>
+class _FlyingBeeOverlayState extends ConsumerState<FlyingBeeOverlay>
     with TickerProviderStateMixin {
   static const double _beeSize = 80.0;
 
@@ -406,8 +415,31 @@ class _FlyingBeeOverlayState extends State<FlyingBeeOverlay>
   @override
   void initState() {
     super.initState();
-    // Start first appearance after 2 seconds
-    Future.delayed(const Duration(seconds: 2), _spawnBee);
+    // Start first appearance after 2 seconds (only if bee is enabled)
+    Future.delayed(const Duration(seconds: 2), () {
+      if (widget.beeEnabled) _spawnBee();
+    });
+  }
+
+  @override
+  void didUpdateWidget(FlyingBeeOverlay oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!widget.beeEnabled && _visible) {
+      // Bee was disabled — hide immediately
+      _wanderTimer?.cancel();
+      setState(() {
+        _visible = false;
+        _dropped = true;
+        _dropping = false;
+        _x = -200;
+        _y = -200;
+        _dropY = -200;
+      });
+    } else if (widget.beeEnabled && !oldWidget.beeEnabled) {
+      // Bee was re-enabled — spawn fresh
+      _dropped = false;
+      Future.delayed(const Duration(seconds: 1), _spawnBee);
+    }
   }
 
   Size get _screenSize => MediaQuery.of(context).size;
@@ -456,6 +488,10 @@ class _FlyingBeeOverlayState extends State<FlyingBeeOverlay>
   void _onTap() {
     if (!_visible || _dropped || _dropping) return;
     _wanderTimer?.cancel();
+
+    // Increment the quest counter
+    ref.read(beeTapCountProvider.notifier).increment();
+
     setState(() {
       _dropping = true;
       _dropY = _screenSize.height + 100; // drop off screen
@@ -474,9 +510,9 @@ class _FlyingBeeOverlayState extends State<FlyingBeeOverlay>
       });
     });
 
-    // Reappear after 10 seconds
+    // Reappear after 10 seconds (if still enabled)
     Future.delayed(const Duration(seconds: 10), () {
-      if (!mounted) return;
+      if (!mounted || !widget.beeEnabled) return;
       _spawnBee();
     });
   }
@@ -500,24 +536,28 @@ class _FlyingBeeOverlayState extends State<FlyingBeeOverlay>
             curve: _dropping ? Curves.easeIn : Curves.easeInOutSine,
             left: _x,
             top: _dropY,
-            child: GestureDetector(
-              onTap: _onTap,
-              child: AnimatedOpacity(
-                duration: const Duration(milliseconds: 400),
-                opacity: _visible ? 0.88 : 0.0,
-                child: SizedBox(
-                  width: _beeSize,
-                  height: _beeSize,
-                  child: Lottie.asset(
-                    'json/Honey_bee.json',
-                    fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) {
-                      return const SizedBox.shrink();
-                    },
-                    frameBuilder: (context, child, composition) {
-                      if (composition == null) return const SizedBox.shrink();
-                      return child;
-                    },
+            child: RepaintBoundary(
+              child: GestureDetector(
+                onTap: _onTap,
+                child: AnimatedOpacity(
+                  duration: const Duration(milliseconds: 400),
+                  opacity: _visible ? 0.88 : 0.0,
+                  child: SizedBox(
+                    width: _beeSize,
+                    height: _beeSize,
+                    child: Lottie.asset(
+                      'json/Honey_bee.json',
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) {
+                        return const SizedBox.shrink();
+                      },
+                      frameBuilder: (context, child, composition) {
+                        if (composition == null) {
+                          return const SizedBox.shrink();
+                        }
+                        return child;
+                      },
+                    ),
                   ),
                 ),
               ),
