@@ -386,64 +386,104 @@ class FlyingBeeOverlay extends StatefulWidget {
 }
 
 class _FlyingBeeOverlayState extends State<FlyingBeeOverlay>
-    with SingleTickerProviderStateMixin {
-  double _x = -150;
-  double _y = -150;
-  double _angle = 0;
-  double _opacity = 0;
-  late Timer _timer;
+    with TickerProviderStateMixin {
+  static const double _beeSize = 80.0;
+
+  // Current position (clamped to screen)
+  double _x = -200;
+  double _y = -200;
+
+  // Drop-down state
+  double _dropY = -200;
+  bool _dropped = false;
+  bool _visible = false;
+  bool _dropping = false;
+
+  // Wander
+  Timer? _wanderTimer;
   final Random _random = Random();
-  bool _isFlipped = false;
 
   @override
   void initState() {
     super.initState();
-    _timer = Timer.periodic(const Duration(seconds: 12), (timer) {
-      _startFlight();
+    // Start first appearance after 2 seconds
+    Future.delayed(const Duration(seconds: 2), _spawnBee);
+  }
+
+  Size get _screenSize => MediaQuery.of(context).size;
+
+  // Random position safely within screen bounds
+  Offset _randomPosition() {
+    final s = _screenSize;
+    final double x = _random.nextDouble() * (s.width - _beeSize - 32) + 16;
+    final double y = _random.nextDouble() * (s.height - _beeSize - 120) + 80;
+    return Offset(x, y);
+  }
+
+  void _spawnBee() {
+    if (!mounted) return;
+    final pos = _randomPosition();
+    setState(() {
+      _x = pos.dx;
+      _y = pos.dy;
+      _dropY = pos.dy;
+      _visible = true;
+      _dropped = false;
+      _dropping = false;
     });
-    Future.delayed(const Duration(seconds: 3), () {
-      if (mounted) _startFlight();
+    // Start wandering
+    _scheduleWander();
+  }
+
+  void _scheduleWander() {
+    _wanderTimer?.cancel();
+    _wanderTimer = Timer.periodic(
+      Duration(milliseconds: 2500 + _random.nextInt(2000)),
+      (_) => _wander(),
+    );
+  }
+
+  void _wander() {
+    if (!mounted || _dropped || _dropping) return;
+    final pos = _randomPosition();
+    setState(() {
+      _x = pos.dx;
+      _y = pos.dy;
+      _dropY = pos.dy;
     });
   }
 
-  void _startFlight() {
-    if (!mounted) return;
-    final size = MediaQuery.of(context).size;
-    final startLeft = _random.nextBool();
-
-    final double startX = startLeft ? -100 : size.width + 100;
-    final double startY = _random.nextDouble() * (size.height - 200) + 100;
-
-    final double endX = startLeft ? size.width + 100 : -100;
-    final double endY = _random.nextDouble() * (size.height - 200) + 100;
-
+  void _onTap() {
+    if (!_visible || _dropped || _dropping) return;
+    _wanderTimer?.cancel();
     setState(() {
-      _x = startX;
-      _y = startY;
-      _opacity = 0.55; // Cute transparent bee
-      _isFlipped = !startLeft;
-      _angle = atan2(endY - startY, endX - startX);
+      _dropping = true;
+      _dropY = _screenSize.height + 100; // drop off screen
     });
 
-    Future.delayed(const Duration(milliseconds: 100), () {
+    // After drop animation completes, mark hidden
+    Future.delayed(const Duration(milliseconds: 600), () {
       if (!mounted) return;
       setState(() {
-        _x = endX;
-        _y = endY;
+        _dropped = true;
+        _visible = false;
+        _dropping = false;
+        _x = -200;
+        _y = -200;
+        _dropY = -200;
       });
     });
 
-    Future.delayed(const Duration(seconds: 6), () {
+    // Reappear after 10 seconds
+    Future.delayed(const Duration(seconds: 10), () {
       if (!mounted) return;
-      setState(() {
-        _opacity = 0.0;
-      });
+      _spawnBee();
     });
   }
 
   @override
   void dispose() {
-    _timer.cancel();
+    _wanderTimer?.cancel();
     super.dispose();
   }
 
@@ -452,28 +492,26 @@ class _FlyingBeeOverlayState extends State<FlyingBeeOverlay>
     return Stack(
       children: [
         widget.child,
-        AnimatedPositioned(
-          duration: const Duration(seconds: 6),
-          curve: Curves.easeInOutCubic,
-          left: _x,
-          top: _y,
-          child: AnimatedOpacity(
-            duration: const Duration(milliseconds: 500),
-            opacity: _opacity,
-            child: Transform.rotate(
-              angle: _angle,
-              child: Transform(
-                alignment: Alignment.center,
-                transform: Matrix4.identity()
-                  ..scale(_isFlipped ? -1.0 : 1.0, 1.0),
+        if (_visible)
+          AnimatedPositioned(
+            duration: _dropping
+                ? const Duration(milliseconds: 550)
+                : const Duration(milliseconds: 2200),
+            curve: _dropping ? Curves.easeIn : Curves.easeInOutSine,
+            left: _x,
+            top: _dropY,
+            child: GestureDetector(
+              onTap: _onTap,
+              child: AnimatedOpacity(
+                duration: const Duration(milliseconds: 400),
+                opacity: _visible ? 0.88 : 0.0,
                 child: SizedBox(
-                  width: 80,
-                  height: 80,
+                  width: _beeSize,
+                  height: _beeSize,
                   child: Lottie.asset(
                     'json/Honey_bee.json',
                     fit: BoxFit.contain,
                     errorBuilder: (context, error, stackTrace) {
-                      // Silent failure — show nothing if bee can't load
                       return const SizedBox.shrink();
                     },
                     frameBuilder: (context, child, composition) {
@@ -485,7 +523,6 @@ class _FlyingBeeOverlayState extends State<FlyingBeeOverlay>
               ),
             ),
           ),
-        ),
       ],
     );
   }
