@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:focus_fox/core/providers.dart';
 import 'package:focus_fox/core/providers/prefs_provider.dart';
 import 'package:focus_fox/core/providers/user_profile_provider.dart';
+import 'package:focus_fox/core/providers/theme_provider.dart';
 import 'package:focus_fox/features/subjects/presentation/providers/subjects_providers.dart';
 import 'package:focus_fox/features/prep_zone/presentation/providers/prep_zone_providers.dart';
 import 'package:focus_fox/features/utilities/presentation/providers/utilities_providers.dart';
@@ -14,6 +15,7 @@ import 'package:focus_fox/features/subjects/presentation/screens/subjects_page.d
 import 'package:focus_fox/features/prep_zone/presentation/screens/prep_zone_page.dart';
 import 'package:focus_fox/features/utilities/presentation/screens/utilities_page.dart';
 import 'package:focus_fox/services/analytics_service.dart';
+import 'package:focus_fox/shared/widgets/theme_toggle_button.dart';
 
 
 class MainNavigationScreen extends ConsumerStatefulWidget {
@@ -238,6 +240,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
               },
             ),
 
+          const ThemeToggleButton(),
           PopupMenuButton<String>(
             offset: const Offset(0, 48),
             shape: RoundedRectangleBorder(
@@ -284,6 +287,8 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
                 Navigator.pushNamed(context, '/settings');
               } else if (value == 'about') {
                 Navigator.pushNamed(context, '/about');
+              } else if (value == 'theme_toggle') {
+                ref.read(themeModeProvider.notifier).toggle();
               } else if (value == 'logout') {
                 _showLogoutDialog(context);
               }
@@ -341,6 +346,26 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
                     const SizedBox(width: 12),
                     Text(
                       'About',
+                      style: GoogleFonts.outfit(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'theme_toggle',
+                child: Row(
+                  children: [
+                    Icon(
+                      isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+                      color: Theme.of(context).colorScheme.primary,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      isDark ? 'Light Theme' : 'Dark Theme',
                       style: GoogleFonts.outfit(
                         fontWeight: FontWeight.bold,
                         fontSize: 13,
