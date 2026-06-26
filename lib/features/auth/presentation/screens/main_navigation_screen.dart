@@ -17,7 +17,6 @@ import 'package:focus_fox/features/utilities/presentation/screens/utilities_page
 import 'package:focus_fox/services/analytics_service.dart';
 import 'package:focus_fox/shared/widgets/theme_toggle_button.dart';
 
-
 class MainNavigationScreen extends ConsumerStatefulWidget {
   final String branchId;
   final int semester;
@@ -28,7 +27,8 @@ class MainNavigationScreen extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<MainNavigationScreen> createState() => _MainNavigationScreenState();
+  ConsumerState<MainNavigationScreen> createState() =>
+      _MainNavigationScreenState();
 }
 
 class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
@@ -121,13 +121,13 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
             ? Container(
                 height: 36,
                 decoration: BoxDecoration(
-                  color: isDark 
-                      ? const Color(0xFF1E1B4B).withOpacity(0.4) 
+                  color: isDark
+                      ? const Color(0xFF1E1B4B).withOpacity(0.4)
                       : Colors.black.withOpacity(0.04),
                   borderRadius: BorderRadius.circular(18),
                   border: Border.all(
-                    color: isDark 
-                        ? Colors.white.withOpacity(0.12) 
+                    color: isDark
+                        ? Colors.white.withOpacity(0.12)
                         : Colors.black.withOpacity(0.08),
                     width: 1.0,
                   ),
@@ -145,10 +145,10 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
                       hintText: _currentIndex == 0
                           ? 'Search subjects or codes...'
                           : _currentIndex == 1
-                              ? 'Search preparation tools...'
-                              : _currentIndex == 2
-                                  ? 'Search utilities...'
-                                  : 'Search doubts, titles or tags...',
+                          ? 'Search preparation tools...'
+                          : _currentIndex == 2
+                          ? 'Search utilities...'
+                          : 'Search doubts, titles or tags...',
                       hintStyle: GoogleFonts.outfit(
                         fontSize: 13,
                         color: isDark ? Colors.white38 : Colors.black38,
@@ -325,7 +325,9 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
                 child: Row(
                   children: [
                     Icon(
-                      isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+                      isDark
+                          ? Icons.light_mode_rounded
+                          : Icons.dark_mode_rounded,
                       color: Theme.of(context).colorScheme.primary,
                       size: 20,
                     ),
@@ -654,5 +656,4 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
       ),
     );
   }
-
 }
