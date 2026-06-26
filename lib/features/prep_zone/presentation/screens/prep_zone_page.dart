@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:focus_fox/features/prep_zone/presentation/providers/prep_zone_providers.dart';
 import 'package:focus_fox/utils/fuzzy_search.dart';
 import 'package:focus_fox/shared/presentation/widgets/entrance_animations.dart';
+import 'package:lottie/lottie.dart';
 
 class PrepZonePage extends ConsumerWidget {
   const PrepZonePage({super.key});
@@ -12,6 +13,14 @@ class PrepZonePage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final searchQuery = ref.watch(prepZoneSearchProvider);
+    final isDark = theme.brightness == Brightness.dark;
+
+    final Color orangeBgStart = isDark
+        ? const Color(0xFF251E4E)
+        : const Color.fromARGB(255, 251, 203, 158);
+    final Color orangeBgEnd = isDark
+        ? const Color(0xFF15112E)
+        : const Color.fromARGB(255, 238, 206, 154);
 
     final prepItems = [
       {
@@ -19,26 +28,8 @@ class PrepZonePage extends ConsumerWidget {
         'desc': 'DSA patterns & Coding roadmaps',
         'icon': Icons.code_rounded,
         'route': '/algo_code',
-        'color': const Color(0xFF6366F1), // Indigo
+        'color': orangeBgStart,
         'isComingSoon': false,
-      },
-      /*
-      {
-        'title': 'Gate Prep',
-        'desc': 'Previous year GATE papers & syllabus',
-        'icon': Icons.menu_book_rounded,
-        'route': '/gate_prep',
-        'color': const Color(0xFFE11D48), // Rose
-        'isComingSoon': false,
-      },
-      */
-      {
-        'title': 'Coming Soon',
-        'desc': 'More prep tools under development',
-        'icon': Icons.hourglass_empty_rounded,
-        'route': '',
-        'color': Colors.grey,
-        'isComingSoon': true,
       },
     ];
 
@@ -90,87 +81,100 @@ class PrepZonePage extends ConsumerWidget {
                     ),
                   ),
                 )
-              : GridView.builder(
+              : ListView.separated(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   itemCount: filteredItems.length,
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 16,
-                    mainAxisSpacing: 16,
-                    childAspectRatio: 0.85,
-                  ),
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(height: 24),
                   itemBuilder: (context, index) {
                     final item = filteredItems[index];
                     final Color itemColor = item['color'] as Color;
-                    final bool isComingSoon = item['isComingSoon'] as bool? ?? false;
+
                     return FadeInSlide(
                       delay: Duration(milliseconds: index * 100),
                       duration: const Duration(milliseconds: 500),
                       child: InkWell(
-                        onTap: isComingSoon
-                            ? null
-                            : () {
-                                Navigator.pushNamed(context, item['route'] as String);
-                              },
-                        borderRadius: BorderRadius.circular(28),
+                        onTap: () {
+                          Navigator.pushNamed(context, item['route'] as String);
+                        },
+                        borderRadius: BorderRadius.circular(32),
                         child: Container(
-                          padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: theme.colorScheme.surface,
-                            borderRadius: BorderRadius.circular(28),
+                            color: theme.brightness == Brightness.dark
+                                ? Colors.white.withOpacity(0.06)
+                                : Colors.white.withOpacity(0.7),
+                            borderRadius: BorderRadius.circular(32),
                             border: Border.all(
-                              color: itemColor.withOpacity(0.12),
+                              color: itemColor.withOpacity(0.2),
                               width: 1.5,
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: itemColor.withOpacity(0.06),
-                                blurRadius: 16,
-                                offset: const Offset(0, 8),
+                                color: itemColor.withOpacity(0.08),
+                                blurRadius: 24,
+                                offset: const Offset(0, 10),
                               ),
                             ],
                           ),
                           child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              Container(
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  color: itemColor.withOpacity(0.1),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Icon(
-                                  item['icon'] as IconData,
-                                  color: itemColor,
-                                  size: 26,
+                              Padding(
+                                padding: const EdgeInsets.all(28.0),
+                                child: Center(
+                                  child: SizedBox(
+                                    width: 180,
+                                    height: 180,
+                                    child: Lottie.asset(
+                                      'json/coding.json',
+                                      fit: BoxFit.contain,
+                                    ),
+                                  ),
                                 ),
                               ),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    item['title'] as String,
-                                    style: GoogleFonts.outfit(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w800,
-                                      color: theme.colorScheme.onSurface,
-                                    ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 24,
+                                  vertical: 20,
+                                ),
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [orangeBgStart, orangeBgEnd],
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
                                   ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    item['desc'] as String,
-                                    style: GoogleFonts.outfit(
-                                      fontSize: 11,
-                                      color: theme.colorScheme.onSurface.withOpacity(
-                                        0.5,
+                                  borderRadius: const BorderRadius.only(
+                                    bottomLeft: Radius.circular(30),
+                                    bottomRight: Radius.circular(30),
+                                  ),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      item['title'] as String,
+                                      style: GoogleFonts.outfit(
+                                        fontSize: 22,
+                                        fontWeight: FontWeight.w900,
+                                        color: isDark
+                                            ? Colors.white
+                                            : Colors.black,
                                       ),
                                     ),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ],
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      item['desc'] as String,
+                                      style: GoogleFonts.outfit(
+                                        fontSize: 14,
+                                        color: isDark
+                                            ? Colors.white.withOpacity(0.75)
+                                            : Colors.black.withOpacity(0.7),
+                                        height: 1.4,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ],
                           ),
@@ -179,6 +183,22 @@ class PrepZonePage extends ConsumerWidget {
                     );
                   },
                 ),
+          const SizedBox(height: 40),
+          FadeInSlide(
+            delay: const Duration(milliseconds: 300),
+            duration: const Duration(milliseconds: 500),
+            child: Center(
+              child: Text(
+                'More features coming soon...',
+                style: GoogleFonts.outfit(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: theme.colorScheme.onSurface.withOpacity(0.4),
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
