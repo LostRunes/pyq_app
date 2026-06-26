@@ -58,162 +58,160 @@ class _SkulkFeedScreenState extends ConsumerState<SkulkFeedScreen> {
     final feedNotifier = ref.read(skulkFeedProvider.notifier);
 
     return Scaffold(
-      backgroundColor: isDark
-          ? const Color(0xFF141414)
-          : const Color(0xFFF9F9F9),
-      body: Container(
-        decoration: BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage(
-              isDark
-                  ? 'assets/images/skulk_bg_dark.jpg'
-                  : 'assets/images/skulk_bg3.jpg',
-            ),
-            fit: BoxFit.cover,
-            colorFilter: ColorFilter.mode(
-              isDark
-                  ? Colors.black.withOpacity(0.10)
-                  : Colors.white.withOpacity(0.45),
-              BlendMode.srcOver,
-            ),
-          ),
-        ),
-        child: SafeArea(
-          child: RefreshIndicator(
-            onRefresh: () async {
-              await feedNotifier.refresh();
-            },
-            color: Theme.of(context).colorScheme.primary,
-            child: ListView(
-              controller: _scrollController,
-              physics: const AlwaysScrollableScrollPhysics(),
-              children: [
-                const SizedBox(height: 12),
-
-                // New horizontally aligned controls row
-                _buildControlRow(context, isDark, subjectsAsync),
-
-                const SizedBox(height: 8),
-
-                // Main feed content
-                doubtsAsync.when(
-                  loading: () => Center(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 80.0),
-                      child: Lottie.asset(
-                        'json/hybrid_logo.json',
-                        width: 150,
-                        height: 150,
-                      ),
+      backgroundColor: Colors.transparent,
+      body: RefreshIndicator(
+        onRefresh: () async {
+          await feedNotifier.refresh();
+        },
+        color: Theme.of(context).colorScheme.primary,
+        child: ListView(
+          controller: _scrollController,
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16.0,
+                vertical: 8.0,
+              ),
+              child: Row(
+                children: [
+                  Text(
+                    'Skulk',
+                    style: GoogleFonts.outfit(
+                      fontSize: 32,
+                      fontWeight: FontWeight.w900,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
-                  error: (err, stack) => Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24.0),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.error_outline_rounded,
-                            color: Colors.redAccent,
-                            size: 48,
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            'Failed to load doubts.',
-                            style: GoogleFonts.outfit(
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '$err',
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.outfit(
-                              fontSize: 12,
-                              color: Colors.grey,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          ElevatedButton(
-                            onPressed: () => feedNotifier.refresh(),
-                            child: Text(
-                              'Try Again',
-                              style: GoogleFonts.outfit(),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                  const SizedBox(width: 8),
+                  Image.asset(
+                    'assets/images/lil_fox.png',
+                    width: 36,
+                    height: 36,
+                    fit: BoxFit.contain,
                   ),
-                  data: (doubtsList) {
-                    // Apply user's academic "My Subjects" filter in-memory if selected
-                    var displayDoubts = doubtsList;
-                    if (activeFilter == 'subjects' && subjectsAsync.hasValue) {
-                      final currentSubjectIds = subjectsAsync.value!
-                          .map((e) => e.id)
-                          .toSet();
-                      displayDoubts = doubtsList
-                          .where((d) => currentSubjectIds.contains(d.subjectId))
-                          .toList();
-                    }
+                ],
+              ),
+            ),
+            const SizedBox(height: 4),
 
-                    if (displayDoubts.isEmpty) {
-                      return Padding(
-                        padding: const EdgeInsets.only(top: 80),
-                        child: _buildEmptyState(context, isDark, activeFilter),
-                      );
-                    }
+            // New horizontally aligned controls row
+            _buildControlRow(context, isDark, subjectsAsync),
 
-                    return Column(
-                      children: [
-                        ...displayDoubts.map((doubt) {
-                          return DoubtCard(
-                            doubt: doubt,
-                            onTap: () {
-                              Navigator.pushNamed(
-                                context,
-                                '/skulk_detail',
-                                arguments: {
-                                  'doubtId': doubt.id,
-                                  'branchId': widget.branchId,
-                                  'semester': widget.semester,
-                                },
-                              );
+            const SizedBox(height: 8),
+
+            // Main feed content
+            doubtsAsync.when(
+              loading: () => Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 80.0),
+                  child: Lottie.asset(
+                    'json/hybrid_logo.json',
+                    width: 150,
+                    height: 150,
+                  ),
+                ),
+              ),
+              error: (err, stack) => Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.error_outline_rounded,
+                        color: Colors.redAccent,
+                        size: 48,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Failed to load doubts.',
+                        style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '$err',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.outfit(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: () => feedNotifier.refresh(),
+                        child: Text('Try Again', style: GoogleFonts.outfit()),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              data: (doubtsList) {
+                // Apply user's academic "My Subjects" filter in-memory if selected
+                var displayDoubts = doubtsList;
+                if (activeFilter == 'subjects' && subjectsAsync.hasValue) {
+                  final currentSubjectIds = subjectsAsync.value!
+                      .map((e) => e.id)
+                      .toSet();
+                  displayDoubts = doubtsList
+                      .where((d) => currentSubjectIds.contains(d.subjectId))
+                      .toList();
+                }
+
+                if (displayDoubts.isEmpty) {
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 80),
+                    child: _buildEmptyState(context, isDark, activeFilter),
+                  );
+                }
+
+                return Column(
+                  children: [
+                    ...displayDoubts.map((doubt) {
+                      return DoubtCard(
+                        doubt: doubt,
+                        onTap: () {
+                          Navigator.pushNamed(
+                            context,
+                            '/skulk_detail',
+                            arguments: {
+                              'doubtId': doubt.id,
+                              'branchId': widget.branchId,
+                              'semester': widget.semester,
                             },
                           );
-                        }),
-                        if (feedNotifier.isLoadingMore)
-                          const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 24),
-                            child: Center(
-                              child: CircularProgressIndicator(strokeWidth: 2),
+                        },
+                      );
+                    }),
+                    if (feedNotifier.isLoadingMore)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 24),
+                        child: Center(
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      )
+                    else if (!feedNotifier.hasMore)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 24),
+                        child: Center(
+                          child: Text(
+                            "You've seen it all! 👀",
+                            style: GoogleFonts.outfit(
+                              color: Colors.grey,
+                              fontSize: 13,
                             ),
-                          )
-                        else if (!feedNotifier.hasMore)
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 24),
-                            child: Center(
-                              child: Text(
-                                "You've seen it all! 👀",
-                                style: GoogleFonts.outfit(
-                                  color: Colors.grey,
-                                  fontSize: 13,
-                                ),
-                              ),
-                            ),
-                          )
-                        else
-                          const SizedBox(
-                            height: 80,
-                          ), // Padding to avoid FAB overlapping feed items
-                      ],
-                    );
-                  },
-                ),
-              ],
+                          ),
+                        ),
+                      )
+                    else
+                      const SizedBox(
+                        height: 80,
+                      ), // Padding to avoid FAB overlapping feed items
+                  ],
+                );
+              },
             ),
-          ),
+          ],
         ),
       ),
       floatingActionButton: FloatingActionButton(

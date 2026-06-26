@@ -88,7 +88,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        leadingWidth: _isSearching ? 56 : (_currentIndex == 3 ? 56 : 110),
+        leadingWidth: _isSearching ? 56 : 110,
         leading: _isSearching
             ? IconButton(
                 icon: const Icon(Icons.arrow_back_rounded),
@@ -103,25 +103,20 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
                   });
                 },
               )
-            : (_currentIndex == 3
-                ? const Padding(
-                    padding: EdgeInsets.only(left: 8.0),
-                    child: NotificationBell(),
-                  )
-                : Row(
-                    children: [
-                      const SizedBox(width: 8),
-                      const NotificationBell(),
-                      IconButton(
-                        icon: const Icon(Icons.search_rounded),
-                        onPressed: () {
-                          setState(() {
-                            _isSearching = true;
-                          });
-                        },
-                      ),
-                    ],
-                  )),
+            : Row(
+                children: [
+                  const SizedBox(width: 8),
+                  const NotificationBell(),
+                  IconButton(
+                    icon: const Icon(Icons.search_rounded),
+                    onPressed: () {
+                      setState(() {
+                        _isSearching = true;
+                      });
+                    },
+                  ),
+                ],
+              ),
         title: _isSearching
             ? Container(
                 height: 36,
@@ -189,28 +184,8 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
                   ),
                 ),
               )
-            : (_currentIndex == 3
-                ? Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'Skulk',
-                        style: GoogleFonts.outfit(
-                          fontWeight: FontWeight.w900,
-                          fontSize: 20,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Image.asset(
-                        'assets/images/lil_fox.png',
-                        width: 32,
-                        height: 32,
-                        fit: BoxFit.contain,
-                      ),
-                    ],
-                  )
-                : null),
-        centerTitle: _currentIndex == 3,
+            : null,
+        centerTitle: false,
         actions: [
           if (_isSearching)
             IconButton(
@@ -227,15 +202,6 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
                   } else if (_currentIndex == 3) {
                     ref.read(skulkFeedSearchProvider.notifier).state = '';
                   }
-                });
-              },
-            )
-          else if (_currentIndex == 3)
-            IconButton(
-              icon: const Icon(Icons.search_rounded),
-              onPressed: () {
-                setState(() {
-                  _isSearching = true;
                 });
               },
             ),
