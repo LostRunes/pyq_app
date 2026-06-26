@@ -19,6 +19,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
+  bool _isLoading = true;
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -47,91 +49,87 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     _checkAuth();
   }
 
-  Future<void> _checkAuth() async {
-    // Wait for the animation to finish
-    await Future.delayed(const Duration(milliseconds: 2000));
-
+  Future<({String routeName, Object? arguments})> _determineDestination() async {
     final session = Supabase.instance.client.auth.currentSession;
-
     if (session == null) {
-      if (mounted) {
-        Navigator.pushReplacementNamed(context, '/login');
-      }
-      return;
+      return (routeName: '/login', arguments: null);
     }
 
     // Register push notification token
     unawaited(PushNotificationService.registerDeviceToken());
 
     final userId = session.user.id;
+    final profile = await Supabase.instance.client
+        .from('user_profiles')
+        .select()
+        .eq('id', userId)
+        .maybeSingle();
 
-    // Run inside safety try-catch block
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      try {
-        final profile = await Supabase.instance.client
-            .from('user_profiles')
-            .select()
-            .eq('id', userId)
-            .maybeSingle();
+    if (profile == null) {
+      return (routeName: '/login', arguments: {'showUsernameDialog': true});
+    }
 
-        if (!mounted) return;
+    // Profile exists, perform email mapping
+    final email = session.user.email ?? '';
+    final kiitRegex = RegExp(r'^(\d+)@kiit\.ac\.in$', caseSensitive: false);
+    final isKiit = kiitRegex.hasMatch(email);
 
-        if (profile == null) {
-          // Logged in but has no profile -> Go to login screen and prompt username
-          Navigator.pushReplacementNamed(
-            context,
-            '/login',
-            arguments: {'showUsernameDialog': true},
-          );
-          return;
-        }
+    if (isKiit) {
+      final redirect = await ref.read(authRepositoryProvider).getRedirectResult(email);
+      return (routeName: redirect.routeName, arguments: redirect.arguments);
+    } else {
+      // Non-KIIT user: Check SharedPreferences for previously saved branch & semester
+      final prefs = ref.read(sharedPrefsProvider);
+      final savedBranchId = prefs.getString('selected_branch_id');
+      final savedSemester = prefs.getInt('selected_semester');
 
-        // Profile exists, perform email mapping
-        final email = session.user.email ?? '';
-        final kiitRegex = RegExp(r'^(\d+)@kiit\.ac\.in$', caseSensitive: false);
-        final isKiit = kiitRegex.hasMatch(email);
-
-        if (isKiit) {
-          final redirect = await ref.read(authRepositoryProvider).getRedirectResult(email);
-          if (mounted) {
-            Navigator.pushReplacementNamed(
-              context,
-              redirect.routeName,
-              arguments: redirect.arguments,
-            );
-          }
-          return;
-        } else {
-          // Non-KIIT user: Check SharedPreferences for previously saved branch & semester
-          final prefs = ref.read(sharedPrefsProvider);
-          final savedBranchId = prefs.getString('selected_branch_id');
-          final savedSemester = prefs.getInt('selected_semester');
-
-          if (savedBranchId != null &&
-              savedBranchId.isNotEmpty &&
-              savedSemester != null) {
-            if (mounted) {
-              Navigator.pushReplacementNamed(
-                context,
-                '/main_navigation',
-                arguments: {
-                  'branchId': savedBranchId,
-                  'semester': savedSemester,
-                },
-              );
-            }
-            return;
-          }
-        }
-      } catch (e) {
-        debugPrint('Splash routing failed, falling back: $e');
+      if (savedBranchId != null &&
+          savedBranchId.isNotEmpty &&
+          savedSemester != null) {
+        return (routeName: '/main_navigation', arguments: {
+          'branchId': savedBranchId,
+          'semester': savedSemester,
+        });
       }
+    }
 
-      // Default fallback -> selection screen
-      if (mounted) {
-        Navigator.pushReplacementNamed(context, '/selection');
-      }
+    return (routeName: '/selection', arguments: null);
+  }
+
+  Future<void> _checkAuth() async {
+    if (!mounted) return;
+    setState(() {
+      _errorMessage = null;
+      _isLoading = true;
     });
+
+    final authCheckFuture = _determineDestination();
+    final animationDelayFuture = Future.delayed(const Duration(milliseconds: 1800));
+
+    try {
+      final results = await Future.wait([
+        authCheckFuture,
+        animationDelayFuture,
+      ]);
+
+      final dest = results[0] as ({String routeName, Object? arguments});
+
+      if (mounted) {
+        Navigator.pushReplacementNamed(
+          context,
+          dest.routeName,
+          arguments: dest.arguments,
+        );
+      }
+    } catch (e) {
+      debugPrint('Splash routing failed: $e');
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Failed to connect. Please check your network connection.';
+          _isLoading = false;
+        });
+      }
+    }
   }
   @override
   void dispose() {
@@ -214,6 +212,48 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                       : const Color(0xFF7A6456),
                 ),
               ),
+              if (_errorMessage != null) ...[
+                const SizedBox(height: 24),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                  child: Text(
+                    _errorMessage!,
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.outfit(
+                      fontSize: 14,
+                      color: Colors.red[400],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  onPressed: _checkAuth,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFFF9F0A),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  ),
+                  icon: const Icon(Icons.refresh_rounded, size: 18),
+                  label: Text(
+                    'Retry',
+                    style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ] else if (_isLoading) ...[
+                const SizedBox(height: 32),
+                const SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFF9F0A)),
+                  ),
+                ),
+              ],
             ],
           ),
         ),

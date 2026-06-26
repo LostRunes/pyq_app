@@ -73,9 +73,10 @@ class SubjectsPage extends ConsumerWidget {
                               ),
                               const Spacer(),
                               GestureDetector(
-                                onTap: () => Navigator.pushReplacementNamed(
+                                onTap: () => Navigator.pushNamedAndRemoveUntil(
                                   context,
                                   '/selection',
+                                  (route) => false,
                                 ),
                                 behavior: HitTestBehavior.opaque,
                                 child: Padding(
@@ -404,7 +405,6 @@ class _FlyingBeeOverlayState extends ConsumerState<FlyingBeeOverlay>
 
   // Current position (clamped to screen)
   double _x = -200;
-  double _y = -200;
 
   // Drop-down state
   double _dropY = -200;
@@ -414,14 +414,16 @@ class _FlyingBeeOverlayState extends ConsumerState<FlyingBeeOverlay>
 
   // Wander
   Timer? _wanderTimer;
+  Timer? _initialSpawnTimer;   // cancellable replacement for Future.delayed
+  Timer? _reappearTimer;       // cancellable replacement for Future.delayed
   final Random _random = Random();
 
   @override
   void initState() {
     super.initState();
     // Start first appearance after 2 seconds (only if bee is enabled)
-    Future.delayed(const Duration(seconds: 2), () {
-      if (widget.beeEnabled) _spawnBee();
+    _initialSpawnTimer = Timer(const Duration(seconds: 2), () {
+      if (mounted && widget.beeEnabled) _spawnBee();
     });
   }
 
@@ -436,13 +438,15 @@ class _FlyingBeeOverlayState extends ConsumerState<FlyingBeeOverlay>
         _dropped = true;
         _dropping = false;
         _x = -200;
-        _y = -200;
         _dropY = -200;
       });
     } else if (widget.beeEnabled && !oldWidget.beeEnabled) {
       // Bee was re-enabled — spawn fresh
       _dropped = false;
-      Future.delayed(const Duration(seconds: 1), _spawnBee);
+      _reappearTimer?.cancel();
+      _reappearTimer = Timer(const Duration(seconds: 1), () {
+        if (mounted) _spawnBee();
+      });
     }
   }
 
@@ -461,7 +465,6 @@ class _FlyingBeeOverlayState extends ConsumerState<FlyingBeeOverlay>
     final pos = _randomPosition();
     setState(() {
       _x = pos.dx;
-      _y = pos.dy;
       _dropY = pos.dy;
       _visible = true;
       _dropped = false;
@@ -484,7 +487,6 @@ class _FlyingBeeOverlayState extends ConsumerState<FlyingBeeOverlay>
     final pos = _randomPosition();
     setState(() {
       _x = pos.dx;
-      _y = pos.dy;
       _dropY = pos.dy;
     });
   }
@@ -509,21 +511,22 @@ class _FlyingBeeOverlayState extends ConsumerState<FlyingBeeOverlay>
         _visible = false;
         _dropping = false;
         _x = -200;
-        _y = -200;
         _dropY = -200;
       });
     });
 
     // Reappear after 10 seconds (if still enabled)
-    Future.delayed(const Duration(seconds: 10), () {
-      if (!mounted || !widget.beeEnabled) return;
-      _spawnBee();
+    _reappearTimer?.cancel();
+    _reappearTimer = Timer(const Duration(seconds: 10), () {
+      if (mounted && widget.beeEnabled) _spawnBee();
     });
   }
 
   @override
   void dispose() {
     _wanderTimer?.cancel();
+    _initialSpawnTimer?.cancel();
+    _reappearTimer?.cancel();
     super.dispose();
   }
 

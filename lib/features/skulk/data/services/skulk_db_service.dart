@@ -1,7 +1,9 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SkulkDbService {
-  final _client = Supabase.instance.client;
+  final SupabaseClient _client;
+
+  SkulkDbService(this._client);
 
   // ----------------------------------------------------
   // DOUBTS (doubt_posts) Queries & Mutations
@@ -14,6 +16,7 @@ class SkulkDbService {
     String? searchQuery,
     String? filterType, // 'all', 'mine', 'unanswered', 'solved', 'hot'
     String? tagFilter, // single tag to filter by
+    List<String>? subjectIds, // List of subjects for My Subjects feed
     int limit = 20,
     int offset = 0,
   }) async {
@@ -30,7 +33,9 @@ class SkulkDbService {
     }
 
     // 2. Subject Filter
-    if (subjectId != null && subjectId.isNotEmpty) {
+    if (subjectIds != null && subjectIds.isNotEmpty) {
+      query = query.in_('subject_id', subjectIds);
+    } else if (subjectId != null && subjectId.isNotEmpty) {
       query = query.eq('subject_id', subjectId);
     }
 
@@ -245,7 +250,7 @@ class SkulkDbService {
       throw Exception('User must be logged in to solve doubts.');
     }
 
-    // 1. Insert answer
+    // 1. Insert answer (count increments automatically via DB trigger tr_sync_solution_stats)
     final res = await _client
         .from('answers')
         .insert({
@@ -260,37 +265,13 @@ class SkulkDbService {
         .select()
         .single();
 
-    // 2. Increment answers_count on doubt_posts
-    final doubt = await _client
-        .from('doubt_posts')
-        .select('answers_count')
-        .eq('id', postId)
-        .single();
-    final count = (doubt['answers_count'] as int? ?? 0) + 1;
-    await _client
-        .from('doubt_posts')
-        .update({'answers_count': count})
-        .eq('id', postId);
-
     return res;
   }
 
   /// Deletes a solution
   Future<void> deleteSolution(String solutionId, String postId) async {
-    // 1. Delete solution
+    // 1. Delete solution (count decrements automatically via DB trigger tr_sync_solution_stats)
     await _client.from('answers').delete().eq('id', solutionId);
-
-    // 2. Decrement answers_count on doubt_posts
-    final doubt = await _client
-        .from('doubt_posts')
-        .select('answers_count')
-        .eq('id', postId)
-        .single();
-    final count = ((doubt['answers_count'] as int? ?? 1) - 1).clamp(0, 99999);
-    await _client
-        .from('doubt_posts')
-        .update({'answers_count': count})
-        .eq('id', postId);
   }
 
   /// Edits a solution
@@ -343,7 +324,7 @@ class SkulkDbService {
     final userId = _client.auth.currentUser?.id;
     if (userId == null) throw Exception('User must be logged in to comment.');
 
-    // 1. Insert comment
+    // 1. Insert comment (count increments automatically via DB trigger tr_sync_comment_stats)
     final res = await _client
         .from('comments')
         .insert({
@@ -354,18 +335,6 @@ class SkulkDbService {
         })
         .select()
         .single();
-
-    // 2. Increment comments_count on doubt_posts
-    final doubt = await _client
-        .from('doubt_posts')
-        .select('comments_count')
-        .eq('id', postId)
-        .single();
-    final count = (doubt['comments_count'] as int? ?? 0) + 1;
-    await _client
-        .from('doubt_posts')
-        .update({'comments_count': count})
-        .eq('id', postId);
 
     return res;
   }
@@ -386,20 +355,8 @@ class SkulkDbService {
 
   /// Deletes a comment
   Future<void> deleteComment(String commentId, String postId) async {
-    // 1. Delete comment
+    // 1. Delete comment (count decrements automatically via DB trigger tr_sync_comment_stats)
     await _client.from('comments').delete().eq('id', commentId);
-
-    // 2. Decrement comments_count on doubt_posts
-    final doubt = await _client
-        .from('doubt_posts')
-        .select('comments_count')
-        .eq('id', postId)
-        .single();
-    final count = ((doubt['comments_count'] as int? ?? 1) - 1).clamp(0, 99999);
-    await _client
-        .from('doubt_posts')
-        .update({'comments_count': count})
-        .eq('id', postId);
   }
 
   /// Creates a content report

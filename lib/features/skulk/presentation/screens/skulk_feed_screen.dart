@@ -4,7 +4,6 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../subjects/presentation/providers/subjects_providers.dart';
 import '../providers/skulk_providers.dart';
 import '../widgets/doubt_card.dart';
-import '../widgets/doubt_card_skeleton.dart';
 import 'package:lottie/lottie.dart';
 
 class SkulkFeedScreen extends ConsumerStatefulWidget {
@@ -147,18 +146,7 @@ class _SkulkFeedScreenState extends ConsumerState<SkulkFeedScreen> {
                 ),
               ),
               data: (doubtsList) {
-                // Apply user's academic "My Subjects" filter in-memory if selected
-                var displayDoubts = doubtsList;
-                if (activeFilter == 'subjects' && subjectsAsync.hasValue) {
-                  final currentSubjectIds = subjectsAsync.value!
-                      .map((e) => e.id)
-                      .toSet();
-                  displayDoubts = doubtsList
-                      .where((d) => currentSubjectIds.contains(d.subjectId))
-                      .toList();
-                }
-
-                if (displayDoubts.isEmpty) {
+                if (doubtsList.isEmpty) {
                   return Padding(
                     padding: const EdgeInsets.only(top: 80),
                     child: _buildEmptyState(context, isDark, activeFilter),
@@ -167,7 +155,7 @@ class _SkulkFeedScreenState extends ConsumerState<SkulkFeedScreen> {
 
                 return Column(
                   children: [
-                    ...displayDoubts.map((doubt) {
+                    ...doubtsList.map((doubt) {
                       return DoubtCard(
                         doubt: doubt,
                         onTap: () {
@@ -360,10 +348,9 @@ class _SkulkFeedScreenState extends ConsumerState<SkulkFeedScreen> {
                   onChanged: (val) {
                     if (val != null) {
                       if (val == 'subjects') {
-                        ref.read(skulkFeedSubjectProvider.notifier).state =
-                            null;
+                        ref.read(skulkFeedSubjectProvider.notifier).updateSubject(null);
                       }
-                      ref.read(skulkFeedFilterProvider.notifier).state = val;
+                      ref.read(skulkFeedFilterProvider.notifier).updateFilter(val);
                     }
                   },
                 ),
@@ -441,7 +428,7 @@ class _SkulkFeedScreenState extends ConsumerState<SkulkFeedScreen> {
                         }),
                       ],
                       onChanged: (val) {
-                        ref.read(skulkFeedSubjectProvider.notifier).state = val;
+                        ref.read(skulkFeedSubjectProvider.notifier).updateSubject(val);
                       },
                     ),
                   );
@@ -531,7 +518,14 @@ class NotificationBell extends ConsumerWidget {
   }
 }
 
-final unreadCountProvider = FutureProvider.autoDispose<int>((ref) async {
+/// Polls the unread notification count every 30 seconds so the badge
+/// updates in real-time without requiring a restart.
+final unreadCountProvider = StreamProvider.autoDispose<int>((ref) async* {
   final repo = ref.watch(skulkRepositoryProvider);
-  return repo.getUnreadNotificationCount();
+  // Initial value
+  yield await repo.getUnreadNotificationCount();
+  // Poll every 30 seconds while the widget is alive
+  await for (final _ in Stream.periodic(const Duration(seconds: 30))) {
+    yield await repo.getUnreadNotificationCount();
+  }
 });
