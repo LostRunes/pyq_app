@@ -282,6 +282,8 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
                 Navigator.pushNamed(context, '/profile');
               } else if (value == 'settings') {
                 Navigator.pushNamed(context, '/settings');
+              } else if (value == 'about') {
+                Navigator.pushNamed(context, '/about');
               } else if (value == 'logout') {
                 _showLogoutDialog(context);
               }
@@ -319,6 +321,26 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
                     const SizedBox(width: 12),
                     Text(
                       'Settings',
+                      style: GoogleFonts.outfit(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'about',
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.info_outline_rounded,
+                      color: Theme.of(context).colorScheme.primary,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'About',
                       style: GoogleFonts.outfit(
                         fontWeight: FontWeight.bold,
                         fontSize: 13,

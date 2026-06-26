@@ -9,6 +9,7 @@ import 'package:focus_fox/features/pyqs/presentation/screens/youtube_resource_sc
 import 'package:focus_fox/features/auth/presentation/screens/splash_screen.dart';
 import 'package:focus_fox/features/profile/presentation/screens/profile_screen.dart';
 import 'package:focus_fox/features/settings/presentation/screens/settings_screen.dart';
+import 'package:focus_fox/features/settings/presentation/screens/about_screen.dart';
 import 'package:focus_fox/features/auth/presentation/screens/login_screen.dart';
 import 'package:focus_fox/features/pyqs/data/models/subject.dart';
 import 'package:focus_fox/features/uploads/presentation/screens/upload_notes_screen.dart';
@@ -111,6 +112,11 @@ class AppRouter {
       case '/settings':
         return ParallaxPageRoute(
           child: const SettingsScreen(),
+          settings: settings,
+        );
+      case '/about':
+        return ParallaxPageRoute(
+          child: const AboutScreen(),
           settings: settings,
         );
       case '/skulk_create':
