@@ -5,6 +5,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:focus_fox/core/providers.dart';
 import 'package:focus_fox/core/providers/prefs_provider.dart';
 import 'package:focus_fox/core/providers/user_profile_provider.dart';
+import 'package:focus_fox/core/providers/theme_provider.dart';
+import 'package:focus_fox/core/providers/bee_provider.dart';
 import 'package:focus_fox/features/subjects/presentation/providers/subjects_providers.dart';
 import 'package:focus_fox/features/prep_zone/presentation/providers/prep_zone_providers.dart';
 import 'package:focus_fox/features/utilities/presentation/providers/utilities_providers.dart';
@@ -14,7 +16,8 @@ import 'package:focus_fox/features/subjects/presentation/screens/subjects_page.d
 import 'package:focus_fox/features/prep_zone/presentation/screens/prep_zone_page.dart';
 import 'package:focus_fox/features/utilities/presentation/screens/utilities_page.dart';
 import 'package:focus_fox/services/analytics_service.dart';
-
+import 'package:focus_fox/shared/widgets/theme_toggle_button.dart';
+import 'package:focus_fox/shared/presentation/widgets/entrance_animations.dart';
 
 class MainNavigationScreen extends ConsumerStatefulWidget {
   final String branchId;
@@ -26,7 +29,8 @@ class MainNavigationScreen extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<MainNavigationScreen> createState() => _MainNavigationScreenState();
+  ConsumerState<MainNavigationScreen> createState() =>
+      _MainNavigationScreenState();
 }
 
 class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
@@ -60,6 +64,9 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
     )..repeat(reverse: true);
 
     _pageController = PageController(initialPage: _currentIndex);
+
+    // Subjects tab is active on startup — open the fade animation window
+    SubjectCardFade.onPageActivated();
   }
 
   @override
@@ -81,12 +88,14 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
     _currentBranchId = activeBranchId;
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final beeCount = ref.watch(beeTapCountProvider);
+    final beeEnabled = ref.watch(beeEnabledProvider);
 
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        leadingWidth: _isSearching ? 56 : (_currentIndex == 3 ? 56 : 110),
+        leadingWidth: _isSearching ? 56 : 110,
         leading: _isSearching
             ? IconButton(
                 icon: const Icon(Icons.arrow_back_rounded),
@@ -101,36 +110,31 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
                   });
                 },
               )
-            : (_currentIndex == 3
-                ? const Padding(
-                    padding: EdgeInsets.only(left: 8.0),
-                    child: NotificationBell(),
-                  )
-                : Row(
-                    children: [
-                      const SizedBox(width: 8),
-                      const NotificationBell(),
-                      IconButton(
-                        icon: const Icon(Icons.search_rounded),
-                        onPressed: () {
-                          setState(() {
-                            _isSearching = true;
-                          });
-                        },
-                      ),
-                    ],
-                  )),
+            : Row(
+                children: [
+                  const SizedBox(width: 8),
+                  const NotificationBell(),
+                  IconButton(
+                    icon: const Icon(Icons.search_rounded),
+                    onPressed: () {
+                      setState(() {
+                        _isSearching = true;
+                      });
+                    },
+                  ),
+                ],
+              ),
         title: _isSearching
             ? Container(
                 height: 36,
                 decoration: BoxDecoration(
-                  color: isDark 
-                      ? const Color(0xFF1E1B4B).withOpacity(0.4) 
+                  color: isDark
+                      ? const Color(0xFF1E1B4B).withOpacity(0.4)
                       : Colors.black.withOpacity(0.04),
                   borderRadius: BorderRadius.circular(18),
                   border: Border.all(
-                    color: isDark 
-                        ? Colors.white.withOpacity(0.12) 
+                    color: isDark
+                        ? Colors.white.withOpacity(0.12)
                         : Colors.black.withOpacity(0.08),
                     width: 1.0,
                   ),
@@ -148,10 +152,10 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
                       hintText: _currentIndex == 0
                           ? 'Search subjects or codes...'
                           : _currentIndex == 1
-                              ? 'Search preparation tools...'
-                              : _currentIndex == 2
-                                  ? 'Search utilities...'
-                                  : 'Search doubts, titles or tags...',
+                          ? 'Search preparation tools...'
+                          : _currentIndex == 2
+                          ? 'Search utilities...'
+                          : 'Search doubts, titles or tags...',
                       hintStyle: GoogleFonts.outfit(
                         fontSize: 13,
                         color: isDark ? Colors.white38 : Colors.black38,
@@ -187,28 +191,8 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
                   ),
                 ),
               )
-            : (_currentIndex == 3
-                ? Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'Skulk',
-                        style: GoogleFonts.outfit(
-                          fontWeight: FontWeight.w900,
-                          fontSize: 20,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Image.asset(
-                        'assets/images/lil_fox.png',
-                        width: 32,
-                        height: 32,
-                        fit: BoxFit.contain,
-                      ),
-                    ],
-                  )
-                : null),
-        centerTitle: _currentIndex == 3,
+            : null,
+        centerTitle: false,
         actions: [
           if (_isSearching)
             IconButton(
@@ -227,17 +211,9 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
                   }
                 });
               },
-            )
-          else if (_currentIndex == 3)
-            IconButton(
-              icon: const Icon(Icons.search_rounded),
-              onPressed: () {
-                setState(() {
-                  _isSearching = true;
-                });
-              },
             ),
 
+          const ThemeToggleButton(),
           PopupMenuButton<String>(
             offset: const Offset(0, 48),
             shape: RoundedRectangleBorder(
@@ -282,11 +258,16 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
                 Navigator.pushNamed(context, '/profile');
               } else if (value == 'settings') {
                 Navigator.pushNamed(context, '/settings');
+              } else if (value == 'about') {
+                Navigator.pushNamed(context, '/about');
+              } else if (value == 'theme_toggle') {
+                ref.read(themeModeProvider.notifier).toggle();
               } else if (value == 'logout') {
                 _showLogoutDialog(context);
               }
             },
-            itemBuilder: (BuildContext context) => [
+            itemBuilder: (BuildContext context) {
+              return [
               PopupMenuItem(
                 value: 'profile',
                 child: Row(
@@ -327,6 +308,176 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
                   ],
                 ),
               ),
+              PopupMenuItem(
+                value: 'about',
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.info_outline_rounded,
+                      color: Theme.of(context).colorScheme.primary,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'About',
+                      style: GoogleFonts.outfit(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // ── Quest Item (bee counter + toggle) — stays open on tap ──
+              PopupMenuItem<String>(
+                // No value — prevents PopupMenuItem from popping the menu
+                padding: EdgeInsets.zero,
+                child: Consumer(
+                  builder: (context, watchRef, _) {
+                    // Live watch inside the popup — rebuilds on every toggle
+                    final liveBeeEnabled =
+                        watchRef.watch(beeEnabledProvider);
+                    final liveBeeCount =
+                        watchRef.watch(beeTapCountProvider);
+                    return GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () {
+                        watchRef
+                            .read(beeEnabledProvider.notifier)
+                            .toggle();
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        child: Row(
+                          children: [
+                            // Bee emoji + golden count badge
+                            Stack(
+                              clipBehavior: Clip.none,
+                              children: [
+                                Text(
+                                  '🐝',
+                                  style: GoogleFonts.outfit(fontSize: 18),
+                                ),
+                                Positioned(
+                                  top: -6,
+                                  right: -10,
+                                  child: Container(
+                                    padding:
+                                        const EdgeInsets.symmetric(
+                                      horizontal: 5,
+                                      vertical: 1,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFFF9F0A),
+                                      borderRadius:
+                                          BorderRadius.circular(10),
+                                    ),
+                                    child: Text(
+                                      '$liveBeeCount',
+                                      style: GoogleFonts.outfit(
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.w900,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment:
+                                    CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    'Quest',
+                                    style: GoogleFonts.outfit(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                  Text(
+                                    liveBeeEnabled
+                                        ? 'Bee is active'
+                                        : 'Bee is off',
+                                    style: GoogleFonts.outfit(
+                                      fontSize: 10,
+                                      color: liveBeeEnabled
+                                          ? const Color(0xFFFF9F0A)
+                                          : Colors.grey,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            // Animated pill — driven by live state, always animates
+                            AnimatedContainer(
+                              duration:
+                                  const Duration(milliseconds: 250),
+                              curve: Curves.easeInOut,
+                              width: 40,
+                              height: 22,
+                              decoration: BoxDecoration(
+                                color: liveBeeEnabled
+                                    ? const Color(0xFFFF9F0A)
+                                    : Colors.grey.shade400,
+                                borderRadius: BorderRadius.circular(11),
+                              ),
+                              child: AnimatedAlign(
+                                duration:
+                                    const Duration(milliseconds: 250),
+                                curve: Curves.easeInOut,
+                                alignment: liveBeeEnabled
+                                    ? Alignment.centerRight
+                                    : Alignment.centerLeft,
+                                child: Padding(
+                                  padding: const EdgeInsets.all(3),
+                                  child: Container(
+                                    width: 16,
+                                    height: 16,
+                                    decoration: const BoxDecoration(
+                                      color: Colors.white,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+
+              PopupMenuItem(
+                value: 'theme_toggle',
+                child: Row(
+                  children: [
+                    Icon(
+                      isDark
+                          ? Icons.light_mode_rounded
+                          : Icons.dark_mode_rounded,
+                      color: Theme.of(context).colorScheme.primary,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      isDark ? 'Light Theme' : 'Dark Theme',
+                      style: GoogleFonts.outfit(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               const PopupMenuDivider(),
               PopupMenuItem(
                 value: 'logout',
@@ -349,7 +500,8 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
                   ],
                 ),
               ),
-            ],
+            ];
+            },
           ),
           const SizedBox(width: 16),
         ],
@@ -382,6 +534,8 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
                 ref.read(utilitiesSearchProvider.notifier).state = '';
                 ref.read(skulkFeedSearchProvider.notifier).state = '';
               });
+              // When swiping to subjects tab, open the fade animation window
+              if (index == 0) SubjectCardFade.onPageActivated();
             },
             children: [
               const SubjectsPage(),
@@ -528,6 +682,8 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
 
     return GestureDetector(
       onTap: () {
+        // When tapping subjects tab, open the fade animation window
+        if (index == 0) SubjectCardFade.onPageActivated();
         setState(() {
           _currentIndex = index;
           if (index != 3) {
@@ -641,5 +797,4 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
       ),
     );
   }
-
 }
