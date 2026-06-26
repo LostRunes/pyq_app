@@ -316,19 +316,12 @@ class _ExpandingSubjectCardState extends State<ExpandingSubjectCard>
   late AnimationController _controller;
   late Animation<double> _expandAnimation;
 
-  // Track the page load time using the first card's initialization time
-  static DateTime? _firstCardBuildTime;
+  // Once set to true for the app session, cards never animate again
+  static bool _hasAnimatedOnce = false;
 
   @override
   void initState() {
     super.initState();
-
-    final now = DateTime.now();
-    // Reset page load time if it's the first build or if we returned to the page after some time
-    if (_firstCardBuildTime == null ||
-        now.difference(_firstCardBuildTime!) > const Duration(seconds: 4)) {
-      _firstCardBuildTime = now;
-    }
 
     _controller = AnimationController(vsync: this, duration: widget.duration);
 
@@ -337,15 +330,16 @@ class _ExpandingSubjectCardState extends State<ExpandingSubjectCard>
       curve: Curves.easeInOutCubic,
     );
 
-    // If the card is built after the initial page animations have settled (e.g. when scrolling down),
-    // skip the expand animation and display it fully expanded.
-    final timeSinceLoad = now.difference(_firstCardBuildTime!);
-    if (timeSinceLoad.inMilliseconds > 1200) {
+    if (_hasAnimatedOnce) {
+      // Already played once this session — snap to fully expanded instantly
       _controller.value = 1.0;
     } else {
+      // First time: run the animation, then mark as done
       Future.delayed(widget.delay, () {
         if (mounted) {
-          _controller.forward();
+          _controller.forward().then((_) {
+            _hasAnimatedOnce = true;
+          });
         }
       });
     }
