@@ -119,7 +119,7 @@ class AboutScreen extends StatelessWidget {
             _buildDeveloperCard(
               context: context,
               name: 'Yogisha Rani',
-              role: 'Founder & Lead Developer',
+              role: '@Random',
               avatarAsset: 'assets/images/pikachu.png',
               linkedin: 'https://www.linkedin.com/in/yogisha-rani-1382a7381/',
               github: 'https://github.com/LostRunes',
@@ -133,7 +133,7 @@ class AboutScreen extends StatelessWidget {
             _buildDeveloperCard(
               context: context,
               name: 'Abinash Mohanty',
-              role: 'Co-Founder & Core Architect',
+              role: '@Royace',
               avatarAsset: 'assets/images/panda.png',
               linkedin: 'https://www.linkedin.com/in/abinash-mohanty-/',
               github: 'https://github.com/abinashmohanty8059',
@@ -169,7 +169,9 @@ class AboutScreen extends StatelessWidget {
             : Colors.white.withOpacity(0.7),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: (isDark ? Colors.white.withOpacity(0.12) : const Color(0xFFFF9F0A).withOpacity(0.2)),
+          color: (isDark
+              ? Colors.white.withOpacity(0.12)
+              : const Color(0xFFFF9F0A).withOpacity(0.2)),
           width: 1.5,
         ),
         boxShadow: [
@@ -184,7 +186,10 @@ class AboutScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16.0,
+              vertical: 12.0,
+            ),
             child: Row(
               children: [
                 CircleAvatar(
@@ -287,11 +292,7 @@ class AboutScreen extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                icon,
-                size: 13,
-                color: isDark ? Colors.white : Colors.black,
-              ),
+              Icon(icon, size: 13, color: isDark ? Colors.white : Colors.black),
               const SizedBox(width: 4),
               Text(
                 label,
