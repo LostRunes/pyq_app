@@ -42,75 +42,79 @@ class AboutScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Top Row: Title (Left) & Logo (Right)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'FOCUS',
-                      style: GoogleFonts.outfit(
-                        fontSize: 38,
-                        fontWeight: FontWeight.w900,
-                        height: 0.95,
-                        color: theme.colorScheme.onSurface,
+            const SizedBox(height: 20),
+            // Top Row: Title (Left) & Logo (Right) - padded to be closer to middle
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 36.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'FOCUS',
+                        style: GoogleFonts.outfit(
+                          fontSize: 38,
+                          fontWeight: FontWeight.w900,
+                          height: 0.95,
+                          color: theme.colorScheme.onSurface,
+                        ),
                       ),
-                    ),
-                    Text(
-                      'FOX',
-                      style: GoogleFonts.outfit(
-                        fontSize: 38,
-                        fontWeight: FontWeight.w900,
-                        height: 0.95,
-                        color: const Color(0xFFFF9F0A),
-                      ),
-                    ),
-                  ],
-                ),
-                Container(
-                  width: 75,
-                  height: 75,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(22),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFFFF9F0A).withOpacity(0.18),
-                        blurRadius: 16,
-                        offset: const Offset(0, 6),
+                      Text(
+                        'FOX',
+                        style: GoogleFonts.outfit(
+                          fontSize: 38,
+                          fontWeight: FontWeight.w900,
+                          height: 0.95,
+                          color: const Color(0xFFFF9F0A),
+                        ),
                       ),
                     ],
-                    image: const DecorationImage(
-                      image: AssetImage('assets/images/FocusFox_icon.png'),
-                      fit: BoxFit.cover,
+                  ),
+                  Container(
+                    width: 75,
+                    height: 75,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(22),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFFFF9F0A).withOpacity(0.18),
+                          blurRadius: 16,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                      image: const DecorationImage(
+                        image: AssetImage('assets/images/FocusFox_icon.png'),
+                        fit: BoxFit.cover,
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 32),
             // App Description
             Text(
               'Focus Fox is your ultimate engineering companion designed to help you prepare for core engineering exams. Keep track of previous year questions, practice DSA patterns, collaborate on doubt feeds, and leverage customized utilities all in one place to streamline your learning journey.',
               style: GoogleFonts.outfit(
-                fontSize: 13,
+                fontSize: 13.5,
                 height: 1.45,
                 color: theme.colorScheme.onSurface.withOpacity(0.7),
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 36),
             // Heading: FOUNDERS/ DEVELOPERS
             Text(
               'FOUNDERS/ DEVELOPERS',
               style: GoogleFonts.outfit(
-                fontSize: 15,
-                fontWeight: FontWeight.w800,
-                color: const Color(0xFFFF9F0A),
+                fontSize: 21,
+                fontWeight: FontWeight.w900,
+                color: isDark ? Colors.white : Colors.black,
                 letterSpacing: 1.0,
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 20),
             // Developer 1: Yogisha Rani
             _buildDeveloperCard(
               context: context,
@@ -124,7 +128,7 @@ class AboutScreen extends StatelessWidget {
               orangeBgStart: orangeBgStart,
               orangeBgEnd: orangeBgEnd,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
             // Developer 2: Abinash Mohanty
             _buildDeveloperCard(
               context: context,
