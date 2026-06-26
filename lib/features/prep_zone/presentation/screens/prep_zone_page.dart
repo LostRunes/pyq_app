@@ -103,7 +103,8 @@ class PrepZonePage extends ConsumerWidget {
                   itemBuilder: (context, index) {
                     final item = filteredItems[index];
                     final Color itemColor = item['color'] as Color;
-                    final bool isComingSoon = item['isComingSoon'] as bool? ?? false;
+                    final bool isComingSoon =
+                        item['isComingSoon'] as bool? ?? false;
                     return FadeInSlide(
                       delay: Duration(milliseconds: index * 100),
                       duration: const Duration(milliseconds: 500),
@@ -111,7 +112,10 @@ class PrepZonePage extends ConsumerWidget {
                         onTap: isComingSoon
                             ? null
                             : () {
-                                Navigator.pushNamed(context, item['route'] as String);
+                                Navigator.pushNamed(
+                                  context,
+                                  item['route'] as String,
+                                );
                               },
                         borderRadius: BorderRadius.circular(28),
                         child: Container(
@@ -163,9 +167,8 @@ class PrepZonePage extends ConsumerWidget {
                                     item['desc'] as String,
                                     style: GoogleFonts.outfit(
                                       fontSize: 11,
-                                      color: theme.colorScheme.onSurface.withOpacity(
-                                        0.5,
-                                      ),
+                                      color: theme.colorScheme.onSurface
+                                          .withOpacity(0.5),
                                     ),
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
