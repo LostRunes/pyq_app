@@ -12,6 +12,7 @@ class StudyRoom {
   final int maxParticipants;
   final int participantCount;
   final bool isActive;
+  final DateTime? endedAt;
 
   StudyRoom({
     required this.id,
@@ -27,6 +28,7 @@ class StudyRoom {
     this.maxParticipants = 20,
     this.participantCount = 0,
     this.isActive = true,
+    this.endedAt,
   });
 
   factory StudyRoom.fromJson(Map<String, dynamic> json) {
@@ -46,6 +48,7 @@ class StudyRoom {
       maxParticipants: json['max_participants'] as int? ?? 20,
       participantCount: json['participant_count'] as int? ?? 0,
       isActive: json['is_active'] as bool? ?? true,
+      endedAt: json['ended_at'] != null ? DateTime.parse(json['ended_at'] as String) : null,
     );
   }
 }

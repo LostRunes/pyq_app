@@ -1,3 +1,6 @@
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import '../models/study_room.dart';
 import '../models/room_message.dart';
 import '../services/study_together_service.dart';
@@ -55,4 +58,33 @@ class StudyTogetherRepository {
   /// Updates (increments/decrements) participant count for a room
   Future<void> updateRoomParticipantCount(String roomId, int delta) =>
       _service.updateRoomParticipantCount(roomId, delta);
+
+  /// Downloads and shares the chat history of a room as a text file
+  Future<void> downloadChatHistory(String roomId, String roomName) async {
+    // Fetch all messages (up to 500 for simplicity)
+    final rawMessages = await _service.fetchRoomMessages(roomId, limit: 500, offset: 0);
+    final messages = rawMessages.map((json) => RoomMessage.fromJson(json)).toList();
+    
+    // Sort in chronological order
+    messages.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+
+    final StringBuffer buffer = StringBuffer();
+    buffer.writeln("=== Chat History for Room: $roomName ===");
+    buffer.writeln("Downloaded on: ${DateTime.now().toLocal()}\n");
+
+    for (final msg in messages) {
+      final timeStr = msg.createdAt.toLocal().toString().split('.').first;
+      final senderName = msg.senderDisplayName ?? msg.senderUsername ?? 'Unknown User';
+      buffer.writeln("[$timeStr] $senderName: ${msg.message}");
+    }
+
+    final tempDir = await getTemporaryDirectory();
+    final file = File("${tempDir.path}/chat_history_${roomId.substring(0, 8)}.txt");
+    await file.writeAsString(buffer.toString());
+
+    await Share.shareXFiles(
+      [XFile(file.path)],
+      text: "Here is the chat history for study room: $roomName",
+    );
+  }
 }
