@@ -10,19 +10,41 @@ class AppInitializer {
   static Future<SharedPreferences> initialize() async {
     WidgetsFlutterBinding.ensureInitialized();
     
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
+    try {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+    } catch (e) {
+      debugPrint('Firebase initialization failed: $e');
+    }
 
-    await dotenv.load(fileName: ".env");
+    try {
+      await dotenv.load(fileName: ".env");
+    } catch (e) {
+      debugPrint('dotenv load failed: $e');
+    }
 
-    await Supabase.initialize(
-      url: dotenv.env['SUPABASE_2_URL']!,
-      anonKey: dotenv.env['SUPABASE_2_KEY']!,
-    );
+    try {
+      final url = dotenv.env['SUPABASE_2_URL'] ?? '';
+      final anonKey = dotenv.env['SUPABASE_2_KEY'] ?? '';
+      if (url.isNotEmpty && anonKey.isNotEmpty) {
+        await Supabase.initialize(
+          url: url,
+          anonKey: anonKey,
+        );
+      } else {
+        debugPrint('Supabase credentials missing in .env');
+      }
+    } catch (e) {
+      debugPrint('Supabase initialization failed: $e');
+    }
 
-    // Initialize Push Notifications
-    await PushNotificationService.initialize();
+    try {
+      // Initialize Push Notifications
+      await PushNotificationService.initialize();
+    } catch (e) {
+      debugPrint('PushNotificationService initialization failed: $e');
+    }
 
     return SharedPreferences.getInstance();
   }

@@ -11,6 +11,9 @@ class ActiveLobby extends StudyRoom {
     required super.isArchived,
     required super.lastMessageAt,
     super.createdBy,
+    super.maxParticipants,
+    super.participantCount,
+    super.isActive,
   });
 
   factory ActiveLobby.fromStudyRoom(StudyRoom room) {
@@ -24,6 +27,9 @@ class ActiveLobby extends StudyRoom {
       isArchived: room.isArchived,
       lastMessageAt: room.lastMessageAt,
       createdBy: room.createdBy,
+      maxParticipants: room.maxParticipants,
+      participantCount: room.participantCount,
+      isActive: room.isActive,
     );
   }
 }

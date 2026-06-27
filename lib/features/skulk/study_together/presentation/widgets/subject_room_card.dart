@@ -112,6 +112,32 @@ class SubjectRoomCard extends StatelessWidget {
                               color: Colors.grey[500],
                             ),
                           ),
+                          if (room.isVoiceEnabled && room.participantCount > 0) ...[
+                            const SizedBox(width: 8),
+                            Container(
+                              width: 3,
+                              height: 3,
+                              decoration: BoxDecoration(
+                                color: Colors.grey[400],
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Icon(
+                              Icons.headset_mic_rounded,
+                              size: 10,
+                              color: Colors.greenAccent,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${room.participantCount} active',
+                              style: GoogleFonts.outfit(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.greenAccent,
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ],

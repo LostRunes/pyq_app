@@ -9,6 +9,9 @@ class StudyRoom {
   final DateTime lastMessageAt;
   final String? createdBy;
   final String? subjectId;
+  final int maxParticipants;
+  final int participantCount;
+  final bool isActive;
 
   StudyRoom({
     required this.id,
@@ -21,6 +24,9 @@ class StudyRoom {
     required this.lastMessageAt,
     this.createdBy,
     this.subjectId,
+    this.maxParticipants = 20,
+    this.participantCount = 0,
+    this.isActive = true,
   });
 
   factory StudyRoom.fromJson(Map<String, dynamic> json) {
@@ -37,6 +43,9 @@ class StudyRoom {
       ),
       createdBy: json['created_by'] as String?,
       subjectId: json['subject_id'] as String?,
+      maxParticipants: json['max_participants'] as int? ?? 20,
+      participantCount: json['participant_count'] as int? ?? 0,
+      isActive: json['is_active'] as bool? ?? true,
     );
   }
 }
