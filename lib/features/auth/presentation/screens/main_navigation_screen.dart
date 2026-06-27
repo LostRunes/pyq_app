@@ -15,6 +15,7 @@ import 'package:focus_fox/features/prep_zone/presentation/providers/prep_zone_pr
 import 'package:focus_fox/features/utilities/presentation/providers/utilities_providers.dart';
 import 'package:focus_fox/features/skulk/presentation/screens/skulk_feed_screen.dart';
 import 'package:focus_fox/features/skulk/presentation/providers/skulk_providers.dart';
+import 'package:focus_fox/features/skulk/study_together/presentation/screens/study_together_screen.dart';
 import 'package:focus_fox/features/subjects/presentation/screens/subjects_page.dart';
 import 'package:focus_fox/features/prep_zone/presentation/screens/prep_zone_page.dart';
 import 'package:focus_fox/features/utilities/presentation/screens/utilities_page.dart';
@@ -40,7 +41,8 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
     with SingleTickerProviderStateMixin, RouteAware {
   // Removed _currentSemester / _currentBranchId local fields:
   // providers are now the single source of truth.
-  int _currentIndex = 0; // 0: Subjects, 1: Prep Zone, 2: Dashboard, 3: Skulk
+  int _currentIndex =
+      0; // 0: Subjects, 1: Prep Zone, 2: Utilities, 3: Study Rooms, 4: Skulk
 
   // Guard flag: suppresses onPageChanged during programmatic animateToPage()
   // so the blob doesn't flicker through intermediate positions.
@@ -53,6 +55,11 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
   // Animation controller for fluid water wobble
   late AnimationController _wobbleController;
   late PageController _pageController;
+
+  // GlobalKey to access StudyTogetherScreenState so we can trigger its dialogs
+  // from the main AppBar action buttons when the Rooms tab is active.
+  final GlobalKey<StudyTogetherScreenState> _studyRoomsKey =
+      GlobalKey<StudyTogetherScreenState>();
 
   @override
   void initState() {
@@ -178,7 +185,9 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
                           ? 'Search preparation tools...'
                           : _currentIndex == 2
                           ? 'Search utilities...'
-                          : 'Search doubts, titles or tags...',
+                          : _currentIndex == 4
+                          ? 'Search doubts, titles or tags...'
+                          : 'Search...',
                       hintStyle: GoogleFonts.outfit(
                         fontSize: 13,
                         color: isDark ? Colors.white38 : Colors.black38,
@@ -197,13 +206,21 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
                     ),
                     onChanged: (val) {
                       if (_currentIndex == 0) {
-                        ref.read(subjectsSearchProvider.notifier).updateSearch(val);
+                        ref
+                            .read(subjectsSearchProvider.notifier)
+                            .updateSearch(val);
                       } else if (_currentIndex == 1) {
-                        ref.read(prepZoneSearchProvider.notifier).updateSearch(val);
+                        ref
+                            .read(prepZoneSearchProvider.notifier)
+                            .updateSearch(val);
                       } else if (_currentIndex == 2) {
-                        ref.read(utilitiesSearchProvider.notifier).updateSearch(val);
-                      } else if (_currentIndex == 3) {
-                        ref.read(skulkFeedSearchProvider.notifier).updateSearch(val);
+                        ref
+                            .read(utilitiesSearchProvider.notifier)
+                            .updateSearch(val);
+                      } else if (_currentIndex == 4) {
+                        ref
+                            .read(skulkFeedSearchProvider.notifier)
+                            .updateSearch(val);
                       }
                     },
                     onSubmitted: (val) {
@@ -229,309 +246,316 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
                     ref.read(prepZoneSearchProvider.notifier).updateSearch('');
                   } else if (_currentIndex == 2) {
                     ref.read(utilitiesSearchProvider.notifier).updateSearch('');
-                  } else if (_currentIndex == 3) {
+                  } else if (_currentIndex == 4) {
                     ref.read(skulkFeedSearchProvider.notifier).updateSearch('');
                   }
                 });
               },
             ),
 
-          const ThemeToggleButton(),
-          PopupMenuButton<String>(
-            offset: const Offset(0, 48),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(24),
-            ),
-            icon: Container(
-              padding: const EdgeInsets.all(2),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: Theme.of(context).colorScheme.primary.withOpacity(0.4),
-                  width: 2,
-                ),
+          if (!_isSearching) ...[
+            const ThemeToggleButton(),
+            PopupMenuButton<String>(
+              offset: const Offset(0, 48),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
               ),
-              child: ref
-                  .watch(userProfileProvider)
-                  .when(
-                    data: (profile) {
-                      final avatarUrl =
-                          profile?['avatar_url']?.toString() ??
-                          'assets/images/pikachu.png';
-                      // Use NetworkImage for remote URLs (e.g. Google OAuth avatar),
-                      // AssetImage for bundled assets.
-                      final ImageProvider imageProvider = avatarUrl.startsWith('http')
-                          ? NetworkImage(avatarUrl)
-                          : AssetImage(avatarUrl) as ImageProvider;
-                      return CircleAvatar(
+              icon: Container(
+                padding: const EdgeInsets.all(2),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.primary.withOpacity(0.4),
+                    width: 2,
+                  ),
+                ),
+                child: ref
+                    .watch(userProfileProvider)
+                    .when(
+                      data: (profile) {
+                        final avatarUrl =
+                            profile?['avatar_url']?.toString() ??
+                            'assets/images/pikachu.png';
+                        // Use NetworkImage for remote URLs (e.g. Google OAuth avatar),
+                        // AssetImage for bundled assets.
+                        final ImageProvider imageProvider =
+                            avatarUrl.startsWith('http')
+                            ? NetworkImage(avatarUrl)
+                            : AssetImage(avatarUrl) as ImageProvider;
+                        return CircleAvatar(
+                          radius: 16,
+                          backgroundImage: imageProvider,
+                          backgroundColor: Colors.transparent,
+                        );
+                      },
+                      loading: () => const CircleAvatar(
                         radius: 16,
-                        backgroundImage: imageProvider,
+                        backgroundImage: AssetImage(
+                          'assets/images/pikachu.png',
+                        ),
                         backgroundColor: Colors.transparent,
-                      );
-                    },
-                    loading: () => const CircleAvatar(
-                      radius: 16,
-                      backgroundImage: AssetImage('assets/images/pikachu.png'),
-                      backgroundColor: Colors.transparent,
+                      ),
+                      error: (_, __) => const CircleAvatar(
+                        radius: 16,
+                        backgroundImage: AssetImage(
+                          'assets/images/pikachu.png',
+                        ),
+                        backgroundColor: Colors.transparent,
+                      ),
                     ),
-                    error: (_, __) => const CircleAvatar(
-                      radius: 16,
-                      backgroundImage: AssetImage('assets/images/pikachu.png'),
-                      backgroundColor: Colors.transparent,
+              ),
+              onSelected: (value) {
+                if (value == 'profile') {
+                  Navigator.pushNamed(context, '/profile');
+                } else if (value == 'settings') {
+                  Navigator.pushNamed(context, '/settings');
+                } else if (value == 'about') {
+                  Navigator.pushNamed(context, '/about');
+                } else if (value == 'theme_toggle') {
+                  ref.read(themeModeProvider.notifier).toggle();
+                } else if (value == 'logout') {
+                  _showLogoutDialog(context);
+                }
+              },
+              itemBuilder: (BuildContext context) {
+                return [
+                  PopupMenuItem(
+                    value: 'profile',
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.person_outline_rounded,
+                          color: Theme.of(context).colorScheme.primary,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          'Profile',
+                          style: GoogleFonts.outfit(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-            ),
-            onSelected: (value) {
-              if (value == 'profile') {
-                Navigator.pushNamed(context, '/profile');
-              } else if (value == 'settings') {
-                Navigator.pushNamed(context, '/settings');
-              } else if (value == 'about') {
-                Navigator.pushNamed(context, '/about');
-              } else if (value == 'theme_toggle') {
-                ref.read(themeModeProvider.notifier).toggle();
-              } else if (value == 'logout') {
-                _showLogoutDialog(context);
-              }
-            },
-            itemBuilder: (BuildContext context) {
-              return [
-              PopupMenuItem(
-                value: 'profile',
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.person_outline_rounded,
-                      color: Theme.of(context).colorScheme.primary,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'Profile',
-                      style: GoogleFonts.outfit(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              PopupMenuItem(
-                value: 'settings',
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.settings_rounded,
-                      color: Theme.of(context).colorScheme.primary,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'Settings',
-                      style: GoogleFonts.outfit(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              PopupMenuItem(
-                value: 'about',
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.info_outline_rounded,
-                      color: Theme.of(context).colorScheme.primary,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'About',
-                      style: GoogleFonts.outfit(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              // ── Quest Item (bee counter + toggle) — stays open on tap ──
-              PopupMenuItem<String>(
-                // No value — prevents PopupMenuItem from popping the menu
-                padding: EdgeInsets.zero,
-                child: Consumer(
-                  builder: (context, watchRef, _) {
-                    // Live watch inside the popup — rebuilds on every toggle
-                    final liveBeeEnabled =
-                        watchRef.watch(beeEnabledProvider);
-                    final liveBeeCount =
-                        watchRef.watch(beeTapCountProvider);
-                    return GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: () {
-                        watchRef
-                            .read(beeEnabledProvider.notifier)
-                            .toggle();
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
+                  PopupMenuItem(
+                    value: 'settings',
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.settings_rounded,
+                          color: Theme.of(context).colorScheme.primary,
+                          size: 20,
                         ),
-                        child: Row(
-                          children: [
-                            // Bee emoji + golden count badge
-                            Stack(
-                              clipBehavior: Clip.none,
+                        const SizedBox(width: 12),
+                        Text(
+                          'Settings',
+                          style: GoogleFonts.outfit(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'about',
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.info_outline_rounded,
+                          color: Theme.of(context).colorScheme.primary,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          'About',
+                          style: GoogleFonts.outfit(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // ── Quest Item (bee counter + toggle) — stays open on tap ──
+                  PopupMenuItem<String>(
+                    // No value — prevents PopupMenuItem from popping the menu
+                    padding: EdgeInsets.zero,
+                    child: Consumer(
+                      builder: (context, watchRef, _) {
+                        // Live watch inside the popup — rebuilds on every toggle
+                        final liveBeeEnabled = watchRef.watch(
+                          beeEnabledProvider,
+                        );
+                        final liveBeeCount = watchRef.watch(
+                          beeTapCountProvider,
+                        );
+                        return GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () {
+                            watchRef.read(beeEnabledProvider.notifier).toggle();
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 8,
+                            ),
+                            child: Row(
                               children: [
-                                Text(
-                                  '🐝',
-                                  style: GoogleFonts.outfit(fontSize: 18),
+                                // Bee emoji + golden count badge
+                                Stack(
+                                  clipBehavior: Clip.none,
+                                  children: [
+                                    Text(
+                                      '🐝',
+                                      style: GoogleFonts.outfit(fontSize: 18),
+                                    ),
+                                    Positioned(
+                                      top: -6,
+                                      right: -10,
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 5,
+                                          vertical: 1,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFFF9F0A),
+                                          borderRadius: BorderRadius.circular(
+                                            10,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          '$liveBeeCount',
+                                          style: GoogleFonts.outfit(
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.w900,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                Positioned(
-                                  top: -6,
-                                  right: -10,
-                                  child: Container(
-                                    padding:
-                                        const EdgeInsets.symmetric(
-                                      horizontal: 5,
-                                      vertical: 1,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFFF9F0A),
-                                      borderRadius:
-                                          BorderRadius.circular(10),
-                                    ),
-                                    child: Text(
-                                      '$liveBeeCount',
-                                      style: GoogleFonts.outfit(
-                                        fontSize: 9,
-                                        fontWeight: FontWeight.w900,
-                                        color: Colors.white,
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        'Quest',
+                                        style: GoogleFonts.outfit(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                      Text(
+                                        liveBeeEnabled
+                                            ? 'Bee is active'
+                                            : 'Bee is off',
+                                        style: GoogleFonts.outfit(
+                                          fontSize: 10,
+                                          color: liveBeeEnabled
+                                              ? const Color(0xFFFF9F0A)
+                                              : Colors.grey,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                // Animated pill — driven by live state, always animates
+                                AnimatedContainer(
+                                  duration: const Duration(milliseconds: 250),
+                                  curve: Curves.easeInOut,
+                                  width: 40,
+                                  height: 22,
+                                  decoration: BoxDecoration(
+                                    color: liveBeeEnabled
+                                        ? const Color(0xFFFF9F0A)
+                                        : Colors.grey.shade400,
+                                    borderRadius: BorderRadius.circular(11),
+                                  ),
+                                  child: AnimatedAlign(
+                                    duration: const Duration(milliseconds: 250),
+                                    curve: Curves.easeInOut,
+                                    alignment: liveBeeEnabled
+                                        ? Alignment.centerRight
+                                        : Alignment.centerLeft,
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(3),
+                                      child: Container(
+                                        width: 16,
+                                        height: 16,
+                                        decoration: const BoxDecoration(
+                                          color: Colors.white,
+                                          shape: BoxShape.circle,
+                                        ),
                                       ),
                                     ),
                                   ),
                                 ),
                               ],
                             ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment:
-                                    CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    'Quest',
-                                    style: GoogleFonts.outfit(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                  Text(
-                                    liveBeeEnabled
-                                        ? 'Bee is active'
-                                        : 'Bee is off',
-                                    style: GoogleFonts.outfit(
-                                      fontSize: 10,
-                                      color: liveBeeEnabled
-                                          ? const Color(0xFFFF9F0A)
-                                          : Colors.grey,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            // Animated pill — driven by live state, always animates
-                            AnimatedContainer(
-                              duration:
-                                  const Duration(milliseconds: 250),
-                              curve: Curves.easeInOut,
-                              width: 40,
-                              height: 22,
-                              decoration: BoxDecoration(
-                                color: liveBeeEnabled
-                                    ? const Color(0xFFFF9F0A)
-                                    : Colors.grey.shade400,
-                                borderRadius: BorderRadius.circular(11),
-                              ),
-                              child: AnimatedAlign(
-                                duration:
-                                    const Duration(milliseconds: 250),
-                                curve: Curves.easeInOut,
-                                alignment: liveBeeEnabled
-                                    ? Alignment.centerRight
-                                    : Alignment.centerLeft,
-                                child: Padding(
-                                  padding: const EdgeInsets.all(3),
-                                  child: Container(
-                                    width: 16,
-                                    height: 16,
-                                    decoration: const BoxDecoration(
-                                      color: Colors.white,
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
 
-              PopupMenuItem(
-                value: 'theme_toggle',
-                child: Row(
-                  children: [
-                    Icon(
-                      isDark
-                          ? Icons.light_mode_rounded
-                          : Icons.dark_mode_rounded,
-                      color: Theme.of(context).colorScheme.primary,
-                      size: 20,
+                  PopupMenuItem(
+                    value: 'theme_toggle',
+                    child: Row(
+                      children: [
+                        Icon(
+                          isDark
+                              ? Icons.light_mode_rounded
+                              : Icons.dark_mode_rounded,
+                          color: Theme.of(context).colorScheme.primary,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          isDark ? 'Light Theme' : 'Dark Theme',
+                          style: GoogleFonts.outfit(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 12),
-                    Text(
-                      isDark ? 'Light Theme' : 'Dark Theme',
-                      style: GoogleFonts.outfit(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                      ),
+                  ),
+                  const PopupMenuDivider(),
+                  PopupMenuItem(
+                    value: 'logout',
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.logout_rounded,
+                          color: Colors.redAccent,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          'Logout',
+                          style: GoogleFonts.outfit(
+                            color: Colors.redAccent,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              ),
-              const PopupMenuDivider(),
-              PopupMenuItem(
-                value: 'logout',
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.logout_rounded,
-                      color: Colors.redAccent,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'Logout',
-                      style: GoogleFonts.outfit(
-                        color: Colors.redAccent,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ];
-            },
-          ),
-          const SizedBox(width: 16),
+                  ),
+                ];
+              },
+            ),
+            const SizedBox(width: 16),
+          ],
         ],
       ),
       body: Container(
@@ -557,6 +581,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
               // Skip intermediate callbacks fired during a programmatic
               // animateToPage() call — this is what caused the blob to flicker.
               if (_isAnimatingPage) return;
+              // All 5 nav indices map 1:1 to PageView pages now.
               ref.read(mainNavigationIndexProvider.notifier).setIndex(index);
               setState(() {
                 // Do NOT reset _isSearching here — that would dismiss the
@@ -574,6 +599,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
               const SubjectsPage(),
               const PrepZonePage(),
               const UtilitiesPage(),
+              StudyTogetherScreen(key: _studyRoomsKey, embeddedMode: true),
               _buildSkulkPage(context),
             ],
           ),
@@ -585,7 +611,8 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
 
   Widget _buildCuteBottomNavBar(BuildContext context) {
     final size = MediaQuery.of(context).size;
-    final tabWidth = size.width / 4;
+    // 5 tabs — slightly narrower slots
+    final tabWidth = size.width / 5;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -599,9 +626,16 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
     final Color orangeActive = isDark
         ? const Color(0xFFC0A6FF)
         : const Color.fromARGB(255, 90, 41, 0);
+    // Study Rooms gets a distinct teal accent
+    final Color studyRoomsActive = isDark
+        ? const Color(0xFF4DD9E0)
+        : const Color(0xFF0083B0);
     final Color orangeActiveBg = isDark
         ? const Color(0x2BC0A6FF)
         : const Color(0x1AD37D3E);
+    final Color studyRoomsActiveBg = isDark
+        ? const Color(0x2B4DD9E0)
+        : const Color(0x1A0083B0);
     final Color orangeInactive = isDark
         ? const Color(0xFF8A7CB5)
         : const Color(0x997A6456);
@@ -609,8 +643,15 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
         ? Colors.black38
         : Colors.black.withOpacity(0.06);
 
+    // Pick the correct blob color based on current index
+    final blobBg = _currentIndex == 3 ? studyRoomsActiveBg : orangeActiveBg;
+    final blobBorder = _currentIndex == 3 ? studyRoomsActive : orangeActive;
+
+    // Blob is 68px wide for 5 tabs so it fits without overlap
+    const double blobW = 68;
+
     return Container(
-      height: 80 + bottomPadding,
+      height: 76 + bottomPadding,
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [orangeBgStart, orangeBgEnd],
@@ -635,18 +676,18 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
           AnimatedPositioned(
             duration: const Duration(milliseconds: 350),
             curve: Curves.easeInOutCubic,
-            left: (_currentIndex * tabWidth) + (tabWidth - 84) / 2,
-            top: 13,
+            left: (_currentIndex * tabWidth) + (tabWidth - blobW) / 2,
+            top: 10,
             child: AnimatedBuilder(
               animation: _wobbleController,
               builder: (context, child) {
                 final val = _wobbleController.value;
                 // Undulating organic border radius simulating a liquid water droplet
                 return Container(
-                  width: 84,
-                  height: 52,
+                  width: blobW,
+                  height: 50,
                   decoration: BoxDecoration(
-                    color: orangeActiveBg,
+                    color: blobBg,
                     borderRadius: BorderRadius.only(
                       topLeft: Radius.circular(26 + 12 * val),
                       topRight: Radius.circular(34 - 12 * val),
@@ -654,7 +695,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
                       bottomRight: Radius.circular(28 + 10 * val),
                     ),
                     border: Border.all(
-                      color: orangeActive.withOpacity(0.25 * val),
+                      color: blobBorder.withOpacity(0.25 * val),
                       width: 1.5,
                     ),
                   ),
@@ -689,8 +730,16 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
                   orangeActive,
                   orangeInactive,
                 ),
+                // Study Rooms — embedded as a real PageView page
                 _buildNavBarItem(
                   3,
+                  Icons.groups_rounded,
+                  'Lobbies',
+                  studyRoomsActive,
+                  orangeInactive,
+                ),
+                _buildNavBarItem(
+                  4,
                   Icons.diversity_3_rounded,
                   'Skulk',
                   orangeActive,
@@ -723,41 +772,44 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
           _skulkSearchController.clear();
           ref.read(skulkFeedSearchProvider.notifier).updateSearch('');
         });
-        // Guard flag: prevents onPageChanged from firing intermediate
-        // index values during the 300 ms animation, which caused blob flicker.
+        // Animate the PageView — all 5 nav indices map 1:1 to PageView pages.
         _isAnimatingPage = true;
-        _pageController.animateToPage(
-          index,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
-        ).then((_) {
-          if (mounted) setState(() => _isAnimatingPage = false);
-        });
+        _pageController
+            .animateToPage(
+              index,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+            )
+            .then((_) {
+              if (mounted) setState(() => _isAnimatingPage = false);
+            });
       },
       behavior: HitTestBehavior.opaque,
       child: SizedBox(
-        width: MediaQuery.of(context).size.width / 4,
-        height: 80,
+        width: MediaQuery.of(context).size.width / 5,
+        height: 76,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             AnimatedScale(
-              scale: isSelected ? 1.25 : 1.0,
+              scale: isSelected ? 1.2 : 1.0,
               duration: const Duration(milliseconds: 250),
               curve: Curves.easeOutBack,
               child: Icon(
                 icon,
                 color: isSelected ? activeColor : inactiveColor,
-                size: 24,
+                size: 22,
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 3),
             Text(
               label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: GoogleFonts.outfit(
                 color: isSelected ? activeColor : inactiveColor,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                fontSize: 11,
+                fontSize: 10,
               ),
             ),
           ],
@@ -770,10 +822,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
     // Read directly from providers — no local duplicate state.
     final branchId = ref.read(selectedBranchIdProvider);
     final semester = ref.read(selectedSemesterProvider);
-    return SkulkFeedScreen(
-      branchId: branchId,
-      semester: semester,
-    );
+    return SkulkFeedScreen(branchId: branchId, semester: semester);
   }
 
   void _showLogoutDialog(BuildContext context) {
