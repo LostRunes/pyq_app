@@ -51,4 +51,8 @@ class StudyTogetherRepository {
     final rawMessage = await _service.updateMessageReactions(messageId, emoji);
     return RoomMessage.fromJson(rawMessage);
   }
+
+  /// Updates (increments/decrements) participant count for a room
+  Future<void> updateRoomParticipantCount(String roomId, int delta) =>
+      _service.updateRoomParticipantCount(roomId, delta);
 }
