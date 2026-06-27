@@ -9,6 +9,9 @@ import '../../data/models/study_room.dart';
 import '../../data/models/room_message.dart';
 import '../../data/services/study_together_service.dart';
 import '../../data/repositories/study_together_repository.dart';
+import 'package:livekit_client/livekit_client.dart';
+import '../../data/services/livekit_service.dart';
+import 'package:flutter/foundation.dart';
 
 /// Database service provider
 final studyTogetherServiceProvider = Provider<StudyTogetherService>((ref) {
@@ -50,6 +53,7 @@ class RoomOperations {
     required String name,
     required String description,
     required bool isVoiceEnabled,
+    int maxParticipants = 20,
   }) async {
     final user = _client.auth.currentUser;
     if (user == null) throw Exception('Must be logged in to create rooms');
@@ -73,6 +77,9 @@ class RoomOperations {
           'is_voice_enabled': isVoiceEnabled,
           'created_by': user.id,
           'last_message_at': DateTime.now().toIso8601String(),
+          'max_participants': maxParticipants,
+          'is_active': true,
+          'participant_count': 0,
         })
         .select()
         .single();
@@ -619,3 +626,182 @@ final branchSubjectsMapProvider = FutureProvider<Map<String, List<({int semester
   }
   return map;
 });
+
+class VoiceParticipant {
+  final String identity;
+  final String name;
+  final bool isSpeaking;
+  final bool isMuted;
+
+  VoiceParticipant({
+    required this.identity,
+    required this.name,
+    required this.isSpeaking,
+    required this.isMuted,
+  });
+}
+
+enum VoiceConnectionStatus {
+  disconnected,
+  connecting,
+  connected,
+  failed,
+}
+
+class VoiceRoomState {
+  final String? activeRoomId;
+  final VoiceConnectionStatus status;
+  final List<VoiceParticipant> participants;
+  final bool isLocalMuted;
+
+  VoiceRoomState({
+    this.activeRoomId,
+    this.status = VoiceConnectionStatus.disconnected,
+    this.participants = const [],
+    this.isLocalMuted = false,
+  });
+
+  VoiceRoomState copyWith({
+    String? activeRoomId,
+    VoiceConnectionStatus? status,
+    List<VoiceParticipant>? participants,
+    bool? isLocalMuted,
+  }) {
+    return VoiceRoomState(
+      activeRoomId: activeRoomId ?? this.activeRoomId,
+      status: status ?? this.status,
+      participants: participants ?? this.participants,
+      isLocalMuted: isLocalMuted ?? this.isLocalMuted,
+    );
+  }
+}
+
+class VoiceRoomNotifier extends Notifier<VoiceRoomState> {
+  @override
+  VoiceRoomState build() {
+    return VoiceRoomState();
+  }
+
+  LiveKitService get _liveKitService => ref.read(liveKitServiceProvider);
+  StudyTogetherRepository get _repository => ref.read(studyTogetherRepositoryProvider);
+
+  Room? get room => _liveKitService.room;
+
+  Future<void> joinVoice(String roomId, String username) async {
+    if (state.activeRoomId == roomId && state.status == VoiceConnectionStatus.connected) {
+      return;
+    }
+
+    state = state.copyWith(
+      activeRoomId: roomId,
+      status: VoiceConnectionStatus.connecting,
+    );
+
+    try {
+      final user = Supabase.instance.client.auth.currentUser;
+      final identity = user?.id ?? username;
+      final displayName = user?.userMetadata?['username'] ?? 
+                          user?.userMetadata?['full_name'] ?? 
+                          user?.userMetadata?['name'] ?? 
+                          user?.email?.split('@').first ?? 
+                          username;
+      final tokenData = await _liveKitService.fetchToken(roomId, identity, displayName);
+
+      final wsUrl = tokenData['ws_url'] as String;
+      final token = tokenData['token'] as String;
+
+      final room = await _liveKitService.connect(wsUrl, token);
+      room.addListener(_onRoomChange);
+
+      await _liveKitService.setMicEnabled(true);
+      await _repository.updateRoomParticipantCount(roomId, 1);
+
+      state = state.copyWith(
+        status: VoiceConnectionStatus.connected,
+        isLocalMuted: false,
+      );
+
+      _updateParticipants();
+    } catch (e) {
+      state = state.copyWith(
+        status: VoiceConnectionStatus.failed,
+      );
+      if (kDebugMode) {
+        print('Failed to join voice room: $e');
+      }
+    }
+  }
+
+  Future<void> leaveVoice() async {
+    final roomId = state.activeRoomId;
+    if (roomId == null) return;
+
+    room?.removeListener(_onRoomChange);
+    await _liveKitService.disconnect();
+
+    try {
+      await _repository.updateRoomParticipantCount(roomId, -1);
+    } catch (e) {
+      // ignore
+    }
+
+    state = VoiceRoomState();
+  }
+
+  Future<void> toggleMute() async {
+    final room = this.room;
+    if (room == null) return;
+
+    final currentlyMuted = !room.localParticipant!.isMicrophoneEnabled();
+    await _liveKitService.setMicEnabled(currentlyMuted);
+    
+    state = state.copyWith(
+      isLocalMuted: !currentlyMuted,
+    );
+    _updateParticipants();
+  }
+
+  void _onRoomChange() {
+    _updateParticipants();
+  }
+
+  void _updateParticipants() {
+    final room = this.room;
+    if (room == null) return;
+
+    final list = <VoiceParticipant>[];
+
+    final local = room.localParticipant;
+    if (local != null) {
+      list.add(VoiceParticipant(
+        identity: local.identity,
+        name: local.name.isNotEmpty ? local.name : 'You',
+        isSpeaking: local.isSpeaking,
+        isMuted: !local.isMicrophoneEnabled(),
+      ));
+    }
+
+    for (final remote in room.remoteParticipants.values) {
+      list.add(VoiceParticipant(
+        identity: remote.identity,
+        name: remote.name.isNotEmpty ? remote.name : (remote.identity.split(':').last),
+        isSpeaking: remote.isSpeaking,
+        isMuted: !remote.isMicrophoneEnabled(),
+      ));
+    }
+
+    state = state.copyWith(
+      participants: list,
+      isLocalMuted: local != null ? !local.isMicrophoneEnabled() : state.isLocalMuted,
+    );
+  }
+}
+
+final liveKitServiceProvider = Provider<LiveKitService>((ref) {
+  return LiveKitService();
+});
+
+final voiceRoomNotifierProvider = NotifierProvider<VoiceRoomNotifier, VoiceRoomState>(
+  VoiceRoomNotifier.new,
+);
+
