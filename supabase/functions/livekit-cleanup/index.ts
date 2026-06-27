@@ -18,18 +18,53 @@ Deno.serve(async (req: Request) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Deactivate study rooms that are voice-enabled but have 0 active participants
-    const { data, error } = await supabase
+    // 1. Deactivate voice study rooms that have 0 active participants
+    const { data: deactivatedVoice, error: deactivateVoiceError } = await supabase
       .from('study_rooms')
-      .update({ is_active: false })
+      .update({ 
+        is_active: false,
+        ended_at: new Date().toISOString()
+      })
       .eq('is_voice_enabled', true)
       .eq('is_active', true)
       .eq('participant_count', 0)
       .select('id, name');
 
-    if (error) throw error;
+    if (deactivateVoiceError) throw deactivateVoiceError;
 
-    return new Response(JSON.stringify({ success: true, deactivated: data }), {
+    // 2. Deactivate personal text-only rooms (is_voice_enabled = false) with no activity for 15 minutes
+    const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+    const { data: deactivatedText, error: deactivateTextError } = await supabase
+      .from('study_rooms')
+      .update({
+        is_active: false,
+        ended_at: new Date().toISOString()
+      })
+      .eq('type', 'personal')
+      .eq('is_voice_enabled', false)
+      .eq('is_active', true)
+      .lt('last_message_at', fifteenMinutesAgo)
+      .select('id, name');
+
+    if (deactivateTextError) throw deactivateTextError;
+
+    // 3. Delete custom/personal rooms (and cascaded messages) that have ended > 15 minutes ago
+    const { data: deleted, error: deleteError } = await supabase
+      .from('study_rooms')
+      .delete()
+      .in('type', ['custom', 'personal'])
+      .eq('is_active', false)
+      .lt('ended_at', fifteenMinutesAgo)
+      .select('id, name');
+
+    if (deleteError) throw deleteError;
+
+    return new Response(JSON.stringify({ 
+      success: true, 
+      deactivatedVoice,
+      deactivatedText,
+      deleted
+    }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

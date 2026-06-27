@@ -538,7 +538,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const Divider(),
           const SizedBox(height: 12),
           Text(
-            'A companion app built with Riverpod state architecture and Supabase to power your exam prep. Includes solved previous year questions (PYQs) and importance maps.',
+            'Your ultimate study companion for exam preparation. Access solved previous year questions (PYQs), track topic importance, and grind in focus rooms.',
             textAlign: TextAlign.center,
             style: theme.textTheme.bodyMedium?.copyWith(
               height: 1.5,
