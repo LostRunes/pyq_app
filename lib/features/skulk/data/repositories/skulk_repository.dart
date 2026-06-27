@@ -45,6 +45,7 @@ class SkulkRepository {
     String? searchQuery,
     String? filterType,
     String? tagFilter,
+    List<String>? subjectIds,
     int limit = 20,
     int offset = 0,
   }) async {
@@ -56,6 +57,7 @@ class SkulkRepository {
       searchQuery: searchQuery,
       filterType: filterType,
       tagFilter: tagFilter,
+      subjectIds: subjectIds,
       limit: limit,
       offset: offset,
     );

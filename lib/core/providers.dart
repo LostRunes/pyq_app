@@ -8,7 +8,10 @@ import '../services/ai_service.dart';
 import '../services/drive_service.dart';
 import '../services/push_notification_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'providers/prefs_provider.dart';
 
+/// Lazily-cached singleton for Supabase client 1.
+/// Uses keepAlive so it is never disposed while the app is running.
 final supabase1ClientProvider = Provider<SupabaseClient>((ref) {
   return SupabaseClient(
     dotenv.env['SUPABASE_URL']!,
@@ -17,10 +20,7 @@ final supabase1ClientProvider = Provider<SupabaseClient>((ref) {
 });
 
 final supabase2ClientProvider = Provider<SupabaseClient>((ref) {
-  return SupabaseClient(
-    dotenv.env['SUPABASE_2_URL']!,
-    dotenv.env['SUPABASE_2_KEY']!,
-  );
+  return Supabase.instance.client;
 });
 
 final subjectsRepositoryProvider = Provider<SubjectsRepository>((ref) {
@@ -35,9 +35,9 @@ final aiServiceProvider = Provider((ref) => AiService());
 final driveServiceProvider = Provider((ref) => DriveService());
 
 /// Fully signs the user out of both Google and Supabase.
-/// Call this from any logout button. After this, the next Google sign-in
-/// will always show the account picker (no silent re-auth).
-Future<void> signOutCompletely() async {
+/// Pass [ref] so that Riverpod provider state is invalidated immediately,
+/// preventing the previous user's data from leaking into the next session.
+Future<void> signOutCompletely({WidgetRef? ref}) async {
   try {
     await PushNotificationService.deleteDeviceToken();
   } catch (_) {}
@@ -61,4 +61,17 @@ Future<void> signOutCompletely() async {
   } catch (_) {
     // Ignore SharedPreferences errors
   }
+
+  // Invalidate Riverpod providers that hold per-user state so that
+  // a subsequent login starts with clean data.
+  if (ref != null) {
+    try {
+      ref.invalidate(selectedBranchIdProvider);
+      ref.invalidate(selectedSemesterProvider);
+      // userProfileProvider is autoDispose — it will self-invalidate
+      // beeEnabledProvider and beeTapCountProvider are shared preferences
+      // backed so they'll re-read correctly on next launch
+    } catch (_) {}
+  }
 }
+

@@ -304,7 +304,7 @@ class ExpandingSubjectCard extends StatefulWidget {
     required this.child,
     required this.isIconLeft,
     this.delay = Duration.zero,
-    this.duration = const Duration(milliseconds: 1100), // slowly
+    this.duration = const Duration(milliseconds: 1100),
   });
 
   @override
@@ -316,36 +316,24 @@ class _ExpandingSubjectCardState extends State<ExpandingSubjectCard>
   late AnimationController _controller;
   late Animation<double> _expandAnimation;
 
-  // Track the page load time using the first card's initialization time
-  static DateTime? _firstCardBuildTime;
+  // Expand animation plays exactly ONCE per app session
+  static bool _hasAnimatedOnce = false;
 
   @override
   void initState() {
     super.initState();
-
-    final now = DateTime.now();
-    // Reset page load time if it's the first build or if we returned to the page after some time
-    if (_firstCardBuildTime == null ||
-        now.difference(_firstCardBuildTime!) > const Duration(seconds: 4)) {
-      _firstCardBuildTime = now;
-    }
-
     _controller = AnimationController(vsync: this, duration: widget.duration);
-
     _expandAnimation = CurvedAnimation(
       parent: _controller,
       curve: Curves.easeInOutCubic,
     );
 
-    // If the card is built after the initial page animations have settled (e.g. when scrolling down),
-    // skip the expand animation and display it fully expanded.
-    final timeSinceLoad = now.difference(_firstCardBuildTime!);
-    if (timeSinceLoad.inMilliseconds > 1200) {
+    if (_hasAnimatedOnce) {
       _controller.value = 1.0;
     } else {
       Future.delayed(widget.delay, () {
         if (mounted) {
-          _controller.forward();
+          _controller.forward().then((_) => _hasAnimatedOnce = true);
         }
       });
     }
@@ -362,17 +350,14 @@ class _ExpandingSubjectCardState extends State<ExpandingSubjectCard>
     return LayoutBuilder(
       builder: (context, constraints) {
         final maxWidth = constraints.maxWidth;
-        // Height of the card is 128 (64 icon + 64 padding) + 16 outer bottom padding = 144
         const cardHeight = 128.0;
         const outerHeight = cardHeight + 16.0;
 
         return AnimatedBuilder(
           animation: _expandAnimation,
           builder: (context, child) {
-            // Animate width from cardHeight (square) to maxWidth
             final currentWidth =
                 cardHeight + (maxWidth - cardHeight) * _expandAnimation.value;
-
             return Align(
               alignment: widget.isIconLeft
                   ? Alignment.centerLeft
@@ -398,6 +383,83 @@ class _ExpandingSubjectCardState extends State<ExpandingSubjectCard>
           },
         );
       },
+    );
+  }
+}
+
+// ── Lightweight per-tab-switch fade + slide ───────────────────────────────────
+// Plays every time the subjects page becomes the active tab.
+// Cards that appear while scrolling (built >1800ms after activation) snap in
+// instantly with no animation.
+
+class _SubjectsActivation {
+  static DateTime? _activatedAt;
+  static void markActivated() => _activatedAt = DateTime.now();
+  static bool isWithinWindow() {
+    if (_activatedAt == null) return false;
+    return DateTime.now().difference(_activatedAt!).inMilliseconds < 1800;
+  }
+}
+
+class SubjectCardFade extends StatefulWidget {
+  final Widget child;
+  final Duration delay;
+
+  const SubjectCardFade({
+    super.key,
+    required this.child,
+    this.delay = Duration.zero,
+  });
+
+  /// Call whenever the subjects tab becomes the active tab.
+  static void onPageActivated() => _SubjectsActivation.markActivated();
+
+  @override
+  State<SubjectCardFade> createState() => _SubjectCardFadeState();
+}
+
+class _SubjectCardFadeState extends State<SubjectCardFade>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _opacity;
+  late Animation<Offset> _slide;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 280),
+    );
+    _opacity = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
+    _slide = Tween<Offset>(
+      begin: const Offset(0, 0.05), // 5% = ~8px downward offset
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
+
+    if (_SubjectsActivation.isWithinWindow()) {
+      Future.delayed(widget.delay, () {
+        if (mounted) _ctrl.forward();
+      });
+    } else {
+      _ctrl.value = 1.0; // Already visible, no animation
+    }
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _opacity,
+      child: SlideTransition(
+        position: _slide,
+        child: widget.child,
+      ),
     );
   }
 }
