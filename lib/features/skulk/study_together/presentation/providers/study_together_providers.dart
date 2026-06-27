@@ -86,6 +86,14 @@ class RoomOperations {
 
     return StudyRoom.fromJson(res);
   }
+
+  /// Delete a personal room (creator only, enforced by RLS)
+  Future<void> deleteRoom(String roomId) async {
+    await _client
+        .from('study_rooms')
+        .delete()
+        .eq('id', roomId);
+  }
 }
 
 /// Fetches active study rooms sorted by last_message_at desc
@@ -159,8 +167,6 @@ final subjectRoomsProvider = Provider.autoDispose<AsyncValue<List<StudyRoom>>>((
   // Watch curriculum subjects
   final subjectsAsync = ref.watch(subjectsProvider((branchId: activeBranchId, semester: activeSemester)));
 
-  // We can combine multiple AsyncValues using roomsAsync.when and subjectsAsync.when,
-  // but let's return a single mapped AsyncValue using whenData on roomsAsync.
   return roomsAsync.when(
     loading: () => const AsyncValue<List<StudyRoom>>.loading(),
     error: (err, stack) => AsyncValue<List<StudyRoom>>.error(err, stack),
@@ -171,16 +177,13 @@ final subjectRoomsProvider = Provider.autoDispose<AsyncValue<List<StudyRoom>>>((
         data: (subjects) {
           // Map curriculum subject IDs and their type info
           final Map<String, int> subjectOrderMap = {}; // subjectId -> sorting weight
-          final Map<String, String> subjectTypeMap = {}; // subjectId -> type ('core' / 'elective')
           
           for (final sub in subjects) {
             final typeLower = (sub.subjectType ?? '').toLowerCase();
             final isCore = typeLower.contains('core') || typeLower.isEmpty;
             final priority = sub.priority ?? 999;
-            // Core subjects get weight 0..999, electives get 1000..1999
             final int weight = (isCore ? 0 : 1000) + priority.toInt();
             subjectOrderMap[sub.id] = weight;
-            subjectTypeMap[sub.id] = isCore ? 'core' : 'elective';
           }
 
           final subjectIdsFromCurriculum = subjectOrderMap.keys.toSet();
@@ -189,7 +192,6 @@ final subjectRoomsProvider = Provider.autoDispose<AsyncValue<List<StudyRoom>>>((
           final List<StudyRoom> filtered = [];
           for (final room in allRooms) {
             final isSubject = room.type == 'subject';
-            final isPersonal = room.type == 'personal';
             final isJoined = joinedIds.contains(room.id);
             
             if (isSubject) {
@@ -197,21 +199,14 @@ final subjectRoomsProvider = Provider.autoDispose<AsyncValue<List<StudyRoom>>>((
               if (isFromCurriculum || isJoined) {
                 filtered.add(room);
               }
-            } else if (isPersonal && isJoined) {
-              filtered.add(room);
             }
           }
 
           // Sort the filtered rooms:
-          // 1. Personal rooms first (or you can sort them differently, let's keep them at the top or custom)
-          // 2. Core subjects
-          // 3. Elective subjects
-          // 4. Any manually joined subjects that are not in the current curriculum
+          // 1. Core subjects
+          // 2. Elective subjects
+          // 3. Any manually joined subjects that are not in the current curriculum
           filtered.sort((a, b) {
-            // Sort by type: personal rooms first
-            if (a.type == 'personal' && b.type != 'personal') return -1;
-            if (b.type == 'personal' && a.type != 'personal') return 1;
-
             final aSubId = a.subjectId ?? '';
             final bSubId = b.subjectId ?? '';
             
@@ -227,7 +222,6 @@ final subjectRoomsProvider = Provider.autoDispose<AsyncValue<List<StudyRoom>>>((
               return aWeight.compareTo(bWeight);
             }
 
-            // Fallback: alphabetical by name
             return a.name.compareTo(b.name);
           });
 
@@ -236,6 +230,22 @@ final subjectRoomsProvider = Provider.autoDispose<AsyncValue<List<StudyRoom>>>((
       );
     },
   );
+});
+
+/// Personal Rooms provider: filters personal study rooms
+final personalRoomsProvider = Provider.autoDispose<AsyncValue<List<StudyRoom>>>((ref) {
+  final roomsAsync = ref.watch(studyRoomsProvider);
+  final joinedIds = ref.watch(joinedRoomIdsProvider);
+  final user = Supabase.instance.client.auth.currentUser;
+
+  return roomsAsync.whenData((rooms) {
+    return rooms.where((room) {
+      final isPersonal = room.type == 'personal';
+      final isJoined = joinedIds.contains(room.id);
+      final isCreator = room.createdBy != null && room.createdBy == user?.id;
+      return isPersonal && (isJoined || isCreator);
+    }).toList();
+  });
 });
 
 /// Community Spaces provider: study_rooms.type = 'community', 'general', or 'voice'
@@ -648,14 +658,27 @@ enum VoiceConnectionStatus {
   failed,
 }
 
+class VoiceRoomScreenActive extends Notifier<bool> {
+  @override
+  bool build() => false;
+
+  void setVal(bool val) => state = val;
+}
+
+final voiceRoomScreenActiveProvider = NotifierProvider<VoiceRoomScreenActive, bool>(
+  VoiceRoomScreenActive.new,
+);
+
 class VoiceRoomState {
   final String? activeRoomId;
+  final StudyRoom? activeRoom;
   final VoiceConnectionStatus status;
   final List<VoiceParticipant> participants;
   final bool isLocalMuted;
 
   VoiceRoomState({
     this.activeRoomId,
+    this.activeRoom,
     this.status = VoiceConnectionStatus.disconnected,
     this.participants = const [],
     this.isLocalMuted = false,
@@ -663,12 +686,14 @@ class VoiceRoomState {
 
   VoiceRoomState copyWith({
     String? activeRoomId,
+    StudyRoom? activeRoom,
     VoiceConnectionStatus? status,
     List<VoiceParticipant>? participants,
     bool? isLocalMuted,
   }) {
     return VoiceRoomState(
       activeRoomId: activeRoomId ?? this.activeRoomId,
+      activeRoom: activeRoom ?? this.activeRoom,
       status: status ?? this.status,
       participants: participants ?? this.participants,
       isLocalMuted: isLocalMuted ?? this.isLocalMuted,
@@ -687,13 +712,15 @@ class VoiceRoomNotifier extends Notifier<VoiceRoomState> {
 
   Room? get room => _liveKitService.room;
 
-  Future<void> joinVoice(String roomId, String username) async {
+  Future<void> joinVoice(StudyRoom room, String username) async {
+    final roomId = room.id;
     if (state.activeRoomId == roomId && state.status == VoiceConnectionStatus.connected) {
       return;
     }
 
     state = state.copyWith(
       activeRoomId: roomId,
+      activeRoom: room,
       status: VoiceConnectionStatus.connecting,
     );
 
@@ -765,26 +792,55 @@ class VoiceRoomNotifier extends Notifier<VoiceRoomState> {
     _updateParticipants();
   }
 
-  void _updateParticipants() {
+  Future<void> _updateParticipants() async {
     final room = this.room;
     if (room == null) return;
 
+    final local = room.localParticipant;
+    final remoteParticipants = room.remoteParticipants.values;
+
+    final uuids = <String>[];
+    if (local != null) uuids.add(local.identity);
+    for (final remote in remoteParticipants) {
+      uuids.add(remote.identity);
+    }
+
+    final Map<String, String> nameMap = {};
+    if (uuids.isNotEmpty) {
+      try {
+        final data = await Supabase.instance.client
+            .from('user_profiles')
+            .select('id, display_name, username')
+            .inFilter('id', uuids);
+            
+        for (final row in data as List) {
+          final id = row['id'] as String;
+          final disp = row['display_name'] as String?;
+          final user = row['username'] as String?;
+          nameMap[id] = disp ?? user ?? 'User';
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+
     final list = <VoiceParticipant>[];
 
-    final local = room.localParticipant;
     if (local != null) {
+      final dbName = nameMap[local.identity];
       list.add(VoiceParticipant(
         identity: local.identity,
-        name: local.name.isNotEmpty ? local.name : 'You',
+        name: dbName ?? (local.name.isNotEmpty ? local.name : 'You'),
         isSpeaking: local.isSpeaking,
         isMuted: !local.isMicrophoneEnabled(),
       ));
     }
 
-    for (final remote in room.remoteParticipants.values) {
+    for (final remote in remoteParticipants) {
+      final dbName = nameMap[remote.identity];
       list.add(VoiceParticipant(
         identity: remote.identity,
-        name: remote.name.isNotEmpty ? remote.name : (remote.identity.split(':').last),
+        name: dbName ?? (remote.name.isNotEmpty ? remote.name : 'User'),
         isSpeaking: remote.isSpeaking,
         isMuted: !remote.isMicrophoneEnabled(),
       ));
@@ -804,4 +860,61 @@ final liveKitServiceProvider = Provider<LiveKitService>((ref) {
 final voiceRoomNotifierProvider = NotifierProvider<VoiceRoomNotifier, VoiceRoomState>(
   VoiceRoomNotifier.new,
 );
+
+final singleStudyRoomProvider = StreamProvider.family.autoDispose<StudyRoom?, String>((ref, roomId) {
+  final supabase = Supabase.instance.client;
+  final controller = StreamController<StudyRoom?>();
+  
+  Future<void> fetchInitial() async {
+    try {
+      final res = await supabase.from('study_rooms').select().eq('id', roomId).maybeSingle();
+      if (res != null) {
+        if (!controller.isClosed) {
+          controller.add(StudyRoom.fromJson(res));
+        }
+      } else {
+        if (!controller.isClosed) {
+          controller.add(null);
+        }
+      }
+    } catch (e) {
+      if (!controller.isClosed) {
+        controller.addError(e);
+      }
+    }
+  }
+  
+  fetchInitial();
+
+  final channel = supabase.channel('study-room-detail-$roomId').onPostgresChanges(
+    event: PostgresChangeEvent.all,
+    schema: 'public',
+    table: 'study_rooms',
+    filter: PostgresChangeFilter(
+      type: PostgresChangeFilterType.eq,
+      column: 'id',
+      value: roomId,
+    ),
+    callback: (payload) {
+      if (payload.eventType == PostgresChangeEvent.delete) {
+        if (!controller.isClosed) {
+          controller.add(null);
+        }
+      } else {
+        if (!controller.isClosed) {
+          controller.add(StudyRoom.fromJson(payload.newRecord));
+        }
+      }
+    },
+  );
+
+  channel.subscribe();
+
+  ref.onDispose(() {
+    supabase.removeChannel(channel);
+    controller.close();
+  });
+
+  return controller.stream;
+});
 
