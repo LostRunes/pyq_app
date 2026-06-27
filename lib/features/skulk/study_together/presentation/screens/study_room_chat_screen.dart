@@ -11,6 +11,7 @@ import '../../../utils/image_utils.dart';
 import '../../../data/services/cloudinary_service.dart';
 import '../providers/study_together_providers.dart';
 import '../widgets/room_message_bubble.dart';
+import '../widgets/voice_panel.dart';
 
 class StudyRoomChatScreen extends ConsumerStatefulWidget {
   final StudyRoom room;
@@ -93,6 +94,7 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen> {
                         _selectedImages.add(compressed);
                       });
                     } catch (e) {
+                      if (!context.mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text('Failed to take photo: $e')),
                       );
@@ -126,6 +128,7 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen> {
                         _selectedImages.addAll(valid);
                       });
                     } catch (e) {
+                      if (!context.mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text('Failed to pick images: $e')),
                       );
@@ -525,6 +528,12 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen> {
       body: SafeArea(
         child: Column(
           children: [
+            if (widget.room.isVoiceEnabled) ...[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                child: VoicePanel(roomId: widget.room.id),
+              ),
+            ],
             // Message List Area
             Expanded(
               child: GestureDetector(
@@ -899,7 +908,7 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen> {
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
+                      color: Colors.black.withValues(alpha: 0.1),
                       blurRadius: 10,
                       offset: const Offset(0, -2),
                     ),

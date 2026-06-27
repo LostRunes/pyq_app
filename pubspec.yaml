@@ -65,6 +65,8 @@ dependencies:
   webview_flutter: ^4.8.0
   math_expressions: ^3.1.0
   lottie: ^3.3.3
+  livekit_client: ^2.4.0
+  permission_handler: ^11.3.1
 
 dev_dependencies:
   flutter_test:
