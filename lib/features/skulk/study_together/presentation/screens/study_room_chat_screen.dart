@@ -12,6 +12,7 @@ import '../../../data/services/cloudinary_service.dart';
 import '../providers/study_together_providers.dart';
 import '../widgets/room_message_bubble.dart';
 import '../widgets/voice_panel.dart';
+import '../../../../../app/app.dart' show appRouteObserver;
 
 class StudyRoomChatScreen extends ConsumerStatefulWidget {
   final StudyRoom room;
@@ -23,7 +24,8 @@ class StudyRoomChatScreen extends ConsumerStatefulWidget {
       _StudyRoomChatScreenState();
 }
 
-class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen> {
+class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen>
+    with RouteAware {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   bool _isSending = false;
@@ -152,7 +154,46 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Subscribe to route events so we know exactly when this screen
+    // is visible vs covered by another route
+    final route = ModalRoute.of(context);
+    if (route is PageRoute) {
+      appRouteObserver.subscribe(this, route);
+    }
+  }
+
+  void _setScreenActive(bool active) {
+    // Defer the provider write until after the current frame is built.
+    // RouteAware callbacks can fire mid-build, which causes a
+    // "provider modified during build" exception if we write synchronously.
+    Future.microtask(() {
+      if (mounted) {
+        ref.read(voiceRoomScreenActiveProvider.notifier).setVal(active);
+      }
+    });
+  }
+
+  // Called when this route is pushed on top (screen becomes visible)
+  @override
+  void didPush() => _setScreenActive(true);
+
+  // Called when the route on top of this one is popped (screen comes back into view)
+  @override
+  void didPopNext() => _setScreenActive(true);
+
+  // Called when a new route is pushed on top of this screen (user navigates away)
+  @override
+  void didPushNext() => _setScreenActive(false);
+
+  // Called when this route is popped (user goes back)
+  @override
+  void didPop() => _setScreenActive(false);
+
+  @override
   void dispose() {
+    appRouteObserver.unsubscribe(this);
     _typingTimer?.cancel();
     _messageController.removeListener(_onCursorChanged);
     _messageController.dispose();
@@ -462,6 +503,20 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen> {
     final chatNotifier = ref.read(roomChatProvider(widget.room.id).notifier);
     final typingUsers = ref.watch(roomTypingProvider(widget.room.id));
 
+    // Watch the real-time stream of this study room details
+    final roomAsync = ref.watch(singleStudyRoomProvider(widget.room.id));
+
+    // If the room has been deleted from DB, pop the screen
+    roomAsync.whenData((room) {
+      if (room == null && Navigator.canPop(context)) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          Navigator.pop(context);
+        });
+      }
+    });
+
+    final activeRoom = roomAsync.value ?? widget.room;
+
     return Scaffold(
       backgroundColor: isDark
           ? const Color(0xFF0F0F0F) // Solid Instagram-style dark mode background
@@ -480,7 +535,7 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen> {
         title: Row(
           children: [
             Icon(
-              widget.room.isVoiceEnabled ? Icons.volume_up_rounded : Icons.chat_bubble_outline_rounded,
+              activeRoom.isVoiceEnabled ? Icons.volume_up_rounded : Icons.chat_bubble_outline_rounded,
               size: 20,
               color: isDark ? Colors.white70 : Colors.black87,
             ),
@@ -490,7 +545,7 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    widget.room.name,
+                    activeRoom.name,
                     style: GoogleFonts.outfit(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
@@ -528,10 +583,24 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            if (widget.room.isVoiceEnabled) ...[
+            // If custom voice room has ended, show the countdown banner with download option
+            if (!activeRoom.isActive && activeRoom.endedAt != null) ...[
+              CountdownBanner(
+                endedAt: activeRoom.endedAt!,
+                roomId: activeRoom.id,
+                roomName: activeRoom.name,
+                onTimerFinished: () {
+                  if (Navigator.canPop(context)) {
+                    Navigator.pop(context);
+                  }
+                },
+              ),
+            ],
+            // Show voice panel only if voice is enabled AND the room is still active
+            if (activeRoom.isVoiceEnabled && activeRoom.isActive) ...[
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                child: VoicePanel(roomId: widget.room.id),
+                child: VoicePanel(room: activeRoom),
               ),
             ],
             // Message List Area
@@ -957,84 +1026,247 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen> {
               ),
 
             // Input composer
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF0F0F0F) : Colors.white,
-                border: Border(
-                  top: BorderSide(
-                    color: isDark ? const Color(0xFF262626) : const Color(0xFFEFEFEF),
-                  ),
-                ),
-              ),
-              child: Row(
-                children: [
-                  GestureDetector(
-                    onTap: _showImageSourceBottomSheet,
-                    child: Padding(
-                      padding: const EdgeInsets.only(right: 12),
-                      child: Icon(
-                        Icons.add_photo_alternate_outlined,
-                        color: Theme.of(context).colorScheme.primary,
-                        size: 24,
-                      ),
+            if (!activeRoom.isActive)
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF0F0F0F) : Colors.white,
+                  border: Border(
+                    top: BorderSide(
+                      color: isDark ? const Color(0xFF262626) : const Color(0xFFEFEFEF),
                     ),
                   ),
-                  Expanded(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: isDark
-                            ? const Color(0xFF262626)
-                            : const Color(0xFFF2F2F2),
-                        borderRadius: BorderRadius.circular(24),
+                ),
+                child: Center(
+                  child: Text(
+                    "This room has ended and is read-only.",
+                    style: GoogleFonts.outfit(
+                      color: Colors.grey,
+                      fontSize: 14,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
+              )
+            else
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF0F0F0F) : Colors.white,
+                  border: Border(
+                    top: BorderSide(
+                      color: isDark ? const Color(0xFF262626) : const Color(0xFFEFEFEF),
+                    ),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    GestureDetector(
+                      onTap: _showImageSourceBottomSheet,
+                      child: Padding(
+                        padding: const EdgeInsets.only(right: 12),
+                        child: Icon(
+                          Icons.add_photo_alternate_outlined,
+                          color: Theme.of(context).colorScheme.primary,
+                          size: 24,
+                        ),
                       ),
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: TextField(
-                        controller: _messageController,
-                        onChanged: _onTextChanged,
-                        style: GoogleFonts.outfit(fontSize: 14),
-                        maxLines: 4,
-                        minLines: 1,
-                        textInputAction: TextInputAction.send,
-                        onSubmitted: (_) => _sendMessage(),
-                        decoration: InputDecoration(
-                          hintText: 'Message...',
-                          hintStyle: GoogleFonts.outfit(
-                            color: Colors.grey[500],
-                            fontSize: 14,
-                          ),
-                          border: InputBorder.none,
-                          enabledBorder: InputBorder.none,
-                          focusedBorder: InputBorder.none,
-                          filled: false,
-                          contentPadding: const EdgeInsets.symmetric(
-                            vertical: 10,
+                    ),
+                    Expanded(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? const Color(0xFF262626)
+                              : const Color(0xFFF2F2F2),
+                          borderRadius: BorderRadius.circular(24),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: TextField(
+                          controller: _messageController,
+                          onChanged: _onTextChanged,
+                          style: GoogleFonts.outfit(fontSize: 14),
+                          maxLines: 4,
+                          minLines: 1,
+                          textInputAction: TextInputAction.send,
+                          onSubmitted: (_) => _sendMessage(),
+                          decoration: InputDecoration(
+                            hintText: 'Message...',
+                            hintStyle: GoogleFonts.outfit(
+                              color: Colors.grey[500],
+                              fontSize: 14,
+                            ),
+                            border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                            filled: false,
+                            contentPadding: const EdgeInsets.symmetric(
+                              vertical: 10,
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  GestureDetector(
-                    onTap: _sendMessage,
-                    child: Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primary,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.send_rounded,
-                        color: Colors.white,
-                        size: 18,
+                    const SizedBox(width: 12),
+                    GestureDetector(
+                      onTap: _sendMessage,
+                      child: Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.primary,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.send_rounded,
+                          color: Colors.white,
+                          size: 18,
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class CountdownBanner extends StatefulWidget {
+  final DateTime endedAt;
+  final String roomId;
+  final String roomName;
+  final VoidCallback onTimerFinished;
+
+  const CountdownBanner({
+    super.key,
+    required this.endedAt,
+    required this.roomId,
+    required this.roomName,
+    required this.onTimerFinished,
+  });
+
+  @override
+  State<CountdownBanner> createState() => _CountdownBannerState();
+}
+
+class _CountdownBannerState extends State<CountdownBanner> {
+  late Timer _timer;
+  late int _secondsLeft;
+
+  @override
+  void initState() {
+    super.initState();
+    _calculateSecondsLeft();
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      _calculateSecondsLeft();
+      if (_secondsLeft <= 0) {
+        _timer.cancel();
+        widget.onTimerFinished();
+      }
+    });
+  }
+
+  void _calculateSecondsLeft() {
+    final difference = DateTime.now().difference(widget.endedAt.toLocal());
+    final remaining = 15 * 60 - difference.inSeconds;
+    setState(() {
+      _secondsLeft = remaining.clamp(0, 15 * 60);
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_secondsLeft <= 0) return const SizedBox.shrink();
+
+    final minutes = _secondsLeft ~/ 60;
+    final seconds = _secondsLeft % 60;
+    final timeStr = "${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}";
+
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF9F9F9),
+        border: Border(
+          bottom: BorderSide(
+            color: isDark ? const Color(0xFF262626) : const Color(0xFFEFEFEF),
+          ),
+        ),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.timer_outlined,
+            color: Colors.redAccent,
+            size: 20,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  "Voice room ended",
+                  style: GoogleFonts.outfit(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    color: isDark ? Colors.white : Colors.black87,
+                  ),
+                ),
+                Text(
+                  "Chat deletes in $timeStr",
+                  style: GoogleFonts.outfit(
+                    fontSize: 12,
+                    color: Colors.grey,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Consumer(
+            builder: (context, ref, child) {
+              return TextButton.icon(
+                onPressed: () async {
+                  try {
+                    await ref.read(studyTogetherRepositoryProvider).downloadChatHistory(
+                      widget.roomId,
+                      widget.roomName,
+                    );
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text("Error exporting chat: $e")),
+                      );
+                    }
+                  }
+                },
+                icon: const Icon(Icons.download_rounded, size: 16, color: Colors.blueAccent),
+                label: Text(
+                  "Download Chats",
+                  style: GoogleFonts.outfit(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blueAccent,
+                  ),
+                ),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+              );
+            },
+          ),
+        ],
       ),
     );
   }

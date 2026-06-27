@@ -5,6 +5,7 @@ import '../providers/study_together_providers.dart';
 import '../widgets/active_lobby_card.dart';
 import '../widgets/subject_room_card.dart';
 import '../widgets/community_space_tile.dart';
+import '../widgets/personal_room_card.dart';
 import 'package:focus_fox/shared/widgets/custom_search_bar.dart';
 import 'package:focus_fox/utils/fuzzy_search.dart';
 
@@ -23,6 +24,7 @@ class _StudyTogetherScreenState extends ConsumerState<StudyTogetherScreen> {
       TextEditingController();
   bool _isSubjectRoomsExpanded = true;
   bool _isActiveLobbiesExpanded = true;
+  bool _isPersonalRoomsExpanded = true;
 
   @override
   void dispose() {
@@ -141,6 +143,7 @@ class _StudyTogetherScreenState extends ConsumerState<StudyTogetherScreen> {
                     }
                     return;
                   }
+                  ref.invalidate(studyRoomsProvider);
                   await ref
                       .read(joinedRoomIdsProvider.notifier)
                       .addRoom(room.id);
@@ -291,26 +294,15 @@ class _StudyTogetherScreenState extends ConsumerState<StudyTogetherScreen> {
                               isVoiceEnabled: isVoiceEnabled,
                               maxParticipants: maxParticipants,
                             );
+                        ref.invalidate(studyRoomsProvider);
                         await ref
                             .read(joinedRoomIdsProvider.notifier)
                             .addRoom(newRoom.id);
                         if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                'Room created! Code: ${newRoom.subjectId}',
-                              ),
-                              action: SnackBarAction(
-                                label: 'Open',
-                                onPressed: () {
-                                  Navigator.pushNamed(
-                                    context,
-                                    '/study-together/chat',
-                                    arguments: newRoom,
-                                  );
-                                },
-                              ),
-                            ),
+                          Navigator.pushNamed(
+                            context,
+                            '/study-together/chat',
+                            arguments: newRoom,
                           );
                         }
                       } catch (e) {
@@ -518,6 +510,7 @@ class _StudyTogetherScreenState extends ConsumerState<StudyTogetherScreen> {
     final lobbiesAsync = ref.watch(activeLobbiesProvider);
     final subjectsAsync = ref.watch(subjectRoomsProvider);
     final communityAsync = ref.watch(communitySpacesProvider);
+    final personalAsync = ref.watch(personalRoomsProvider);
 
     return Scaffold(
       backgroundColor: isDark
@@ -630,6 +623,99 @@ class _StudyTogetherScreenState extends ConsumerState<StudyTogetherScreen> {
                               room: communitySpaces[index],
                             );
                           },
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+
+              // 1.5 PERSONAL ROOMS SECTION (Collapsible with +/- toggle)
+              personalAsync.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (err, stack) => const SizedBox.shrink(),
+                data: (personalRooms) {
+                  if (personalRooms.isEmpty) return const SizedBox.shrink();
+
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 20),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? const Color(0xFFA855F7).withOpacity(0.15)
+                          : const Color(0xFFA855F7).withOpacity(0.06),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(
+                        color: isDark
+                            ? const Color(0xFFA855F7).withOpacity(0.25)
+                            : const Color(0xFFA855F7).withOpacity(0.12),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.stars_rounded,
+                                  size: 18,
+                                  color: isDark ? const Color(0xFFC084FC) : const Color(0xFF7E22CE),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Personal Rooms',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w800,
+                                    color: isDark ? const Color(0xFFC084FC) : const Color(0xFF7E22CE),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            IconButton(
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              icon: Icon(
+                                _isPersonalRoomsExpanded
+                                    ? Icons.remove_circle_outline_rounded
+                                    : Icons.add_circle_outline_rounded,
+                                size: 20,
+                                color: isDark ? Colors.white70 : Colors.black54,
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  _isPersonalRoomsExpanded = !_isPersonalRoomsExpanded;
+                                });
+                              },
+                            ),
+                          ],
+                        ),
+                        AnimatedCrossFade(
+                          firstChild: const SizedBox.shrink(),
+                          secondChild: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const SizedBox(height: 16),
+                              ListView.builder(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount: personalRooms.length,
+                                itemBuilder: (context, index) {
+                                  return PersonalRoomCard(
+                                    room: personalRooms[index],
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                          crossFadeState: _isPersonalRoomsExpanded
+                              ? CrossFadeState.showSecond
+                              : CrossFadeState.showFirst,
+                          duration: const Duration(milliseconds: 300),
                         ),
                       ],
                     ),

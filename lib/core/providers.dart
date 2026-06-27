@@ -68,10 +68,26 @@ Future<void> signOutCompletely({WidgetRef? ref}) async {
     try {
       ref.invalidate(selectedBranchIdProvider);
       ref.invalidate(selectedSemesterProvider);
+      ref.invalidate(mainNavigationIndexProvider);
       // userProfileProvider is autoDispose — it will self-invalidate
       // beeEnabledProvider and beeTapCountProvider are shared preferences
       // backed so they'll re-read correctly on next launch
     } catch (_) {}
   }
 }
+
+class MainNavigationIndexNotifier extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  void setIndex(int index) {
+    state = index;
+  }
+}
+
+final mainNavigationIndexProvider =
+    NotifierProvider<MainNavigationIndexNotifier, int>(
+  MainNavigationIndexNotifier.new,
+);
+
 

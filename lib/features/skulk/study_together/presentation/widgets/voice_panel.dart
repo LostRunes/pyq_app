@@ -3,20 +3,26 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../providers/study_together_providers.dart';
 import 'speaking_indicator.dart';
+import '../../../../../core/providers/user_profile_provider.dart';
+import '../../data/models/study_room.dart';
 
 class VoicePanel extends ConsumerWidget {
-  final String roomId;
+  final StudyRoom room;
   
   const VoicePanel({
     super.key,
-    required this.roomId,
+    required this.room,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final roomId = room.id;
     final theme = Theme.of(context);
     final voiceState = ref.watch(voiceRoomNotifierProvider);
     final voiceNotifier = ref.read(voiceRoomNotifierProvider.notifier);
+    
+    final userProfile = ref.watch(userProfileProvider).value;
+    final username = userProfile?['display_name'] ?? userProfile?['username'] ?? 'User';
 
     // If we're disconnected or in a different room, show the Join Voice bar
     if (voiceState.activeRoomId != roomId) {
@@ -72,7 +78,7 @@ class VoicePanel extends ConsumerWidget {
               ),
               InkWell(
                 onTap: () async {
-                  await voiceNotifier.joinVoice(roomId, 'User');
+                  await voiceNotifier.joinVoice(room, username);
                 },
                 borderRadius: BorderRadius.circular(12),
                 child: Container(
