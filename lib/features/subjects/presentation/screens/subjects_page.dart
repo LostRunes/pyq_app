@@ -52,14 +52,14 @@ class SubjectsPage extends ConsumerWidget {
               itemCount: filtered.isEmpty ? 2 : filtered.length + 1,
               itemBuilder: (context, i) {
                 if (i == 0) {
-                  return FadeInSlide(
-                    duration: const Duration(milliseconds: 500),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
+                  return Container(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        FadeInSlide(
+                          duration: const Duration(milliseconds: 500),
+                          child: Row(
                             children: [
                               Text(
                                 'Subjects',
@@ -111,10 +111,13 @@ class SubjectsPage extends ConsumerWidget {
                               ),
                             ],
                           ),
-                          const SizedBox(height: 4),
-                          Row(
-                            children: [
-                              Expanded(
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: FadeInSlide(
+                                duration: const Duration(milliseconds: 500),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
@@ -141,19 +144,15 @@ class SubjectsPage extends ConsumerWidget {
                                   ],
                                 ),
                               ),
-                              ZoomInFlash(
-                                delay: const Duration(milliseconds: 600),
-                                duration: const Duration(milliseconds: 750),
-                                child: SizedBox(
-                                  height: 140,
-                                  width: 140,
-                                  child: Image.asset('assets/images/panda.png'),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
+                            ),
+                            SizedBox(
+                              height: 140,
+                              width: 140,
+                              child: Image.asset('assets/images/panda.png'),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   );
                 }
