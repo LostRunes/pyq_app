@@ -33,7 +33,7 @@ class PushNotificationService {
 
     // 2. Local Notifications Setup for foreground notifications
     const AndroidInitializationSettings androidInitSettings =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+        AndroidInitializationSettings('@mipmap/launcher_icon');
     const DarwinInitializationSettings iosInitSettings = DarwinInitializationSettings();
 
     const InitializationSettings initSettings = InitializationSettings(
@@ -139,7 +139,7 @@ class PushNotificationService {
     final context = AppRouter.navigatorKey.currentContext;
     if (context == null) return;
 
-    if (type == 'mention' || type == 'tag') {
+    if (type == 'mention' || type == 'tag' || type == 'grind_room') {
       try {
         final client = Supabase.instance.client;
         final res = await client

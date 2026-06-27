@@ -176,6 +176,7 @@ class _StudyTogetherScreenState extends ConsumerState<StudyTogetherScreen> {
     final nameController = TextEditingController();
     final descController = TextEditingController();
     bool isVoiceEnabled = false;
+    int maxParticipants = 20;
 
     showModalBottomSheet(
       context: context,
@@ -243,6 +244,38 @@ class _StudyTogetherScreenState extends ConsumerState<StudyTogetherScreen> {
                       });
                     },
                   ),
+                  if (isVoiceEnabled) ...[
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Max Participants',
+                          style: GoogleFonts.outfit(fontWeight: FontWeight.w600, fontSize: 14),
+                        ),
+                        DropdownButton<int>(
+                          value: maxParticipants,
+                          borderRadius: BorderRadius.circular(12),
+                          onChanged: (val) {
+                            if (val != null) {
+                              setModalState(() {
+                                maxParticipants = val;
+                              });
+                            }
+                          },
+                          items: [5, 10, 15, 20, 30, 50].map((int val) {
+                            return DropdownMenuItem<int>(
+                              value: val,
+                              child: Text(
+                                '$val Users',
+                                style: GoogleFonts.outfit(fontSize: 14),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ],
+                    ),
+                  ],
                   const SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: () async {
@@ -256,6 +289,7 @@ class _StudyTogetherScreenState extends ConsumerState<StudyTogetherScreen> {
                               name: name,
                               description: descController.text.trim(),
                               isVoiceEnabled: isVoiceEnabled,
+                              maxParticipants: maxParticipants,
                             );
                         await ref
                             .read(joinedRoomIdsProvider.notifier)

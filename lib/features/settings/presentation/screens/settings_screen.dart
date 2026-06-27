@@ -528,7 +528,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
           ),
           Text(
-            'Version 1.2.0 (Royace Build)',
+            'Version 1.2.0',
             style: theme.textTheme.bodyMedium?.copyWith(
               fontSize: 12,
               color: isDark ? Colors.white54 : Colors.black54,
