@@ -86,6 +86,14 @@ class RoomOperations {
 
     return StudyRoom.fromJson(res);
   }
+
+  /// Delete a personal room (creator only, enforced by RLS)
+  Future<void> deleteRoom(String roomId) async {
+    await _client
+        .from('study_rooms')
+        .delete()
+        .eq('id', roomId);
+  }
 }
 
 /// Fetches active study rooms sorted by last_message_at desc
@@ -159,8 +167,6 @@ final subjectRoomsProvider = Provider.autoDispose<AsyncValue<List<StudyRoom>>>((
   // Watch curriculum subjects
   final subjectsAsync = ref.watch(subjectsProvider((branchId: activeBranchId, semester: activeSemester)));
 
-  // We can combine multiple AsyncValues using roomsAsync.when and subjectsAsync.when,
-  // but let's return a single mapped AsyncValue using whenData on roomsAsync.
   return roomsAsync.when(
     loading: () => const AsyncValue<List<StudyRoom>>.loading(),
     error: (err, stack) => AsyncValue<List<StudyRoom>>.error(err, stack),
@@ -171,16 +177,13 @@ final subjectRoomsProvider = Provider.autoDispose<AsyncValue<List<StudyRoom>>>((
         data: (subjects) {
           // Map curriculum subject IDs and their type info
           final Map<String, int> subjectOrderMap = {}; // subjectId -> sorting weight
-          final Map<String, String> subjectTypeMap = {}; // subjectId -> type ('core' / 'elective')
           
           for (final sub in subjects) {
             final typeLower = (sub.subjectType ?? '').toLowerCase();
             final isCore = typeLower.contains('core') || typeLower.isEmpty;
             final priority = sub.priority ?? 999;
-            // Core subjects get weight 0..999, electives get 1000..1999
             final int weight = (isCore ? 0 : 1000) + priority.toInt();
             subjectOrderMap[sub.id] = weight;
-            subjectTypeMap[sub.id] = isCore ? 'core' : 'elective';
           }
 
           final subjectIdsFromCurriculum = subjectOrderMap.keys.toSet();
@@ -189,7 +192,6 @@ final subjectRoomsProvider = Provider.autoDispose<AsyncValue<List<StudyRoom>>>((
           final List<StudyRoom> filtered = [];
           for (final room in allRooms) {
             final isSubject = room.type == 'subject';
-            final isPersonal = room.type == 'personal';
             final isJoined = joinedIds.contains(room.id);
             
             if (isSubject) {
@@ -197,21 +199,14 @@ final subjectRoomsProvider = Provider.autoDispose<AsyncValue<List<StudyRoom>>>((
               if (isFromCurriculum || isJoined) {
                 filtered.add(room);
               }
-            } else if (isPersonal && isJoined) {
-              filtered.add(room);
             }
           }
 
           // Sort the filtered rooms:
-          // 1. Personal rooms first (or you can sort them differently, let's keep them at the top or custom)
-          // 2. Core subjects
-          // 3. Elective subjects
-          // 4. Any manually joined subjects that are not in the current curriculum
+          // 1. Core subjects
+          // 2. Elective subjects
+          // 3. Any manually joined subjects that are not in the current curriculum
           filtered.sort((a, b) {
-            // Sort by type: personal rooms first
-            if (a.type == 'personal' && b.type != 'personal') return -1;
-            if (b.type == 'personal' && a.type != 'personal') return 1;
-
             final aSubId = a.subjectId ?? '';
             final bSubId = b.subjectId ?? '';
             
@@ -227,7 +222,6 @@ final subjectRoomsProvider = Provider.autoDispose<AsyncValue<List<StudyRoom>>>((
               return aWeight.compareTo(bWeight);
             }
 
-            // Fallback: alphabetical by name
             return a.name.compareTo(b.name);
           });
 
@@ -236,6 +230,22 @@ final subjectRoomsProvider = Provider.autoDispose<AsyncValue<List<StudyRoom>>>((
       );
     },
   );
+});
+
+/// Personal Rooms provider: filters personal study rooms
+final personalRoomsProvider = Provider.autoDispose<AsyncValue<List<StudyRoom>>>((ref) {
+  final roomsAsync = ref.watch(studyRoomsProvider);
+  final joinedIds = ref.watch(joinedRoomIdsProvider);
+  final user = Supabase.instance.client.auth.currentUser;
+
+  return roomsAsync.whenData((rooms) {
+    return rooms.where((room) {
+      final isPersonal = room.type == 'personal';
+      final isJoined = joinedIds.contains(room.id);
+      final isCreator = room.createdBy != null && room.createdBy == user?.id;
+      return isPersonal && (isJoined || isCreator);
+    }).toList();
+  });
 });
 
 /// Community Spaces provider: study_rooms.type = 'community', 'general', or 'voice'
@@ -850,4 +860,61 @@ final liveKitServiceProvider = Provider<LiveKitService>((ref) {
 final voiceRoomNotifierProvider = NotifierProvider<VoiceRoomNotifier, VoiceRoomState>(
   VoiceRoomNotifier.new,
 );
+
+final singleStudyRoomProvider = StreamProvider.family.autoDispose<StudyRoom?, String>((ref, roomId) {
+  final supabase = Supabase.instance.client;
+  final controller = StreamController<StudyRoom?>();
+  
+  Future<void> fetchInitial() async {
+    try {
+      final res = await supabase.from('study_rooms').select().eq('id', roomId).maybeSingle();
+      if (res != null) {
+        if (!controller.isClosed) {
+          controller.add(StudyRoom.fromJson(res));
+        }
+      } else {
+        if (!controller.isClosed) {
+          controller.add(null);
+        }
+      }
+    } catch (e) {
+      if (!controller.isClosed) {
+        controller.addError(e);
+      }
+    }
+  }
+  
+  fetchInitial();
+
+  final channel = supabase.channel('study-room-detail-$roomId').onPostgresChanges(
+    event: PostgresChangeEvent.all,
+    schema: 'public',
+    table: 'study_rooms',
+    filter: PostgresChangeFilter(
+      type: PostgresChangeFilterType.eq,
+      column: 'id',
+      value: roomId,
+    ),
+    callback: (payload) {
+      if (payload.eventType == PostgresChangeEvent.delete) {
+        if (!controller.isClosed) {
+          controller.add(null);
+        }
+      } else {
+        if (!controller.isClosed) {
+          controller.add(StudyRoom.fromJson(payload.newRecord));
+        }
+      }
+    },
+  );
+
+  channel.subscribe();
+
+  ref.onDispose(() {
+    supabase.removeChannel(channel);
+    controller.close();
+  });
+
+  return controller.stream;
+});
 
