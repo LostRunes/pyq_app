@@ -9,13 +9,14 @@ class LiveKitService {
   final _supabase = Supabase.instance.client;
 
   /// Fetches a token from our Supabase Edge Function
-  Future<Map<String, dynamic>> fetchToken(String roomId, String identity) async {
+  Future<Map<String, dynamic>> fetchToken(String roomId, String identity, String name) async {
     try {
       final res = await _supabase.functions.invoke(
         'livekit-token',
         body: {
           'room_id': roomId,
           'identity': identity,
+          'name': name,
         },
       );
       

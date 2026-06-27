@@ -700,7 +700,12 @@ class VoiceRoomNotifier extends Notifier<VoiceRoomState> {
     try {
       final user = Supabase.instance.client.auth.currentUser;
       final identity = user?.id ?? username;
-      final tokenData = await _liveKitService.fetchToken(roomId, identity);
+      final displayName = user?.userMetadata?['username'] ?? 
+                          user?.userMetadata?['full_name'] ?? 
+                          user?.userMetadata?['name'] ?? 
+                          user?.email?.split('@').first ?? 
+                          username;
+      final tokenData = await _liveKitService.fetchToken(roomId, identity, displayName);
 
       final wsUrl = tokenData['ws_url'] as String;
       final token = tokenData['token'] as String;

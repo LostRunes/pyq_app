@@ -24,7 +24,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const body = await req.json();
-    const { room_id, identity } = body;
+    const { room_id, identity, name } = body;
 
     if (!room_id || !identity) {
       return new Response(JSON.stringify({ error: 'Missing room_id or identity' }), {
@@ -48,6 +48,7 @@ Deno.serve(async (req: Request) => {
     // 3. Create AccessToken
     const at = new AccessToken(apiKey, apiSecret, {
       identity: identity,
+      name: name || identity,
       ttl: 7200,
     });
 
