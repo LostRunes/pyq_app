@@ -4,6 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:path_provider/path_provider.dart';
 
+enum WhiteboardTool {
+  draw,
+  erase,
+  panZoom,
+}
+
 class DrawnLine {
   final List<Offset> points;
   final Color color;
@@ -49,7 +55,11 @@ class _WhiteboardScreenState extends State<WhiteboardScreen> {
   Color _selectedColor = Colors.black;
   double _selectedWidth = 5.0;
   bool _isDarkCanvas = false;
-  bool _isEraserMode = false;
+  
+  WhiteboardTool _activeTool = WhiteboardTool.draw;
+  bool get _isEraserMode => _activeTool == WhiteboardTool.erase;
+
+  late TransformationController _transformationController;
 
   final List<Color> _lightColors = [
     Colors.black,
@@ -72,13 +82,32 @@ class _WhiteboardScreenState extends State<WhiteboardScreen> {
   @override
   void initState() {
     super.initState();
+    _transformationController = TransformationController();
     // Default canvas color matches theme brightness
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      final size = MediaQuery.of(context).size;
+      final viewWidth = size.width - 32;
+      final viewHeight = size.height - 240;
+      
+      final initialTranslation = Offset(
+        (viewWidth - 3000) / 2,
+        (viewHeight - 3000) / 2,
+      );
+      
+      _transformationController.value = Matrix4.identity()
+        ..translate(initialTranslation.dx, initialTranslation.dy);
+
       setState(() {
         _isDarkCanvas = Theme.of(context).brightness == Brightness.dark;
         _selectedColor = _isDarkCanvas ? Colors.white : Colors.black;
       });
     });
+  }
+
+  @override
+  void dispose() {
+    _transformationController.dispose();
+    super.dispose();
   }
 
   void _undo() {
@@ -113,21 +142,46 @@ class _WhiteboardScreenState extends State<WhiteboardScreen> {
     );
 
     try {
-      final boundaryWidth = MediaQuery.of(context).size.width;
-      // Subtract appbar and toolbar heights approx
-      final boundaryHeight = MediaQuery.of(context).size.height - 240;
+      double minX = double.infinity;
+      double minY = double.infinity;
+      double maxX = double.negativeInfinity;
+      double maxY = double.negativeInfinity;
+
+      for (final line in _lines) {
+        for (final pt in line.points) {
+          if (pt.dx < minX) minX = pt.dx;
+          if (pt.dy < minY) minY = pt.dy;
+          if (pt.dx > maxX) maxX = pt.dx;
+          if (pt.dy > maxY) maxY = pt.dy;
+        }
+      }
+
+      if (minX == double.infinity) {
+        minX = 1250;
+        minY = 1250;
+        maxX = 1750;
+        maxY = 1750;
+      } else {
+        minX = (minX - 50).clamp(0.0, 3000.0);
+        minY = (minY - 50).clamp(0.0, 3000.0);
+        maxX = (maxX + 50).clamp(0.0, 3000.0);
+        maxY = (maxY + 50).clamp(0.0, 3000.0);
+      }
+
+      final drawWidth = maxX - minX;
+      final drawHeight = maxY - minY;
 
       final recorder = ui.PictureRecorder();
       final canvas = Canvas(
         recorder,
-        Rect.fromLTWH(0, 0, boundaryWidth, boundaryHeight),
+        Rect.fromLTWH(0, 0, drawWidth, drawHeight),
       );
 
       // Draw background color
       final bgPaint = Paint()
         ..color = _isDarkCanvas ? const Color(0xFF1E1A24) : Colors.white;
       canvas.drawRect(
-        Rect.fromLTWH(0, 0, boundaryWidth, boundaryHeight),
+        Rect.fromLTWH(0, 0, drawWidth, drawHeight),
         bgPaint,
       );
 
@@ -139,18 +193,23 @@ class _WhiteboardScreenState extends State<WhiteboardScreen> {
         ..strokeWidth = 1.0;
 
       const gridSize = 25.0;
-      for (double i = 0; i < boundaryWidth; i += gridSize) {
-        canvas.drawLine(Offset(i, 0), Offset(i, boundaryHeight), gridPaint);
+      final startX = (minX / gridSize).floor() * gridSize;
+      final startY = (minY / gridSize).floor() * gridSize;
+
+      for (double i = startX; i <= maxX; i += gridSize) {
+        canvas.drawLine(Offset(i - minX, 0), Offset(i - minX, drawHeight), gridPaint);
       }
-      for (double i = 0; i < boundaryHeight; i += gridSize) {
-        canvas.drawLine(Offset(0, i), Offset(boundaryWidth, i), gridPaint);
+      for (double i = startY; i <= maxY; i += gridSize) {
+        canvas.drawLine(Offset(0, i - minY), Offset(drawWidth, i - minY), gridPaint);
       }
 
       // Draw lines on a layer to allow BlendMode.clear for eraser
       canvas.saveLayer(
-        Rect.fromLTWH(0, 0, boundaryWidth, boundaryHeight),
+        Rect.fromLTWH(0, 0, drawWidth, drawHeight),
         Paint(),
       );
+
+      canvas.translate(-minX, -minY);
 
       for (final line in _lines) {
         final paint = Paint()
@@ -170,11 +229,12 @@ class _WhiteboardScreenState extends State<WhiteboardScreen> {
       }
 
       canvas.restore();
+      canvas.restore();
 
       final picture = recorder.endRecording();
       final img = await picture.toImage(
-        boundaryWidth.toInt(),
-        boundaryHeight.toInt(),
+        drawWidth.toInt(),
+        drawHeight.toInt(),
       );
       final byteData = await img.toByteData(format: ui.ImageByteFormat.png);
       if (byteData == null) throw Exception('Failed to generate PNG bytes');
@@ -274,40 +334,85 @@ class _WhiteboardScreenState extends State<WhiteboardScreen> {
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(22),
-                  child: GestureDetector(
-                    onPanStart: (details) {
-                      setState(() {
-                        _currentLine = DrawnLine(
-                          points: [details.localPosition],
-                          color: _selectedColor,
-                          strokeWidth: _selectedWidth,
-                          isEraser: _isEraserMode,
-                        );
-                      });
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      return Stack(
+                        children: [
+                          InteractiveViewer(
+                            transformationController: _transformationController,
+                            constrained: false,
+                            scaleEnabled: _activeTool == WhiteboardTool.panZoom,
+                            panEnabled: _activeTool == WhiteboardTool.panZoom,
+                            minScale: 0.2,
+                            maxScale: 4.0,
+                            child: SizedBox(
+                              width: 3000,
+                              height: 3000,
+                              child: GestureDetector(
+                                onPanStart: _activeTool == WhiteboardTool.panZoom
+                                    ? null
+                                    : (details) {
+                                        setState(() {
+                                          _currentLine = DrawnLine(
+                                            points: [details.localPosition],
+                                            color: _selectedColor,
+                                            strokeWidth: _selectedWidth,
+                                            isEraser: _isEraserMode,
+                                          );
+                                        });
+                                      },
+                                onPanUpdate: _activeTool == WhiteboardTool.panZoom
+                                    ? null
+                                    : (details) {
+                                        setState(() {
+                                          if (_currentLine != null) {
+                                            _currentLine!.points.add(details.localPosition);
+                                          }
+                                        });
+                                      },
+                                onPanEnd: _activeTool == WhiteboardTool.panZoom
+                                    ? null
+                                    : (details) {
+                                        setState(() {
+                                          if (_currentLine != null) {
+                                            _lines.add(_currentLine!);
+                                            _currentLine = null;
+                                          }
+                                        });
+                                      },
+                                child: CustomPaint(
+                                  painter: WhiteboardPainter(
+                                    lines: _lines,
+                                    currentLine: _currentLine,
+                                    isDark: _isDarkCanvas,
+                                  ),
+                                  size: const Size(3000, 3000),
+                                ),
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            bottom: 16,
+                            right: 16,
+                            child: FloatingActionButton.small(
+                              heroTag: 'recenter_whiteboard',
+                              backgroundColor: theme.colorScheme.primaryContainer,
+                              foregroundColor: theme.colorScheme.onPrimaryContainer,
+                              onPressed: () {
+                                final initialTranslation = Offset(
+                                  (constraints.maxWidth - 3000) / 2,
+                                  (constraints.maxHeight - 3000) / 2,
+                                );
+                                _transformationController.value = Matrix4.identity()
+                                  ..translate(initialTranslation.dx, initialTranslation.dy);
+                              },
+                              child: const Icon(Icons.center_focus_strong_rounded, size: 20),
+                              tooltip: 'Recenter View',
+                            ),
+                          ),
+                        ],
+                      );
                     },
-                    onPanUpdate: (details) {
-                      setState(() {
-                        if (_currentLine != null) {
-                          _currentLine!.points.add(details.localPosition);
-                        }
-                      });
-                    },
-                    onPanEnd: (details) {
-                      setState(() {
-                        if (_currentLine != null) {
-                          _lines.add(_currentLine!);
-                          _currentLine = null;
-                        }
-                      });
-                    },
-                    child: CustomPaint(
-                      painter: WhiteboardPainter(
-                        lines: _lines,
-                        currentLine: _currentLine,
-                        isDark: _isDarkCanvas,
-                      ),
-                      size: Size.infinite,
-                    ),
                   ),
                 ),
               ),
@@ -333,7 +438,7 @@ class _WhiteboardScreenState extends State<WhiteboardScreen> {
                   // Tool toggle row + action buttons
                   Row(
                     children: [
-                      // Draw / Erase toggle
+                      // Draw / Erase / Move toggle
                       Expanded(
                         child: Container(
                           decoration: BoxDecoration(
@@ -348,83 +453,135 @@ class _WhiteboardScreenState extends State<WhiteboardScreen> {
                                 child: GestureDetector(
                                   onTap: () {
                                     setState(() {
-                                      _isEraserMode = false;
+                                      _activeTool = WhiteboardTool.draw;
                                       _selectedColor = _isDarkCanvas ? Colors.white : Colors.black;
                                     });
                                   },
                                   child: Container(
                                     decoration: BoxDecoration(
-                                      color: !_isEraserMode
+                                      color: _activeTool == WhiteboardTool.draw
                                           ? theme.colorScheme.primary
                                           : Colors.transparent,
                                       borderRadius: BorderRadius.circular(12),
                                     ),
-                                    padding: const EdgeInsets.symmetric(vertical: 8),
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Icon(
-                                          Icons.brush_rounded,
-                                          size: 18,
-                                          color: !_isEraserMode
-                                              ? theme.colorScheme.onPrimary
-                                              : theme.colorScheme.onSurfaceVariant,
-                                        ),
-                                        const SizedBox(width: 6),
-                                        Text(
-                                          'Draw',
-                                          style: GoogleFonts.outfit(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.bold,
-                                            color: !_isEraserMode
+                                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                                    child: FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            Icons.brush_rounded,
+                                            size: 16,
+                                            color: _activeTool == WhiteboardTool.draw
                                                 ? theme.colorScheme.onPrimary
                                                 : theme.colorScheme.onSurfaceVariant,
                                           ),
-                                        ),
-                                      ],
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            'Draw',
+                                            style: GoogleFonts.outfit(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold,
+                                              color: _activeTool == WhiteboardTool.draw
+                                                  ? theme.colorScheme.onPrimary
+                                                  : theme.colorScheme.onSurfaceVariant,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ),
                               ),
-                              const SizedBox(width: 4),
+                              const SizedBox(width: 2),
                               // Eraser Button
                               Expanded(
                                 child: GestureDetector(
                                   onTap: () {
                                     setState(() {
-                                      _isEraserMode = true;
+                                      _activeTool = WhiteboardTool.erase;
                                     });
                                   },
                                   child: Container(
                                     decoration: BoxDecoration(
-                                      color: _isEraserMode
+                                      color: _activeTool == WhiteboardTool.erase
                                           ? theme.colorScheme.primary
                                           : Colors.transparent,
                                       borderRadius: BorderRadius.circular(12),
                                     ),
-                                    padding: const EdgeInsets.symmetric(vertical: 8),
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Icon(
-                                          Icons.auto_fix_normal_rounded,
-                                          size: 18,
-                                          color: _isEraserMode
-                                              ? theme.colorScheme.onPrimary
-                                              : theme.colorScheme.onSurfaceVariant,
-                                        ),
-                                        const SizedBox(width: 6),
-                                        Text(
-                                          'Erase',
-                                          style: GoogleFonts.outfit(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.bold,
-                                            color: _isEraserMode
+                                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                                    child: FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            Icons.auto_fix_normal_rounded,
+                                            size: 16,
+                                            color: _activeTool == WhiteboardTool.erase
                                                 ? theme.colorScheme.onPrimary
                                                 : theme.colorScheme.onSurfaceVariant,
                                           ),
-                                        ),
-                                      ],
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            'Erase',
+                                            style: GoogleFonts.outfit(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold,
+                                              color: _activeTool == WhiteboardTool.erase
+                                                  ? theme.colorScheme.onPrimary
+                                                  : theme.colorScheme.onSurfaceVariant,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 2),
+                              // Move Button
+                              Expanded(
+                                child: GestureDetector(
+                                  onTap: () {
+                                    setState(() {
+                                      _activeTool = WhiteboardTool.panZoom;
+                                    });
+                                  },
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: _activeTool == WhiteboardTool.panZoom
+                                          ? theme.colorScheme.primary
+                                          : Colors.transparent,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                                    child: FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            Icons.back_hand_rounded,
+                                            size: 16,
+                                            color: _activeTool == WhiteboardTool.panZoom
+                                                ? theme.colorScheme.onPrimary
+                                                : theme.colorScheme.onSurfaceVariant,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            'Move',
+                                            style: GoogleFonts.outfit(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold,
+                                              color: _activeTool == WhiteboardTool.panZoom
+                                                  ? theme.colorScheme.onPrimary
+                                                  : theme.colorScheme.onSurfaceVariant,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -478,7 +635,7 @@ class _WhiteboardScreenState extends State<WhiteboardScreen> {
                   // Color selection row (Only show in Draw mode)
                   AnimatedCrossFade(
                     duration: const Duration(milliseconds: 200),
-                    crossFadeState: !_isEraserMode
+                    crossFadeState: _activeTool == WhiteboardTool.draw
                         ? CrossFadeState.showFirst
                         : CrossFadeState.showSecond,
                     secondChild: const SizedBox.shrink(),
@@ -537,36 +694,43 @@ class _WhiteboardScreenState extends State<WhiteboardScreen> {
                   ),
 
                   // Stroke width selection row
-                  Row(
-                    children: [
-                      Text(
-                        _isEraserMode ? 'Eraser Size' : 'Brush Size',
-                        style: GoogleFonts.outfit(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
+                  AnimatedCrossFade(
+                    duration: const Duration(milliseconds: 200),
+                    crossFadeState: _activeTool != WhiteboardTool.panZoom
+                        ? CrossFadeState.showFirst
+                        : CrossFadeState.showSecond,
+                    secondChild: const SizedBox.shrink(),
+                    firstChild: Row(
+                      children: [
+                        Text(
+                          _isEraserMode ? 'Eraser Size' : 'Brush Size',
+                          style: GoogleFonts.outfit(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                      ),
-                      Expanded(
-                        child: Slider.adaptive(
-                          value: _selectedWidth,
-                          min: 1.0,
-                          max: 30.0,
-                          activeColor: theme.colorScheme.primary,
-                          onChanged: (val) {
-                            setState(() {
-                              _selectedWidth = val;
-                            });
-                          },
+                        Expanded(
+                          child: Slider.adaptive(
+                            value: _selectedWidth,
+                            min: 1.0,
+                            max: 30.0,
+                            activeColor: theme.colorScheme.primary,
+                            onChanged: (val) {
+                              setState(() {
+                                _selectedWidth = val;
+                              });
+                            },
+                          ),
                         ),
-                      ),
-                      Text(
-                        '${_selectedWidth.toInt()}px',
-                        style: GoogleFonts.outfit(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
+                        Text(
+                          '${_selectedWidth.toInt()}px',
+                          style: GoogleFonts.outfit(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ],
               ),

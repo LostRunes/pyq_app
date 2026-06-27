@@ -16,6 +16,13 @@ class UtilitiesPage extends ConsumerWidget {
 
     final utils = [
       {
+        'title': 'To Do Dashboard',
+        'desc': 'Track study activity & custom tasks',
+        'icon': Icons.playlist_add_check_rounded,
+        'route': '/todo_dashboard',
+        'color': const Color(0xFF6366F1), // Indigo
+      },
+      {
         'title': 'Scientific Calculator',
         'desc': 'Casio-style advanced math tool',
         'icon': Icons.calculate_rounded,
@@ -50,13 +57,6 @@ class UtilitiesPage extends ConsumerWidget {
         'route': '/focus_timer',
         'color': const Color(0xFFEC4899), // Pink
       },
-      {
-        'title': 'To Do Dashboard',
-        'desc': 'Track study activity & custom tasks',
-        'icon': Icons.playlist_add_check_rounded,
-        'route': '/todo_dashboard',
-        'color': const Color(0xFF6366F1), // Indigo
-      }
     ];
 
     final filteredUtils = utils.where((util) {
@@ -120,7 +120,8 @@ class UtilitiesPage extends ConsumerWidget {
                     crossAxisCount: 2,
                     crossAxisSpacing: 16,
                     mainAxisSpacing: 16,
-                    childAspectRatio: 0.95, // Prevent overflow on smaller screens
+                    childAspectRatio:
+                        0.95, // Prevent overflow on smaller screens
                   ),
                   itemBuilder: (context, index) {
                     final util = filteredUtils[index];
@@ -134,9 +135,14 @@ class UtilitiesPage extends ConsumerWidget {
                         },
                         borderRadius: BorderRadius.circular(28),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
                           decoration: BoxDecoration(
-                            color: isDark ? const Color(0xFF1E1B4B).withOpacity(0.2) : theme.colorScheme.surface,
+                            color: isDark
+                                ? const Color(0xFF1E1B4B).withOpacity(0.2)
+                                : theme.colorScheme.surface,
                             borderRadius: BorderRadius.circular(28),
                             border: Border.all(
                               color: utilColor.withOpacity(0.12),
@@ -182,7 +188,8 @@ class UtilitiesPage extends ConsumerWidget {
                                     util['desc'] as String,
                                     style: GoogleFonts.outfit(
                                       fontSize: 11,
-                                      color: theme.colorScheme.onSurface.withOpacity(0.5),
+                                      color: theme.colorScheme.onSurface
+                                          .withOpacity(0.5),
                                     ),
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
