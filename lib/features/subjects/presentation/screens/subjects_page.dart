@@ -9,6 +9,8 @@ import 'package:focus_fox/core/providers/bee_provider.dart';
 import 'package:focus_fox/features/subjects/presentation/providers/subjects_providers.dart';
 import 'package:focus_fox/utils/fuzzy_search.dart';
 import 'package:focus_fox/shared/presentation/widgets/entrance_animations.dart';
+import 'package:focus_fox/core/providers.dart';
+import 'package:focus_fox/features/pyqs/data/models/subject.dart';
 import 'package:lottie/lottie.dart';
 
 class SubjectsPage extends ConsumerWidget {
@@ -49,7 +51,7 @@ class SubjectsPage extends ConsumerWidget {
             return ListView.builder(
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-              itemCount: filtered.isEmpty ? 2 : filtered.length + 1,
+              itemCount: filtered.isEmpty ? 3 : filtered.length + 2,
               itemBuilder: (context, i) {
                 if (i == 0) {
                   return Container(
@@ -157,7 +159,7 @@ class SubjectsPage extends ConsumerWidget {
                   );
                 }
 
-                if (filtered.isEmpty) {
+                if (filtered.isEmpty && i == 1) {
                   return Center(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 40),
@@ -170,6 +172,15 @@ class SubjectsPage extends ConsumerWidget {
                         ),
                       ),
                     ),
+                  );
+                }
+
+                if (i == (filtered.isEmpty ? 2 : filtered.length + 1)) {
+                  return _buildAddSubjectCard(
+                    context,
+                    ref,
+                    currentBranchId,
+                    currentSemester,
                   );
                 }
 
@@ -281,9 +292,7 @@ class SubjectsPage extends ConsumerWidget {
                 );
 
                 return SubjectCardFade(
-                  delay: Duration(
-                    milliseconds: (i - 1).clamp(0, 5) * 60,
-                  ),
+                  delay: Duration(milliseconds: (i - 1).clamp(0, 5) * 60),
                   child: ExpandingSubjectCard(
                     isIconLeft: isIconLeft,
                     delay: Duration(milliseconds: (i - 1).clamp(0, 6) * 150),
@@ -298,16 +307,27 @@ class SubjectsPage extends ConsumerWidget {
                             arguments: {'subject': subject},
                           );
                         },
+                        onLongPress: () {
+                          _showDeleteConfirmationDialog(
+                            context,
+                            ref,
+                            currentBranchId,
+                            currentSemester,
+                            subject,
+                          );
+                        },
                         borderRadius: BorderRadius.circular(32),
                         child: Container(
                           decoration: BoxDecoration(
-                            color: Theme.of(context).brightness == Brightness.dark
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
                                 ? Colors.white.withOpacity(0.03)
                                 : Colors.white.withOpacity(0.65),
                             borderRadius: BorderRadius.circular(32),
                             border: Border.all(
                               color:
-                                  (Theme.of(context).brightness == Brightness.dark
+                                  (Theme.of(context).brightness ==
+                                      Brightness.dark
                                   ? Colors.white.withOpacity(0.08)
                                   : const Color(0xFFFF9F0A).withOpacity(0.28)),
                               width: 1.5,
@@ -413,8 +433,8 @@ class _FlyingBeeOverlayState extends ConsumerState<FlyingBeeOverlay>
 
   // Wander
   Timer? _wanderTimer;
-  Timer? _initialSpawnTimer;   // cancellable replacement for Future.delayed
-  Timer? _reappearTimer;       // cancellable replacement for Future.delayed
+  Timer? _initialSpawnTimer; // cancellable replacement for Future.delayed
+  Timer? _reappearTimer; // cancellable replacement for Future.delayed
   final Random _random = Random();
 
   @override
@@ -569,6 +589,442 @@ class _FlyingBeeOverlayState extends ConsumerState<FlyingBeeOverlay>
               ),
             ),
           ),
+      ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Helpers and Dialogs for Adding/Deleting Subjects
+// ---------------------------------------------------------------------------
+
+class DashedBorderPainter extends CustomPainter {
+  final Color color;
+  final double strokeWidth;
+  final double gap;
+  final double dash;
+  final double borderRadius;
+
+  DashedBorderPainter({
+    required this.color,
+    this.strokeWidth = 1.5,
+    this.gap = 4.0,
+    this.dash = 6.0,
+    this.borderRadius = 32.0,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke;
+
+    final path = Path()
+      ..addRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(0, 0, size.width, size.height),
+          Radius.circular(borderRadius),
+        ),
+      );
+
+    final dashPath = Path();
+    double distance = 0.0;
+    for (final pathMetric in path.computeMetrics()) {
+      while (distance < pathMetric.length) {
+        dashPath.addPath(
+          pathMetric.extractPath(distance, distance + dash),
+          Offset.zero,
+        );
+        distance += dash + gap;
+      }
+    }
+    canvas.drawPath(dashPath, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+void _showDeleteConfirmationDialog(
+  BuildContext context,
+  WidgetRef ref,
+  String branchId,
+  int semester,
+  Subject subject,
+) {
+  showDialog(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Text(
+          'Delete Subject?',
+          style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          'Are you sure you want to remove "${subject.name}" from this subject list?',
+          style: GoogleFonts.outfit(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.outfit(color: Colors.grey),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            onPressed: () async {
+              Navigator.pop(context);
+              try {
+                await ref
+                    .read(subjectsRepositoryProvider)
+                    .deleteSubjectFromSemester(
+                      branchId: branchId,
+                      semester: semester,
+                      subjectId: subject.id,
+                    );
+                ref.invalidate(subjectsProvider);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Successfully removed ${subject.name}'),
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Failed to delete subject: $e')),
+                  );
+                }
+              }
+            },
+            child: Text(
+              'Delete',
+              style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      );
+    },
+  );
+}
+
+Widget _buildAddSubjectCard(
+  BuildContext context,
+  WidgetRef ref,
+  String currentBranchId,
+  int currentSemester,
+) {
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+  final Color orangeColor = const Color(0xFFFF9F0A);
+  final Color fillBg = orangeColor.withOpacity(isDark ? 0.05 : 0.08);
+
+  return Padding(
+    padding: const EdgeInsets.only(bottom: 16),
+    child: InkWell(
+      onTap: () {
+        _showAddSubjectDialog(context, ref, currentBranchId, currentSemester);
+      },
+      borderRadius: BorderRadius.circular(32),
+      child: CustomPaint(
+        painter: DashedBorderPainter(
+          color: orangeColor.withOpacity(0.5),
+          borderRadius: 32,
+        ),
+        child: Container(
+          height: 120,
+          decoration: BoxDecoration(
+            color: fillBg,
+            borderRadius: BorderRadius.circular(32),
+          ),
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.add_rounded, size: 32, color: orangeColor),
+                const SizedBox(height: 8),
+                Text(
+                  'Add Subjects',
+                  style: GoogleFonts.outfit(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: orangeColor,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+void _showAddSubjectDialog(
+  BuildContext context,
+  WidgetRef ref,
+  String currentBranchId,
+  int currentSemester,
+) {
+  showDialog(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Text(
+          'Add Subject',
+          style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+        ),
+        content: SingleChildScrollView(
+          child: _AddSubjectDialogContent(
+            initialBranchId: currentBranchId,
+            initialSemester: currentSemester,
+          ),
+        ),
+      );
+    },
+  );
+}
+
+class _AddSubjectDialogContent extends ConsumerStatefulWidget {
+  final String initialBranchId;
+  final int initialSemester;
+
+  const _AddSubjectDialogContent({
+    required this.initialBranchId,
+    required this.initialSemester,
+  });
+
+  @override
+  ConsumerState<_AddSubjectDialogContent> createState() =>
+      _AddSubjectDialogContentState();
+}
+
+class _AddSubjectDialogContentState
+    extends ConsumerState<_AddSubjectDialogContent> {
+  late String _selectedBranchId;
+  late int _selectedSemester;
+  String? _selectedSubjectId;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedBranchId = widget.initialBranchId;
+    _selectedSemester = widget.initialSemester;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final branchesAsync = ref.watch(branchesProvider);
+
+    // We watch the subjects for the selected branch/semester in the popup (source)
+    final sourceSubjectsAsync = ref.watch(
+      subjectsProvider((
+        branchId: _selectedBranchId,
+        semester: _selectedSemester,
+      )),
+    );
+
+    // We watch the subjects for the current screen (target)
+    final currentSubjectsAsync = ref.watch(
+      subjectsProvider((
+        branchId: widget.initialBranchId,
+        semester: widget.initialSemester,
+      )),
+    );
+
+    if (branchesAsync.isLoading) {
+      return const SizedBox(
+        height: 200,
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final branches = branchesAsync.value ?? [];
+    final sourceSubjects = sourceSubjectsAsync.value ?? [];
+    final currentSubjects = currentSubjectsAsync.value ?? [];
+
+    final isSourceLoading = sourceSubjectsAsync.isLoading;
+    final isCurrentLoading = currentSubjectsAsync.isLoading;
+
+    final currentIds = currentSubjects.map((s) => s.id).toSet();
+    final availableSubjects = sourceSubjects
+        .where((s) => !currentIds.contains(s.id))
+        .toList();
+
+    // Reset selection if the current selected subject has been filtered out
+    if (_selectedSubjectId != null &&
+        !availableSubjects.any((s) => s.id == _selectedSubjectId)) {
+      _selectedSubjectId = null;
+    }
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        DropdownButtonFormField<String>(
+          isExpanded: true,
+          value: _selectedBranchId,
+          decoration: InputDecoration(
+            labelText: 'Branch',
+            labelStyle: GoogleFonts.outfit(),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+          items: branches.map((b) {
+            return DropdownMenuItem(
+              value: b.id,
+              child: Text(
+                b.name,
+                style: GoogleFonts.outfit(fontSize: 14),
+                overflow: TextOverflow.ellipsis,
+              ),
+            );
+          }).toList(),
+          onChanged: (val) {
+            if (val != null) {
+              setState(() {
+                _selectedBranchId = val;
+                _selectedSubjectId = null;
+              });
+            }
+          },
+        ),
+        const SizedBox(height: 16),
+        DropdownButtonFormField<int>(
+          isExpanded: true,
+          value: _selectedSemester,
+          decoration: InputDecoration(
+            labelText: 'Semester',
+            labelStyle: GoogleFonts.outfit(),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+          items: List.generate(8, (index) => index + 1).map((sem) {
+            return DropdownMenuItem(
+              value: sem,
+              child: Text(
+                'Semester $sem',
+                style: GoogleFonts.outfit(fontSize: 14),
+              ),
+            );
+          }).toList(),
+          onChanged: (val) {
+            if (val != null) {
+              setState(() {
+                _selectedSemester = val;
+                _selectedSubjectId = null;
+              });
+            }
+          },
+        ),
+        const SizedBox(height: 16),
+        DropdownButtonFormField<String>(
+          isExpanded: true,
+          value: _selectedSubjectId,
+          decoration: InputDecoration(
+            labelText: 'Subject',
+            labelStyle: GoogleFonts.outfit(),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            suffixIcon: isSourceLoading || isCurrentLoading
+                ? const Padding(
+                    padding: EdgeInsets.all(12),
+                    child: SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  )
+                : null,
+          ),
+          hint: Text(
+            isSourceLoading || isCurrentLoading
+                ? 'Loading subjects...'
+                : 'Select Subject',
+            style: GoogleFonts.outfit(fontSize: 14),
+          ),
+          items: availableSubjects.map((s) {
+            return DropdownMenuItem(
+              value: s.id,
+              child: Text(
+                '${s.name} (${s.code})',
+                style: GoogleFonts.outfit(fontSize: 14),
+                overflow: TextOverflow.ellipsis,
+              ),
+            );
+          }).toList(),
+          onChanged: isSourceLoading || isCurrentLoading
+              ? null
+              : (val) {
+                  setState(() {
+                    _selectedSubjectId = val;
+                  });
+                },
+        ),
+        const SizedBox(height: 24),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFFFF9F0A),
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            padding: const EdgeInsets.symmetric(vertical: 14),
+          ),
+          onPressed:
+              _selectedSubjectId == null || isSourceLoading || isCurrentLoading
+              ? null
+              : () async {
+                  try {
+                    // Add chosen subject to target/current screen branch & sem
+                    await ref
+                        .read(subjectsRepositoryProvider)
+                        .addSubjectToSemester(
+                          branchId: widget.initialBranchId,
+                          semester: widget.initialSemester,
+                          subjectId: _selectedSubjectId!,
+                        );
+
+                    // Force refresh target page subjects Provider
+                    await ref.refresh(
+                      subjectsProvider((
+                        branchId: widget.initialBranchId,
+                        semester: widget.initialSemester,
+                      )).future,
+                    );
+
+                    if (context.mounted) {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Successfully added subject'),
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Failed to add subject: $e')),
+                      );
+                    }
+                  }
+                },
+          child: Text(
+            'Add Subject',
+            style: GoogleFonts.outfit(
+              fontWeight: FontWeight.bold,
+              fontSize: 15,
+            ),
+          ),
+        ),
       ],
     );
   }
