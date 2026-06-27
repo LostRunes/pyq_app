@@ -68,10 +68,13 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
       duration: const Duration(milliseconds: 900),
     )..repeat(reverse: true);
 
-    _pageController = PageController(initialPage: _currentIndex);
+    final initialIdx = ref.read(mainNavigationIndexProvider);
+    _pageController = PageController(initialPage: initialIdx);
 
     // Subjects tab is active on startup — open the fade animation window
-    SubjectCardFade.onPageActivated();
+    if (initialIdx == 0) {
+      SubjectCardFade.onPageActivated();
+    }
 
     // Register FCM device token for push notifications
     unawaited(PushNotificationService.registerDeviceToken());
@@ -108,6 +111,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
 
   @override
   Widget build(BuildContext context) {
+    _currentIndex = ref.watch(mainNavigationIndexProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
@@ -547,13 +551,14 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
             : null,
         child: SafeArea(
           child: PageView(
+            key: const PageStorageKey('main_navigation_page_view'),
             controller: _pageController,
             onPageChanged: (index) {
               // Skip intermediate callbacks fired during a programmatic
               // animateToPage() call — this is what caused the blob to flicker.
               if (_isAnimatingPage) return;
+              ref.read(mainNavigationIndexProvider.notifier).setIndex(index);
               setState(() {
-                _currentIndex = index;
                 // Do NOT reset _isSearching here — that would dismiss the
                 // keyboard unexpectedly when the user swipes between tabs.
                 _skulkSearchController.clear();
@@ -712,8 +717,8 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
       onTap: () {
         // When tapping subjects tab, open the fade animation window
         if (index == 0) SubjectCardFade.onPageActivated();
+        ref.read(mainNavigationIndexProvider.notifier).setIndex(index);
         setState(() {
-          _currentIndex = index;
           _isSearching = false;
           _skulkSearchController.clear();
           ref.read(skulkFeedSearchProvider.notifier).updateSearch('');
