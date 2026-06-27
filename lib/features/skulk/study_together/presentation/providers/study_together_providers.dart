@@ -648,14 +648,27 @@ enum VoiceConnectionStatus {
   failed,
 }
 
+class VoiceRoomScreenActive extends Notifier<bool> {
+  @override
+  bool build() => false;
+
+  void setVal(bool val) => state = val;
+}
+
+final voiceRoomScreenActiveProvider = NotifierProvider<VoiceRoomScreenActive, bool>(
+  VoiceRoomScreenActive.new,
+);
+
 class VoiceRoomState {
   final String? activeRoomId;
+  final StudyRoom? activeRoom;
   final VoiceConnectionStatus status;
   final List<VoiceParticipant> participants;
   final bool isLocalMuted;
 
   VoiceRoomState({
     this.activeRoomId,
+    this.activeRoom,
     this.status = VoiceConnectionStatus.disconnected,
     this.participants = const [],
     this.isLocalMuted = false,
@@ -663,12 +676,14 @@ class VoiceRoomState {
 
   VoiceRoomState copyWith({
     String? activeRoomId,
+    StudyRoom? activeRoom,
     VoiceConnectionStatus? status,
     List<VoiceParticipant>? participants,
     bool? isLocalMuted,
   }) {
     return VoiceRoomState(
       activeRoomId: activeRoomId ?? this.activeRoomId,
+      activeRoom: activeRoom ?? this.activeRoom,
       status: status ?? this.status,
       participants: participants ?? this.participants,
       isLocalMuted: isLocalMuted ?? this.isLocalMuted,
@@ -687,13 +702,15 @@ class VoiceRoomNotifier extends Notifier<VoiceRoomState> {
 
   Room? get room => _liveKitService.room;
 
-  Future<void> joinVoice(String roomId, String username) async {
+  Future<void> joinVoice(StudyRoom room, String username) async {
+    final roomId = room.id;
     if (state.activeRoomId == roomId && state.status == VoiceConnectionStatus.connected) {
       return;
     }
 
     state = state.copyWith(
       activeRoomId: roomId,
+      activeRoom: room,
       status: VoiceConnectionStatus.connecting,
     );
 
@@ -765,26 +782,55 @@ class VoiceRoomNotifier extends Notifier<VoiceRoomState> {
     _updateParticipants();
   }
 
-  void _updateParticipants() {
+  Future<void> _updateParticipants() async {
     final room = this.room;
     if (room == null) return;
 
+    final local = room.localParticipant;
+    final remoteParticipants = room.remoteParticipants.values;
+
+    final uuids = <String>[];
+    if (local != null) uuids.add(local.identity);
+    for (final remote in remoteParticipants) {
+      uuids.add(remote.identity);
+    }
+
+    final Map<String, String> nameMap = {};
+    if (uuids.isNotEmpty) {
+      try {
+        final data = await Supabase.instance.client
+            .from('user_profiles')
+            .select('id, display_name, username')
+            .inFilter('id', uuids);
+            
+        for (final row in data as List) {
+          final id = row['id'] as String;
+          final disp = row['display_name'] as String?;
+          final user = row['username'] as String?;
+          nameMap[id] = disp ?? user ?? 'User';
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+
     final list = <VoiceParticipant>[];
 
-    final local = room.localParticipant;
     if (local != null) {
+      final dbName = nameMap[local.identity];
       list.add(VoiceParticipant(
         identity: local.identity,
-        name: local.name.isNotEmpty ? local.name : 'You',
+        name: dbName ?? (local.name.isNotEmpty ? local.name : 'You'),
         isSpeaking: local.isSpeaking,
         isMuted: !local.isMicrophoneEnabled(),
       ));
     }
 
-    for (final remote in room.remoteParticipants.values) {
+    for (final remote in remoteParticipants) {
+      final dbName = nameMap[remote.identity];
       list.add(VoiceParticipant(
         identity: remote.identity,
-        name: remote.name.isNotEmpty ? remote.name : (remote.identity.split(':').last),
+        name: dbName ?? (remote.name.isNotEmpty ? remote.name : 'User'),
         isSpeaking: remote.isSpeaking,
         isMuted: !remote.isMicrophoneEnabled(),
       ));

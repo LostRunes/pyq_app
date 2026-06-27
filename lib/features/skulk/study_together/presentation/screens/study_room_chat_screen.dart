@@ -12,6 +12,7 @@ import '../../../data/services/cloudinary_service.dart';
 import '../providers/study_together_providers.dart';
 import '../widgets/room_message_bubble.dart';
 import '../widgets/voice_panel.dart';
+import '../../../../../app/app.dart' show appRouteObserver;
 
 class StudyRoomChatScreen extends ConsumerStatefulWidget {
   final StudyRoom room;
@@ -23,7 +24,8 @@ class StudyRoomChatScreen extends ConsumerStatefulWidget {
       _StudyRoomChatScreenState();
 }
 
-class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen> {
+class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen>
+    with RouteAware {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   bool _isSending = false;
@@ -152,7 +154,46 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Subscribe to route events so we know exactly when this screen
+    // is visible vs covered by another route
+    final route = ModalRoute.of(context);
+    if (route is PageRoute) {
+      appRouteObserver.subscribe(this, route);
+    }
+  }
+
+  void _setScreenActive(bool active) {
+    // Defer the provider write until after the current frame is built.
+    // RouteAware callbacks can fire mid-build, which causes a
+    // "provider modified during build" exception if we write synchronously.
+    Future.microtask(() {
+      if (mounted) {
+        ref.read(voiceRoomScreenActiveProvider.notifier).setVal(active);
+      }
+    });
+  }
+
+  // Called when this route is pushed on top (screen becomes visible)
+  @override
+  void didPush() => _setScreenActive(true);
+
+  // Called when the route on top of this one is popped (screen comes back into view)
+  @override
+  void didPopNext() => _setScreenActive(true);
+
+  // Called when a new route is pushed on top of this screen (user navigates away)
+  @override
+  void didPushNext() => _setScreenActive(false);
+
+  // Called when this route is popped (user goes back)
+  @override
+  void didPop() => _setScreenActive(false);
+
+  @override
   void dispose() {
+    appRouteObserver.unsubscribe(this);
     _typingTimer?.cancel();
     _messageController.removeListener(_onCursorChanged);
     _messageController.dispose();
@@ -531,7 +572,7 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen> {
             if (widget.room.isVoiceEnabled) ...[
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                child: VoicePanel(roomId: widget.room.id),
+                child: VoicePanel(room: widget.room),
               ),
             ],
             // Message List Area
