@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -145,8 +146,22 @@ class AuthRepository {
 
   int _getSemesterFromBatch(String batch) {
     final match = RegExp(r'\d+').firstMatch(batch);
-    if (match == null) return 1;
-    final batchNum = int.parse(match.group(0)!);
+    if (match == null) {
+      debugPrint('Warning: Could not parse batch number from "$batch". Defaulting to semester 1.');
+      return 1;
+    }
+    
+    int batchNum = int.parse(match.group(0)!);
+    
+    // If the batch number is a calendar year (e.g. 2023), convert it to a relative year of study (1-4).
+    // Assuming the year represents the admission year.
+    if (batchNum > 2000) {
+      final currentYear = DateTime.now().year;
+      final admissionYear = batchNum;
+      final diff = currentYear - admissionYear;
+      batchNum = (diff + 1).clamp(1, 4);
+      debugPrint('Resolved calendar year batch "$batch" (admission year: $admissionYear) to year of study: $batchNum.');
+    }
 
     final month = DateTime.now().month;
     final isEvenSemester = month >= 1 && month <= 6;

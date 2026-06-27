@@ -4,8 +4,7 @@ class UtilitiesSearchNotifier extends Notifier<String> {
   @override
   String build() => '';
 
-  @override
-  set state(String value) => super.state = value;
+  void updateSearch(String query) => state = query;
 }
 
 final utilitiesSearchProvider = NotifierProvider<UtilitiesSearchNotifier, String>(

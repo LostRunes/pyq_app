@@ -35,8 +35,7 @@ class SubjectsSearchNotifier extends Notifier<String> {
   @override
   String build() => '';
 
-  @override
-  set state(String value) => super.state = value;
+  void updateSearch(String query) => state = query;
 }
 
 final subjectsSearchProvider = NotifierProvider<SubjectsSearchNotifier, String>(

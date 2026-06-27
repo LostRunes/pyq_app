@@ -111,12 +111,27 @@ class _ToDoDashboardState extends ConsumerState<ToDoDashboard> {
         );
         return;
       }
-      final subjects = ref.read(subjectsProvider((branchId: _selectedBranchId!, semester: _selectedSemester!))).value ?? [];
-      final topics = ref.read(topicsProvider(_selectedSubjectId!)).value ?? [];
-      
-      final sub = subjects.firstWhere((s) => s.id == _selectedSubjectId);
-      final top = topics.firstWhere((t) => t.id == _selectedTopicId);
-      title = '${sub.name} → ${top.name}';
+      try {
+        final subjects = ref.read(subjectsProvider((branchId: _selectedBranchId!, semester: _selectedSemester!))).value ?? [];
+        final topics = ref.read(topicsProvider(_selectedSubjectId!)).value ?? [];
+        
+        final sub = subjects.firstWhere(
+          (s) => s.id == _selectedSubjectId,
+          orElse: () => throw StateError('Selected subject not found'),
+        );
+        final top = topics.firstWhere(
+          (t) => t.id == _selectedTopicId,
+          orElse: () => throw StateError('Selected topic not found'),
+        );
+        title = '${sub.name} → ${top.name}';
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Please re-select the subject and topic')),
+          );
+        }
+        return;
+      }
     } else if (_selectedType == 'Algo') {
       if (_selectedAlgoTopic == null) {
         ScaffoldMessenger.of(context).showSnackBar(
