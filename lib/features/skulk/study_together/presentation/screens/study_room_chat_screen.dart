@@ -580,9 +580,26 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen>
           ],
         ),
       ),
-      body: SafeArea(
-        child: Column(
-          children: [
+      body: Container(
+        decoration: BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage(
+              isDark
+                  ? 'assets/images/skulk_bg_dark2.jpg'
+                  : 'assets/images/skulk_bg5.jpg',
+            ),
+            fit: BoxFit.cover,
+            colorFilter: ColorFilter.mode(
+              isDark
+                  ? Colors.black.withOpacity(0.30)
+                  : Colors.white.withOpacity(0.45),
+              BlendMode.srcOver,
+            ),
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
             // If custom voice room has ended, show the countdown banner with download option
             if (!activeRoom.isActive && activeRoom.endedAt != null) ...[
               CountdownBanner(
@@ -1128,7 +1145,8 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen>
           ],
         ),
       ),
-    );
+    ),
+  );
   }
 }
 

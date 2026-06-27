@@ -430,7 +430,7 @@ class _CreateDoubtScreenState extends ConsumerState<CreateDoubtScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (!_argsParsed) {
+    if (!_argsParsed || _branchId == null || _semester == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 

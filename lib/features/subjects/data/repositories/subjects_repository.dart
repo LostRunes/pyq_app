@@ -97,4 +97,38 @@ class SubjectsRepository {
       return '';
     }
   }
+
+  Future<void> deleteSubjectFromSemester({
+    required String branchId,
+    required int semester,
+    required String subjectId,
+  }) async {
+    await _supabase
+        .from('branch_subjects')
+        .delete()
+        .eq('branch_id', branchId)
+        .eq('semester', semester)
+        .eq('subject_id', subjectId);
+  }
+
+  Future<void> addSubjectToSemester({
+    required String branchId,
+    required int semester,
+    required String subjectId,
+  }) async {
+    final yearName = ((semester + 1) ~/ 2).toString();
+    final yearRes = await _supabase
+        .from('years')
+        .select('id')
+        .eq('name', yearName)
+        .maybeSingle();
+    final yearId = yearRes?['id'] as String?;
+
+    await _supabase.from('branch_subjects').insert({
+      'branch_id': branchId,
+      'semester': semester,
+      'subject_id': subjectId,
+      if (yearId != null) 'year_id': yearId,
+    });
+  }
 }
