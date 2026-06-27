@@ -139,7 +139,7 @@ class PushNotificationService {
     final context = AppRouter.navigatorKey.currentContext;
     if (context == null) return;
 
-    if (type == 'mention' || type == 'tag') {
+    if (type == 'mention' || type == 'tag' || type == 'grind_room') {
       try {
         final client = Supabase.instance.client;
         final res = await client

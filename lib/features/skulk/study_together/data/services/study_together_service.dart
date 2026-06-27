@@ -101,4 +101,12 @@ class StudyTogetherService {
         .single();
     return res;
   }
+
+  /// Updates (increments/decrements) participant count for a room
+  Future<void> updateRoomParticipantCount(String roomId, int delta) async {
+    await _client.rpc('update_room_participant_count', params: {
+      'p_room_id': roomId,
+      'p_delta': delta,
+    });
+  }
 }
