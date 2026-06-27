@@ -8,16 +8,18 @@ import '../widgets/community_space_tile.dart';
 import '../widgets/personal_room_card.dart';
 import 'package:focus_fox/shared/widgets/custom_search_bar.dart';
 import 'package:focus_fox/utils/fuzzy_search.dart';
+import 'package:focus_fox/shared/presentation/widgets/entrance_animations.dart';
 
 class StudyTogetherScreen extends ConsumerStatefulWidget {
-  const StudyTogetherScreen({super.key});
+  final bool embeddedMode;
+  const StudyTogetherScreen({super.key, this.embeddedMode = false});
 
   @override
   ConsumerState<StudyTogetherScreen> createState() =>
-      _StudyTogetherScreenState();
+      StudyTogetherScreenState();
 }
 
-class _StudyTogetherScreenState extends ConsumerState<StudyTogetherScreen> {
+class StudyTogetherScreenState extends ConsumerState<StudyTogetherScreen> {
   bool _isSearchingSubjects = false;
   String _subjectSearchQuery = '';
   final TextEditingController _subjectSearchController =
@@ -32,7 +34,7 @@ class _StudyTogetherScreenState extends ConsumerState<StudyTogetherScreen> {
     super.dispose();
   }
 
-  void _showCreateOrJoinDialog(BuildContext context) {
+  void showCreateOrJoinDialog(BuildContext context) {
     showDialog(
       context: context,
       builder: (context) {
@@ -59,7 +61,7 @@ class _StudyTogetherScreenState extends ConsumerState<StudyTogetherScreen> {
                 ),
                 onTap: () {
                   Navigator.pop(context);
-                  _showCreateRoomBottomSheet(context);
+                  showCreateRoomBottomSheet(context);
                 },
               ),
               const Divider(),
@@ -175,7 +177,7 @@ class _StudyTogetherScreenState extends ConsumerState<StudyTogetherScreen> {
     );
   }
 
-  void _showCreateRoomBottomSheet(BuildContext context) {
+  void showCreateRoomBottomSheet(BuildContext context) {
     final nameController = TextEditingController();
     final descController = TextEditingController();
     bool isVoiceEnabled = false;
@@ -329,7 +331,7 @@ class _StudyTogetherScreenState extends ConsumerState<StudyTogetherScreen> {
     );
   }
 
-  void _showAddSubjectRoomDialog(BuildContext context) {
+  void showAddSubjectRoomDialog(BuildContext context) {
     final allRoomsAsync = ref.read(studyRoomsProvider);
     final joinedNotifier = ref.read(joinedRoomIdsProvider.notifier);
     final joinedIds = ref.read(joinedRoomIdsProvider);
@@ -513,64 +515,100 @@ class _StudyTogetherScreenState extends ConsumerState<StudyTogetherScreen> {
     final personalAsync = ref.watch(personalRoomsProvider);
 
     return Scaffold(
-      backgroundColor: isDark
-          ? const Color(0xFF121212)
-          : const Color(0xFFF9F9F9),
-      appBar: AppBar(
-        backgroundColor: isDark
-            ? const Color(0xFF1E1E1E)
-            : const Color.fromARGB(255, 250, 217, 191),
-        elevation: 0.5,
-        title: Text(
-          'Study Together',
-          style: GoogleFonts.outfit(
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
-            color: isDark ? Colors.white : Colors.black87,
-          ),
-        ),
-        iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black87),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add_circle_outline_rounded),
-            tooltip: 'Create or Join Room',
-            onPressed: () {
-              _showCreateOrJoinDialog(context);
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.library_add_rounded),
-            tooltip: 'Add Subject Rooms',
-            onPressed: () {
-              _showAddSubjectRoomDialog(context);
-            },
-          ),
-        ],
-      ),
-      body: Container(
-        decoration: BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage(
-              isDark
-                  ? 'assets/images/skulk_bg_dark2.jpg'
-                  : 'assets/images/skulk_bg5.jpg',
+      backgroundColor: widget.embeddedMode
+          ? Colors.transparent
+          : (isDark ? const Color(0xFF121212) : const Color(0xFFF9F9F9)),
+      appBar: widget.embeddedMode
+          ? null
+          : AppBar(
+              backgroundColor: isDark
+                  ? const Color(0xFF1E1E1E)
+                  : const Color.fromARGB(255, 250, 217, 191),
+              elevation: 0.5,
+              title: Text(
+                'Study Together',
+                style: GoogleFonts.outfit(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 20,
+                  color: isDark ? Colors.white : Colors.black87,
+                ),
+              ),
+              iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black87),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.add_circle_outline_rounded),
+                  tooltip: 'Create or Join Room',
+                  onPressed: () {
+                    showCreateOrJoinDialog(context);
+                  },
+                ),
+                IconButton(
+                  icon: const Icon(Icons.library_add_rounded),
+                  tooltip: 'Add Subject Rooms',
+                  onPressed: () {
+                    showAddSubjectRoomDialog(context);
+                  },
+                ),
+              ],
             ),
-            fit: BoxFit.cover,
-            colorFilter: ColorFilter.mode(
-              isDark
-                  ? Colors.black.withOpacity(0.30)
-                  : Colors.white.withOpacity(0.45),
-              BlendMode.srcOver,
-            ),
-          ),
-        ),
-        child: RefreshIndicator(
+      body: RefreshIndicator(
           onRefresh: () async {
             ref.invalidate(studyRoomsProvider);
           },
           child: ListView(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
             children: [
+              FadeInSlide(
+                duration: const Duration(milliseconds: 500),
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 20, left: 4, right: 4),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Chat Rooms',
+                              style: GoogleFonts.outfit(
+                                fontSize: 32,
+                                fontWeight: FontWeight.w900,
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Join lobbies, community spaces, or create your own room',
+                              style: GoogleFonts.outfit(
+                                fontSize: 13,
+                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: const Icon(Icons.add_circle_outline_rounded),
+                        tooltip: 'Create or Join Room',
+                        color: Theme.of(context).colorScheme.primary,
+                        onPressed: () {
+                          showCreateOrJoinDialog(context);
+                        },
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.library_add_rounded),
+                        tooltip: 'Add Subject Rooms',
+                        color: Theme.of(context).colorScheme.primary,
+                        onPressed: () {
+                          showAddSubjectRoomDialog(context);
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
               // 1. COMMUNITY SPACES SECTION (Top, always visible, non-collapsible)
               communityAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
@@ -983,7 +1021,6 @@ class _StudyTogetherScreenState extends ConsumerState<StudyTogetherScreen> {
             ],
           ),
         ),
-      ),
     );
   }
 }
