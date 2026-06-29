@@ -18,7 +18,7 @@ Deno.serve(async (req: Request) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // 1. Deactivate voice study rooms that have 0 active participants
+    // 1. Deactivate voice study rooms that have 0 active participants (excluding permanent rooms)
     const { data: deactivatedVoice, error: deactivateVoiceError } = await supabase
       .from('study_rooms')
       .update({ 
@@ -28,6 +28,16 @@ Deno.serve(async (req: Request) => {
       .eq('is_voice_enabled', true)
       .eq('is_active', true)
       .eq('participant_count', 0)
+      .not('name', 'in', [
+        'general voice lounge',
+        'General Voice Lounge',
+        'dsa griend',
+        'dsa grind',
+        'DSA Griend',
+        'DSA Grind',
+        'placement talkies',
+        'Placement Talkies'
+      ])
       .select('id, name');
 
     if (deactivateVoiceError) throw deactivateVoiceError;
