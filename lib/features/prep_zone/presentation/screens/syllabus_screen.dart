@@ -111,20 +111,20 @@ class _SyllabusScreenState extends ConsumerState<SyllabusScreen> {
                                   decoration: BoxDecoration(
                                     color: isSelected
                                         ? (isDark
-                                            ? theme.colorScheme.primary
-                                            : const Color(0xFF7D4B26))
+                                              ? theme.colorScheme.primary
+                                              : const Color(0xFF7D4B26))
                                         : (isDark
-                                            ? theme.colorScheme.surface
-                                                .withOpacity(0.4)
-                                            : const Color(0xFFFFF7ED)),
+                                              ? theme.colorScheme.surface
+                                                    .withOpacity(0.4)
+                                              : const Color(0xFFFFF7ED)),
                                     borderRadius: BorderRadius.circular(20),
                                     border: Border.all(
                                       color: isSelected
                                           ? Colors.transparent
                                           : (isDark
-                                              ? theme.colorScheme.primary
-                                                  .withOpacity(0.15)
-                                              : const Color(0xFFF6DDB7)),
+                                                ? theme.colorScheme.primary
+                                                      .withOpacity(0.15)
+                                                : const Color(0xFFF6DDB7)),
                                       width: 1.2,
                                     ),
                                     boxShadow: isSelected
@@ -132,7 +132,7 @@ class _SyllabusScreenState extends ConsumerState<SyllabusScreen> {
                                             BoxShadow(
                                               color: isDark
                                                   ? theme.colorScheme.primary
-                                                      .withOpacity(0.25)
+                                                        .withOpacity(0.25)
                                                   : const Color(
                                                       0xFF7D4B26,
                                                     ).withOpacity(0.2),
@@ -149,11 +149,11 @@ class _SyllabusScreenState extends ConsumerState<SyllabusScreen> {
                                       fontWeight: FontWeight.bold,
                                       color: isSelected
                                           ? (isDark
-                                              ? theme.colorScheme.onPrimary
-                                              : Colors.white)
+                                                ? theme.colorScheme.onPrimary
+                                                : Colors.white)
                                           : (isDark
-                                              ? Colors.white70
-                                              : const Color(0xFF7D4B26)),
+                                                ? Colors.white70
+                                                : const Color(0xFF7D4B26)),
                                     ),
                                   ),
                                 ),
@@ -228,13 +228,29 @@ class _SyllabusSemesterSubjectsList extends ConsumerWidget {
           );
         }
 
+        // Sort: core subjects first, then by descending credits within each group
+        final sorted = [...subjects]..sort((a, b) {
+          final aIsCore = a.subjectType?.toLowerCase() == 'core';
+          final bIsCore = b.subjectType?.toLowerCase() == 'core';
+          if (aIsCore != bIsCore) return aIsCore ? -1 : 1;
+          final aCredits = a.subjectCredit ?? 0;
+          final bCredits = b.subjectCredit ?? 0;
+          return bCredits.compareTo(aCredits);
+        });
+
         return ListView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           padding: const EdgeInsets.symmetric(horizontal: 20),
-          itemCount: subjects.length,
+          itemCount: sorted.length,
           itemBuilder: (context, idx) {
-            final subject = subjects[idx];
+            final subject = sorted[idx];
+            final isCore = subject.subjectType?.toLowerCase() == 'core';
+            final iconColor = subject.subjectType == null
+                ? Theme.of(context).colorScheme.primary
+                : isCore
+                    ? Colors.redAccent
+                    : Colors.green[600]!;
             return Card(
               margin: const EdgeInsets.only(bottom: 8),
               elevation: 0,
@@ -254,7 +270,7 @@ class _SyllabusSemesterSubjectsList extends ConsumerWidget {
                 ),
                 leading: Icon(
                   Icons.book_rounded,
-                  color: Theme.of(context).colorScheme.primary,
+                  color: iconColor,
                   size: 20,
                 ),
                 title: Text(
@@ -274,63 +290,25 @@ class _SyllabusSemesterSubjectsList extends ConsumerWidget {
                         color: Colors.grey,
                       ),
                     ),
-                    if (subject.subjectCredit != null ||
-                        subject.subjectType != null) ...[
+                    if (subject.subjectCredit != null) ...[
                       const SizedBox(height: 4),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          if (subject.subjectCredit != null) ...[
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.primary.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                '${subject.subjectCredit} Cr',
-                                style: GoogleFonts.outfit(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  color: Theme.of(context).colorScheme.primary,
-                                ),
-                              ),
-                            ),
-                            if (subject.subjectType != null)
-                              const SizedBox(width: 6),
-                          ],
-                          if (subject.subjectType != null) ...[
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color:
-                                    subject.subjectType!.toLowerCase() == 'core'
-                                        ? Colors.redAccent.withOpacity(0.1)
-                                        : Colors.green.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                subject.subjectType!.toUpperCase(),
-                                style: GoogleFonts.outfit(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  color: subject.subjectType!.toLowerCase() ==
-                                          'core'
-                                      ? Colors.redAccent
-                                      : Colors.green[700],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ],
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: iconColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          '${subject.subjectCredit} Credits',
+                          style: GoogleFonts.outfit(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: iconColor,
+                          ),
+                        ),
                       ),
                     ],
                   ],

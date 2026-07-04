@@ -22,6 +22,7 @@ class SubjectsRepository {
     required String branchId,
     required int semester,
   }) async {
+    // 1. Fetch global default subjects
     final res = await _supabase
         .from('branch_subjects')
         .select(
@@ -29,9 +30,40 @@ class SubjectsRepository {
         )
         .eq('branch_id', branchId)
         .eq('semester', semester);
-    final subjects = (res as List)
+    
+    final List<Subject> subjects = (res as List)
+        .where((e) => e['subjects'] != null)
         .map((e) => Subject.fromJson(e['subjects']))
         .toList();
+
+    // 2. Fetch user customizations if logged in
+    final userId = Supabase.instance.client.auth.currentUser?.id;
+    if (userId != null) {
+      final customRes = await _supabase
+          .from('user_subject_customizations')
+          .select(
+            'action, subjects(id, name, code, pyq_drive_link, notes_drive_link, course_outcome_link, priority, subject_credit, subject_type)',
+          )
+          .eq('user_id', userId)
+          .eq('branch_id', branchId)
+          .eq('semester', semester);
+
+      for (var custom in customRes as List) {
+        final action = custom['action'] as String;
+        final subjectData = custom['subjects'];
+        if (subjectData == null) continue;
+        final subject = Subject.fromJson(subjectData);
+
+        if (action == 'add') {
+          if (!subjects.any((s) => s.id == subject.id)) {
+            subjects.add(subject);
+          }
+        } else if (action == 'remove') {
+          subjects.removeWhere((s) => s.id == subject.id);
+        }
+      }
+    }
+
     subjects.sort((a, b) {
       if (a.priority == null && b.priority == null) return 0;
       if (a.priority == null) return 1;
@@ -103,12 +135,52 @@ class SubjectsRepository {
     required int semester,
     required String subjectId,
   }) async {
-    await _supabase
-        .from('branch_subjects')
-        .delete()
+    final userId = Supabase.instance.client.auth.currentUser?.id;
+    if (userId == null) {
+      throw Exception('User is not logged in');
+    }
+
+    // Check if there is an existing customization for this subject
+    final existingCustom = await _supabase
+        .from('user_subject_customizations')
+        .select()
+        .eq('user_id', userId)
         .eq('branch_id', branchId)
         .eq('semester', semester)
-        .eq('subject_id', subjectId);
+        .eq('subject_id', subjectId)
+        .maybeSingle();
+
+    if (existingCustom != null) {
+      final action = existingCustom['action'] as String;
+      if (action == 'add') {
+        // If it was added, deleting the customization row reverts it to the default (not present)
+        await _supabase
+            .from('user_subject_customizations')
+            .delete()
+            .eq('id', existingCustom['id']);
+        return;
+      }
+    }
+
+    // Check if the subject is in the global branch_subjects (default)
+    final existingGlobal = await _supabase
+        .from('branch_subjects')
+        .select()
+        .eq('branch_id', branchId)
+        .eq('semester', semester)
+        .eq('subject_id', subjectId)
+        .maybeSingle();
+
+    if (existingGlobal != null) {
+      // If it exists in the global syllabus, we insert a 'remove' customization to hide it for this user
+      await _supabase.from('user_subject_customizations').insert({
+        'user_id': userId,
+        'branch_id': branchId,
+        'semester': semester,
+        'subject_id': subjectId,
+        'action': 'remove',
+      });
+    }
   }
 
   Future<void> addSubjectToSemester({
@@ -116,19 +188,54 @@ class SubjectsRepository {
     required int semester,
     required String subjectId,
   }) async {
-    final yearName = ((semester + 1) ~/ 2).toString();
-    final yearRes = await _supabase
-        .from('years')
-        .select('id')
-        .eq('name', yearName)
-        .maybeSingle();
-    final yearId = yearRes?['id'] as String?;
+    final userId = Supabase.instance.client.auth.currentUser?.id;
+    if (userId == null) {
+      throw Exception('User is not logged in');
+    }
 
-    await _supabase.from('branch_subjects').insert({
+    // Check if there is an existing customization for this subject
+    final existingCustom = await _supabase
+        .from('user_subject_customizations')
+        .select()
+        .eq('user_id', userId)
+        .eq('branch_id', branchId)
+        .eq('semester', semester)
+        .eq('subject_id', subjectId)
+        .maybeSingle();
+
+    if (existingCustom != null) {
+      final action = existingCustom['action'] as String;
+      if (action == 'remove') {
+        // If it was removed, deleting the customization row reverts it to the default (added)
+        await _supabase
+            .from('user_subject_customizations')
+            .delete()
+            .eq('id', existingCustom['id']);
+        return;
+      }
+    }
+
+    // Check if the subject is already in the global branch_subjects (default)
+    final existingGlobal = await _supabase
+        .from('branch_subjects')
+        .select()
+        .eq('branch_id', branchId)
+        .eq('semester', semester)
+        .eq('subject_id', subjectId)
+        .maybeSingle();
+
+    if (existingGlobal != null) {
+      // It's already there globally, so nothing to add
+      return;
+    }
+
+    // Otherwise, insert an 'add' customization
+    await _supabase.from('user_subject_customizations').insert({
+      'user_id': userId,
       'branch_id': branchId,
       'semester': semester,
       'subject_id': subjectId,
-      if (yearId != null) 'year_id': yearId,
+      'action': 'add',
     });
   }
 }

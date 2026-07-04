@@ -87,11 +87,11 @@ class SkulkDbService {
         'user_id': userId,
         'type': type,
         'message': message,
-        'post_id': ?postId,
-        'answer_id': ?answerId,
-        'actor_id': ?actorId,
-        'actor_username': ?actorUsername,
-        'actor_display_name': ?actorDisplayName,
+        'post_id': postId,
+        'answer_id': answerId,
+        'actor_id': actorId,
+        'actor_username': actorUsername,
+        'actor_display_name': actorDisplayName,
       });
     } catch (_) {
       // Notifications are non-critical — fail silently

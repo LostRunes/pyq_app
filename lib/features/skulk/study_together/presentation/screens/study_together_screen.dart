@@ -199,130 +199,180 @@ class StudyTogetherScreenState extends ConsumerState<StudyTogetherScreen> {
                 left: 24,
                 right: 24,
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    'Create Personal Room',
-                    style: GoogleFonts.outfit(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: nameController,
-                    decoration: InputDecoration(
-                      labelText: 'Room Name',
-                      labelStyle: GoogleFonts.outfit(),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      'Create Personal Room',
+                      style: GoogleFonts.outfit(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: descController,
-                    decoration: InputDecoration(
-                      labelText: 'Description',
-                      labelStyle: GoogleFonts.outfit(),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  SwitchListTile(
-                    title: Text(
-                      'Enable Voice Room',
-                      style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
-                    ),
-                    subtitle: Text(
-                      'Users can join both voice and text chat',
-                      style: GoogleFonts.outfit(fontSize: 12),
-                    ),
-                    value: isVoiceEnabled,
-                    onChanged: (val) {
-                      setModalState(() {
-                        isVoiceEnabled = val;
-                      });
-                    },
-                  ),
-                  if (isVoiceEnabled) ...[
                     const SizedBox(height: 12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Max Participants',
-                          style: GoogleFonts.outfit(fontWeight: FontWeight.w600, fontSize: 14),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.primary.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
                         ),
-                        DropdownButton<int>(
-                          value: maxParticipants,
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(
+                            Icons.info_outline_rounded,
+                            color: Theme.of(context).colorScheme.primary,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Room Limitations & Closing Policy',
+                                  style: GoogleFonts.outfit(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                    color: Theme.of(context).colorScheme.onSurface,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '• Voice rooms close automatically when empty (0 active participants).\n'
+                                  '• Text-only rooms close after 15 minutes of message inactivity.\n'
+                                  '• All temporary rooms are permanently deleted 15 minutes after closing.',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 11.5,
+                                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
+                                    height: 1.4,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: nameController,
+                      decoration: InputDecoration(
+                        labelText: 'Room Name',
+                        labelStyle: GoogleFonts.outfit(),
+                        border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          onChanged: (val) {
-                            if (val != null) {
-                              setModalState(() {
-                                maxParticipants = val;
-                              });
-                            }
-                          },
-                          items: [5, 10, 15, 20, 30, 50].map((int val) {
-                            return DropdownMenuItem<int>(
-                              value: val,
-                              child: Text(
-                                '$val Users',
-                                style: GoogleFonts.outfit(fontSize: 14),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: descController,
+                      decoration: InputDecoration(
+                        labelText: 'Description',
+                        labelStyle: GoogleFonts.outfit(),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    SwitchListTile(
+                      title: Text(
+                        'Enable Voice Room',
+                        style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+                      ),
+                      subtitle: Text(
+                        'Users can join both voice and text chat',
+                        style: GoogleFonts.outfit(fontSize: 12),
+                      ),
+                      value: isVoiceEnabled,
+                      onChanged: (val) {
+                        setModalState(() {
+                          isVoiceEnabled = val;
+                        });
+                      },
+                    ),
+                    if (isVoiceEnabled) ...[
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Max Participants',
+                            style: GoogleFonts.outfit(fontWeight: FontWeight.w600, fontSize: 14),
+                          ),
+                          DropdownButton<int>(
+                            value: maxParticipants,
+                            borderRadius: BorderRadius.circular(12),
+                            onChanged: (val) {
+                              if (val != null) {
+                                setModalState(() {
+                                  maxParticipants = val;
+                                });
+                              }
+                            },
+                            items: [5, 10, 15, 20, 30, 50].map((int val) {
+                              return DropdownMenuItem<int>(
+                                value: val,
+                                child: Text(
+                                  '$val Users',
+                                  style: GoogleFonts.outfit(fontSize: 14),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ],
+                      ),
+                    ],
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: () async {
+                        final name = nameController.text.trim();
+                        if (name.isEmpty) return;
+                        Navigator.pop(context);
+                        try {
+                          final newRoom = await ref
+                              .read(roomOperationsProvider)
+                              .createPersonalRoom(
+                                name: name,
+                                description: descController.text.trim(),
+                                isVoiceEnabled: isVoiceEnabled,
+                                maxParticipants: maxParticipants,
+                              );
+                          ref.invalidate(studyRoomsProvider);
+                          await ref
+                              .read(joinedRoomIdsProvider.notifier)
+                              .addRoom(newRoom.id);
+                          if (context.mounted) {
+                            Navigator.pushNamed(
+                              context,
+                              '/study-together/chat',
+                              arguments: newRoom,
+                            );
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Failed to create room: $e'),
                               ),
                             );
-                          }).toList(),
-                        ),
-                      ],
+                          }
+                        }
+                      },
+                      child: Text(
+                        'Create',
+                        style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+                      ),
                     ),
                   ],
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () async {
-                      final name = nameController.text.trim();
-                      if (name.isEmpty) return;
-                      Navigator.pop(context);
-                      try {
-                        final newRoom = await ref
-                            .read(roomOperationsProvider)
-                            .createPersonalRoom(
-                              name: name,
-                              description: descController.text.trim(),
-                              isVoiceEnabled: isVoiceEnabled,
-                              maxParticipants: maxParticipants,
-                            );
-                        ref.invalidate(studyRoomsProvider);
-                        await ref
-                            .read(joinedRoomIdsProvider.notifier)
-                            .addRoom(newRoom.id);
-                        if (context.mounted) {
-                          Navigator.pushNamed(
-                            context,
-                            '/study-together/chat',
-                            arguments: newRoom,
-                          );
-                        }
-                      } catch (e) {
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Failed to create room: $e'),
-                            ),
-                          );
-                        }
-                      }
-                    },
-                    child: Text(
-                      'Create',
-                      style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ],
+                ),
               ),
             );
           },

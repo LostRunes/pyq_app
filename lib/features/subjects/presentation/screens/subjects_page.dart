@@ -12,6 +12,7 @@ import 'package:focus_fox/shared/presentation/widgets/entrance_animations.dart';
 import 'package:focus_fox/core/providers.dart';
 import 'package:focus_fox/features/pyqs/data/models/subject.dart';
 import 'package:lottie/lottie.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SubjectsPage extends ConsumerWidget {
   const SubjectsPage({super.key});
@@ -43,10 +44,18 @@ class SubjectsPage extends ConsumerWidget {
         },
         child: subjectsAsync.when(
           data: (subjects) {
+            // Sort: core first, then highest credits descending
             final filtered = subjects.where((subject) {
               return FuzzySearch.matches(subject.name, searchQuery) ||
                   FuzzySearch.matches(subject.code, searchQuery);
-            }).toList();
+            }).toList()..sort((a, b) {
+              final aIsCore = a.subjectType?.toLowerCase() == 'core';
+              final bIsCore = b.subjectType?.toLowerCase() == 'core';
+              if (aIsCore != bIsCore) return aIsCore ? -1 : 1;
+              final aCredits = a.subjectCredit ?? 0;
+              final bCredits = b.subjectCredit ?? 0;
+              return bCredits.compareTo(aCredits);
+            });
 
             return ListView.builder(
               physics: const AlwaysScrollableScrollPhysics(),
@@ -186,19 +195,23 @@ class SubjectsPage extends ConsumerWidget {
 
                 final subject = filtered[i - 1];
                 final isIconLeft = (i - 1) % 2 == 0;
+                final isCore = subject.subjectType?.toLowerCase() == 'core';
+                final iconColor = subject.subjectType == null
+                    ? Theme.of(context).colorScheme.primary
+                    : isCore
+                        ? Colors.redAccent
+                        : Colors.green[600]!;
 
                 final iconWidget = Container(
                   width: 64,
                   height: 64,
                   decoration: BoxDecoration(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.secondary.withValues(alpha: 0.2),
+                    color: iconColor.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Icon(
                     Icons.book_rounded,
-                    color: Theme.of(context).colorScheme.primary,
+                    color: iconColor,
                     size: 32,
                   ),
                 );
@@ -228,8 +241,7 @@ class SubjectsPage extends ConsumerWidget {
                                 color: Colors.grey,
                               ),
                         ),
-                        if (subject.subjectCredit != null ||
-                            subject.subjectType != null) ...[
+                        if (subject.subjectCredit != null) ...[
                           Text(
                             '•',
                             style: TextStyle(
@@ -237,51 +249,21 @@ class SubjectsPage extends ConsumerWidget {
                               fontSize: 12,
                             ),
                           ),
-                        ],
-                        if (subject.subjectCredit != null) ...[
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 6,
                               vertical: 2,
                             ),
                             decoration: BoxDecoration(
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.primary.withValues(alpha: 0.1),
+                              color: iconColor.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
-                              '${subject.subjectCredit} Cr',
+                              '${subject.subjectCredit} Credits',
                               style: GoogleFonts.outfit(
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold,
-                                color: Theme.of(context).colorScheme.primary,
-                              ),
-                            ),
-                          ),
-                        ],
-                        if (subject.subjectType != null) ...[
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color:
-                                  subject.subjectType!.toLowerCase() == 'core'
-                                  ? Colors.redAccent.withValues(alpha: 0.1)
-                                  : Colors.green.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              subject.subjectType!.toUpperCase(),
-                              style: GoogleFonts.outfit(
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                color:
-                                    subject.subjectType!.toLowerCase() == 'core'
-                                    ? Colors.redAccent
-                                    : Colors.green[700],
+                                color: iconColor,
                               ),
                             ),
                           ),
@@ -1007,6 +989,15 @@ class _AddSubjectDialogContentState
                         const SnackBar(
                           content: Text('Successfully added subject'),
                         ),
+                      );
+                    }
+                  } on PostgrestException catch (e) {
+                    if (context.mounted) {
+                      final message = e.code == '23505'
+                          ? 'This subject is already added to this branch and semester.'
+                          : 'Failed to add subject: ${e.message}';
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(message)),
                       );
                     }
                   } catch (e) {

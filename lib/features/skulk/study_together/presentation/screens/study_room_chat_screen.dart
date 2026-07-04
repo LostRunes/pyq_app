@@ -13,6 +13,7 @@ import '../providers/study_together_providers.dart';
 import '../widgets/room_message_bubble.dart';
 import '../widgets/voice_panel.dart';
 import '../../../../../app/app.dart' show appRouteObserver;
+import 'package:url_launcher/url_launcher.dart';
 
 class StudyRoomChatScreen extends ConsumerStatefulWidget {
   final StudyRoom room;
@@ -1054,15 +1055,111 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen>
                     ),
                   ),
                 ),
-                child: Center(
-                  child: Text(
-                    "This room has ended and is read-only.",
-                    style: GoogleFonts.outfit(
-                      color: Colors.grey,
-                      fontSize: 14,
-                      fontStyle: FontStyle.italic,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      "This room has ended and is read-only.",
+                      style: GoogleFonts.outfit(
+                        color: Colors.grey,
+                        fontSize: 13.5,
+                        fontStyle: FontStyle.italic,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
-                  ),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        ElevatedButton.icon(
+                          onPressed: () async {
+                            try {
+                              await ref.read(studyTogetherRepositoryProvider).downloadChatHistory(
+                                activeRoom.id,
+                                activeRoom.name,
+                              );
+                            } catch (e) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text("Error exporting chat: $e")),
+                                );
+                              }
+                            }
+                          },
+                          icon: const Icon(Icons.download_rounded, size: 16),
+                          label: Text(
+                            'Download Chat',
+                            style: GoogleFonts.outfit(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12.5,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: isDark ? const Color(0xFF2C256E) : Theme.of(context).colorScheme.primaryContainer,
+                            foregroundColor: isDark ? Colors.white : Theme.of(context).colorScheme.onPrimaryContainer,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          ),
+                        ),
+                        if (activeRoom.type == 'personal') ...[
+                          const SizedBox(width: 12),
+                          ElevatedButton.icon(
+                            onPressed: () async {
+                              final creatorId = activeRoom.createdBy;
+                              final creatorProfile = _allUsers.firstWhere(
+                                (u) => u['id'] == creatorId,
+                                orElse: () => <String, dynamic>{},
+                              );
+                              final creatorName = creatorProfile['display_name'] ?? creatorProfile['username'] ?? creatorId ?? 'Unknown Creator';
+                              
+                              final emailSubject = Uri.encodeComponent("Request to Reopen Study Room: ${activeRoom.name}");
+                              final emailBody = Uri.encodeComponent(
+                                "Hello Admin,\n\n"
+                                "I would like to request to reopen the following personal study room:\n\n"
+                                "Room Name: ${activeRoom.name}\n"
+                                "Room ID: ${activeRoom.id}\n"
+                                "Room Creator: $creatorName\n"
+                                "Creator ID: $creatorId\n\n"
+                                "Thank you!"
+                              );
+                              
+                              final Uri emailUri = Uri.parse(
+                                "mailto:focusfox.admin@gmail.com?subject=$emailSubject&body=$emailBody"
+                              );
+                              
+                              try {
+                                await launchUrl(emailUri, mode: LaunchMode.externalApplication);
+                              } catch (e) {
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text("Could not launch email client.")),
+                                  );
+                                }
+                              }
+                            },
+                            icon: const Icon(Icons.refresh_rounded, size: 16),
+                            label: Text(
+                              'Request Reopen',
+                              style: GoogleFonts.outfit(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12.5,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.amber[800],
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
                 ),
               )
             else

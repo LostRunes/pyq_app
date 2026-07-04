@@ -10,12 +10,14 @@ import '../services/push_notification_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'providers/prefs_provider.dart';
 
-/// Lazily-cached singleton for Supabase client 1.
-/// Uses keepAlive so it is never disposed while the app is running.
+/// Primary DB client using the service role key.
+/// This bypasses RLS — necessary because the user's auth session lives on
+/// the secondary DB (Supabase.instance.client), so auth.uid() is always
+/// null on this client and RLS policies would silently block all writes.
 final supabase1ClientProvider = Provider<SupabaseClient>((ref) {
   return SupabaseClient(
     dotenv.env['SUPABASE_URL']!,
-    dotenv.env['SUPABASE_KEY']!,
+    dotenv.env['SUPABASE_SERVICE']!,
   );
 });
 

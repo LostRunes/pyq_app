@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:focus_fox/core/providers.dart';
 import 'package:focus_fox/features/pyqs/presentation/providers/pyq_providers.dart';
 import 'leetcode_webview_screen.dart';
 import 'package:focus_fox/features/pyqs/presentation/screens/solution_viewer_screen.dart';
@@ -15,10 +14,6 @@ class AlgoCodeScreen extends ConsumerStatefulWidget {
 }
 
 class _AlgoCodeScreenState extends ConsumerState<AlgoCodeScreen> {
-  final _supabase = SupabaseClient(
-    dotenv.env['SUPABASE_URL']!,
-    dotenv.env['SUPABASE_KEY']!,
-  );
   String? _selectedTopic;
   bool _isLoadingQuestions = false;
   String? _fetchError;
@@ -46,7 +41,8 @@ class _AlgoCodeScreenState extends ConsumerState<AlgoCodeScreen> {
     });
 
     try {
-      final response = await _supabase
+      final supabase = ref.read(supabase1ClientProvider);
+      final response = await supabase
           .from('leetcode')
           .select(
             'id, parent_topic, difficulty, question_name, question_link, priority_order',
@@ -524,7 +520,8 @@ class _AlgoCodeScreenState extends ConsumerState<AlgoCodeScreen> {
     // Check if solution exists
     bool solutionExists = false;
     try {
-      final response = await _supabase
+      final supabase = ref.read(supabase1ClientProvider);
+      final response = await supabase
           .from('leet_solution')
           .select('id')
           .eq('question_id', question['id'])

@@ -11,6 +11,7 @@ import 'package:focus_fox/features/pyqs/presentation/providers/pyq_providers.dar
 import 'package:focus_fox/features/subjects/presentation/providers/subjects_providers.dart';
 import 'package:focus_fox/features/profile/presentation/widgets/balloon_donut_chart.dart';
 import 'package:focus_fox/features/profile/presentation/widgets/heatmap_widget.dart';
+import 'package:focus_fox/features/auth/presentation/widgets/mascot_avatar_selector.dart';
 
 
 class ProfileScreen extends ConsumerStatefulWidget {
@@ -619,14 +620,26 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       : const Color(0xFFFFF7ED),
                   child: Padding(
                     padding: const EdgeInsets.all(4.0),
-                    child: Image.asset(
-                      _avatarPath,
-                      fit: BoxFit.contain,
-                      errorBuilder: (context, error, stackTrace) => Image.asset(
-                        'assets/images/pikachu.png',
-                        fit: BoxFit.contain,
-                      ),
-                    ),
+                    child: _avatarPath.startsWith('http')
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(46),
+                            child: Image.network(
+                              _avatarPath,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) => Image.asset(
+                                'assets/images/pikachu.png',
+                                fit: BoxFit.contain,
+                              ),
+                            ),
+                          )
+                        : Image.asset(
+                            _avatarPath,
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, error, stackTrace) => Image.asset(
+                              'assets/images/pikachu.png',
+                              fit: BoxFit.contain,
+                            ),
+                          ),
                   ),
                 ),
                 Positioned(
@@ -1041,49 +1054,13 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
               ),
             ),
             const SizedBox(height: 10),
-            SizedBox(
-              height: 76,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                itemCount: widget.mascots.length,
-                itemBuilder: (context, index) {
-                  final mascot = widget.mascots[index];
-                  final isSelected = _avatarPath == mascot['path'];
-                  return GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        _avatarPath = mascot['path']!;
-                      });
-                    },
-                    child: Container(
-                      margin: const EdgeInsets.only(right: 12),
-                      padding: const EdgeInsets.all(3),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: isSelected
-                              ? theme.colorScheme.primary
-                              : Colors.transparent,
-                          width: 2.5,
-                        ),
-                      ),
-                      child: CircleAvatar(
-                        radius: 28,
-                        backgroundColor: isDark
-                            ? const Color(0xFF15112E)
-                            : Colors.amber.shade50.withOpacity(0.3),
-                        child: Padding(
-                          padding: const EdgeInsets.all(4.0),
-                          child: Image.asset(
-                            mascot['path']!,
-                            fit: BoxFit.contain,
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
+            MascotAvatarSelector(
+              selectedAvatarPath: _avatarPath,
+              onSelected: (path) {
+                setState(() {
+                  _avatarPath = path;
+                });
+              },
             ),
             const SizedBox(height: 20),
 
