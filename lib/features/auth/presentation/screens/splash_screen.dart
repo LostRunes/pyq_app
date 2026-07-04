@@ -50,6 +50,13 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   }
 
   Future<({String routeName, Object? arguments})> _determineDestination() async {
+    // Wait for the Supabase session recovery to complete (up to 1.5 seconds)
+    int checkCount = 0;
+    while (Supabase.instance.client.auth.currentSession == null && checkCount < 15) {
+      await Future.delayed(const Duration(milliseconds: 100));
+      checkCount++;
+    }
+
     final session = Supabase.instance.client.auth.currentSession;
     if (session == null) {
       return (routeName: '/login', arguments: null);
@@ -66,6 +73,18 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
         .maybeSingle();
 
     if (profile == null) {
+      return (routeName: '/login', arguments: {'showUsernameDialog': true});
+    }
+
+    final username = profile['username'] as String?;
+    final avatarUrl = profile['avatar_url'] as String?;
+    final isNewProfile = username == null ||
+        username.trim().isEmpty ||
+        avatarUrl == null ||
+        avatarUrl.trim().isEmpty ||
+        (username.startsWith('user_') && username.length == 13);
+
+    if (isNewProfile) {
       return (routeName: '/login', arguments: {'showUsernameDialog': true});
     }
 
@@ -241,16 +260,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                   label: Text(
                     'Retry',
                     style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ] else if (_isLoading) ...[
-                const SizedBox(height: 32),
-                const SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2.5,
-                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFF9F0A)),
                   ),
                 ),
               ],

@@ -819,9 +819,9 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
   }
 
   Widget _buildSkulkPage(BuildContext context) {
-    // Read directly from providers — no local duplicate state.
-    final branchId = ref.read(selectedBranchIdProvider);
-    final semester = ref.read(selectedSemesterProvider);
+    // Watch directly from providers — reactive state updates.
+    final branchId = ref.watch(selectedBranchIdProvider);
+    final semester = ref.watch(selectedSemesterProvider);
     return SkulkFeedScreen(branchId: branchId, semester: semester);
   }
 
