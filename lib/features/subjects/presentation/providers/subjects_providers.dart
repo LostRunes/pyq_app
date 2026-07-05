@@ -26,6 +26,18 @@ final subjectsProvider =
       );
     });
 
+final globalSubjectsProvider =
+    FutureProvider.family<List<Subject>, ({String branchId, int semester})>((
+      ref,
+      arg,
+    ) {
+      final repository = ref.watch(subjectsRepositoryProvider);
+      return repository.getGlobalSubjectsBySemester(
+        branchId: arg.branchId,
+        semester: arg.semester,
+      );
+    });
+
 final allSubjectsProvider = FutureProvider<List<Subject>>((ref) {
   final repository = ref.watch(subjectsRepositoryProvider);
   return repository.getAllSubjects();

@@ -122,6 +122,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
+      extendBody: true,
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         automaticallyImplyLeading: false,
@@ -574,34 +575,40 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
               )
             : null,
         child: SafeArea(
-          child: PageView(
-            key: const PageStorageKey('main_navigation_page_view'),
-            controller: _pageController,
-            onPageChanged: (index) {
-              // Skip intermediate callbacks fired during a programmatic
-              // animateToPage() call — this is what caused the blob to flicker.
-              if (_isAnimatingPage) return;
-              // All 5 nav indices map 1:1 to PageView pages now.
-              ref.read(mainNavigationIndexProvider.notifier).setIndex(index);
-              setState(() {
-                // Do NOT reset _isSearching here — that would dismiss the
-                // keyboard unexpectedly when the user swipes between tabs.
-                _skulkSearchController.clear();
-                ref.read(subjectsSearchProvider.notifier).updateSearch('');
-                ref.read(prepZoneSearchProvider.notifier).updateSearch('');
-                ref.read(utilitiesSearchProvider.notifier).updateSearch('');
-                ref.read(skulkFeedSearchProvider.notifier).updateSearch('');
-              });
-              // When swiping to subjects tab, open the fade animation window
-              if (index == 0) SubjectCardFade.onPageActivated();
-            },
-            children: [
-              const SubjectsPage(),
-              const PrepZonePage(),
-              const UtilitiesPage(),
-              StudyTogetherScreen(key: _studyRoomsKey, embeddedMode: true),
-              _buildSkulkPage(context),
-            ],
+          bottom: false,
+          child: Padding(
+            padding: EdgeInsets.only(
+              bottom: 76 + MediaQuery.of(context).padding.bottom,
+            ),
+            child: PageView(
+              key: const PageStorageKey('main_navigation_page_view'),
+              controller: _pageController,
+              onPageChanged: (index) {
+                // Skip intermediate callbacks fired during a programmatic
+                // animateToPage() call — this is what caused the blob to flicker.
+                if (_isAnimatingPage) return;
+                // All 5 nav indices map 1:1 to PageView pages now.
+                ref.read(mainNavigationIndexProvider.notifier).setIndex(index);
+                setState(() {
+                  // Do NOT reset _isSearching here — that would dismiss the
+                  // keyboard unexpectedly when the user swipes between tabs.
+                  _skulkSearchController.clear();
+                  ref.read(subjectsSearchProvider.notifier).updateSearch('');
+                  ref.read(prepZoneSearchProvider.notifier).updateSearch('');
+                  ref.read(utilitiesSearchProvider.notifier).updateSearch('');
+                  ref.read(skulkFeedSearchProvider.notifier).updateSearch('');
+                });
+                // When swiping to subjects tab, open the fade animation window
+                if (index == 0) SubjectCardFade.onPageActivated();
+              },
+              children: [
+                const SubjectsPage(),
+                const PrepZonePage(),
+                const UtilitiesPage(),
+                StudyTogetherScreen(key: _studyRoomsKey, embeddedMode: true),
+                _buildSkulkPage(context),
+              ],
+            ),
           ),
         ),
       ),
