@@ -45,17 +45,18 @@ class SubjectsPage extends ConsumerWidget {
         child: subjectsAsync.when(
           data: (subjects) {
             // Sort: core first, then highest credits descending
-            final filtered = subjects.where((subject) {
-              return FuzzySearch.matches(subject.name, searchQuery) ||
-                  FuzzySearch.matches(subject.code, searchQuery);
-            }).toList()..sort((a, b) {
-              final aIsCore = a.subjectType?.toLowerCase() == 'core';
-              final bIsCore = b.subjectType?.toLowerCase() == 'core';
-              if (aIsCore != bIsCore) return aIsCore ? -1 : 1;
-              final aCredits = a.subjectCredit ?? 0;
-              final bCredits = b.subjectCredit ?? 0;
-              return bCredits.compareTo(aCredits);
-            });
+            final filtered =
+                subjects.where((subject) {
+                  return FuzzySearch.matches(subject.name, searchQuery) ||
+                      FuzzySearch.matches(subject.code, searchQuery);
+                }).toList()..sort((a, b) {
+                  final aIsCore = a.subjectType?.toLowerCase() == 'core';
+                  final bIsCore = b.subjectType?.toLowerCase() == 'core';
+                  if (aIsCore != bIsCore) return aIsCore ? -1 : 1;
+                  final aCredits = a.subjectCredit ?? 0;
+                  final bCredits = b.subjectCredit ?? 0;
+                  return bCredits.compareTo(aCredits);
+                });
 
             return ListView.builder(
               physics: const AlwaysScrollableScrollPhysics(),
@@ -195,12 +196,7 @@ class SubjectsPage extends ConsumerWidget {
 
                 final subject = filtered[i - 1];
                 final isIconLeft = (i - 1) % 2 == 0;
-                final isCore = subject.subjectType?.toLowerCase() == 'core';
-                final iconColor = subject.subjectType == null
-                    ? Theme.of(context).colorScheme.primary
-                    : isCore
-                        ? Colors.redAccent
-                        : Colors.green[600]!;
+                final iconColor = Theme.of(context).colorScheme.primary;
 
                 final iconWidget = Container(
                   width: 64,
@@ -209,10 +205,12 @@ class SubjectsPage extends ConsumerWidget {
                     color: iconColor.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: Icon(
-                    Icons.book_rounded,
-                    color: iconColor,
-                    size: 32,
+                  padding: const EdgeInsets.all(2),
+                  child: Image.asset(
+                    isDark
+                        ? 'assets/images/ourple_honey.png'
+                        : 'assets/images/yello_honey.png',
+                    fit: BoxFit.contain,
                   ),
                 );
 
@@ -338,7 +336,10 @@ class SubjectsPage extends ConsumerWidget {
                             child: BackdropFilter(
                               filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
                               child: Padding(
-                                padding: const EdgeInsets.all(24),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 24,
+                                  vertical: 12,
+                                ),
                                 child: Row(
                                   children: [
                                     if (isIconLeft) ...[
@@ -368,13 +369,53 @@ class SubjectsPage extends ConsumerWidget {
             physics: const AlwaysScrollableScrollPhysics(),
             children: [
               SizedBox(
-                height: MediaQuery.of(context).size.height * 0.4,
+                height: MediaQuery.of(context).size.height * 0.7,
                 child: Center(
                   child: Padding(
-                    padding: const EdgeInsets.all(24.0),
-                    child: Text(
-                      'Error: $e\n\nPull down to retry',
-                      textAlign: TextAlign.center,
+                    padding: const EdgeInsets.symmetric(horizontal: 32.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        SizedBox(
+                          height: 180,
+                          width: 180,
+                          child: Image.asset(
+                            'assets/images/frustrated_racoon.png',
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        Text(
+                          'Oops, no internet!',
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.outfit(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Failed to load subjects. Please check your connection and pull down to retry.',
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.outfit(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.grey,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Details: $e',
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.outfit(
+                            fontSize: 12,
+                            color: Colors.grey.withOpacity(0.7),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -809,9 +850,9 @@ class _AddSubjectDialogContentState
   Widget build(BuildContext context) {
     final branchesAsync = ref.watch(branchesProvider);
 
-    // We watch the subjects for the selected branch/semester in the popup (source)
+    // We watch the global default subjects for the selected branch/semester in the popup (source)
     final sourceSubjectsAsync = ref.watch(
-      subjectsProvider((
+      globalSubjectsProvider((
         branchId: _selectedBranchId,
         semester: _selectedSemester,
       )),
@@ -996,9 +1037,9 @@ class _AddSubjectDialogContentState
                       final message = e.code == '23505'
                           ? 'This subject is already added to this branch and semester.'
                           : 'Failed to add subject: ${e.message}';
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(message)),
-                      );
+                      ScaffoldMessenger.of(
+                        context,
+                      ).showSnackBar(SnackBar(content: Text(message)));
                     }
                   } catch (e) {
                     if (context.mounted) {
