@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:focus_fox/core/providers/prefs_provider.dart';
+import 'package:focus_fox/core/providers/user_profile_provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 // ── Bee tap counter (persisted) ──────────────────────────────────────────────
 
@@ -9,13 +11,73 @@ class BeeTapCountNotifier extends Notifier<int> {
   @override
   int build() {
     final prefs = ref.watch(sharedPrefsProvider);
-    return prefs.getInt(_key) ?? 0;
+    final localCount = prefs.getInt(_key) ?? 0;
+
+    // Sync initially if user is already logged in
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user != null) {
+      Future.microtask(() => _syncWithSupabase(user, localCount));
+    }
+
+    // Listen for future auth state changes
+    ref.listen<AsyncValue<User?>>(authUserProvider, (previous, next) {
+      final newUser = next.value;
+      if (newUser != null) {
+        _syncWithSupabase(newUser, state);
+      }
+    });
+
+    return localCount;
   }
 
   Future<void> increment() async {
     state = state + 1;
     final prefs = ref.read(sharedPrefsProvider);
     await prefs.setInt(_key, state);
+
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user != null) {
+      try {
+        await Supabase.instance.client.from('user_bee_kills').upsert({
+          'user_id': user.id,
+          'kills': state,
+          'updated_at': DateTime.now().toUtc().toIso8601String(),
+        });
+      } catch (e) {
+        print('Failed to upsert bee kills on increment: $e');
+      }
+    }
+  }
+
+  Future<void> _syncWithSupabase(User user, int localCount) async {
+    try {
+      final response = await Supabase.instance.client
+          .from('user_bee_kills')
+          .select('kills')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+      int remoteCount = 0;
+      if (response != null && response['kills'] != null) {
+        remoteCount = response['kills'] as int;
+      }
+
+      if (localCount > remoteCount) {
+        // Sync local count to database
+        await Supabase.instance.client.from('user_bee_kills').upsert({
+          'user_id': user.id,
+          'kills': localCount,
+          'updated_at': DateTime.now().toUtc().toIso8601String(),
+        });
+      } else if (remoteCount > localCount) {
+        // Sync database count to local
+        state = remoteCount;
+        final prefs = ref.read(sharedPrefsProvider);
+        await prefs.setInt(_key, remoteCount);
+      }
+    } catch (e) {
+      print('Failed to sync bee kills with Supabase: $e');
+    }
   }
 }
 

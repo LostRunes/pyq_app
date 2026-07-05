@@ -22,6 +22,7 @@ import 'package:focus_fox/features/utilities/presentation/screens/utilities_page
 import 'package:focus_fox/services/analytics_service.dart';
 import 'package:focus_fox/shared/widgets/theme_toggle_button.dart';
 import 'package:focus_fox/shared/presentation/widgets/entrance_animations.dart';
+import 'package:focus_fox/features/auth/presentation/widgets/bee_leaderboard_sheet.dart';
 
 class MainNavigationScreen extends ConsumerStatefulWidget {
   final String branchId;
@@ -318,6 +319,8 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
                   ref.read(themeModeProvider.notifier).toggle();
                 } else if (value == 'logout') {
                   _showLogoutDialog(context);
+                } else if (value == 'bee_leaderboard') {
+                  _showBeeLeaderboard(context);
                 }
               },
               itemBuilder: (BuildContext context) {
@@ -374,6 +377,26 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
                         const SizedBox(width: 12),
                         Text(
                           'About',
+                          style: GoogleFonts.outfit(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'bee_leaderboard',
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.emoji_events_rounded,
+                          color: Color(0xFFFF9F0A),
+                          size: 20,
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          'Bee Leaderboard',
                           style: GoogleFonts.outfit(
                             fontWeight: FontWeight.bold,
                             fontSize: 13,
@@ -878,6 +901,15 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
           ),
         ],
       ),
+    );
+  }
+
+  void _showBeeLeaderboard(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => const BeeLeaderboardSheet(),
     );
   }
 }
