@@ -16,6 +16,9 @@ class RoomMessageBubble extends StatefulWidget {
   final VoidCallback? onDelete;
   final ValueChanged<String>? onReact;
 
+  final bool isPinned;
+  final VoidCallback? onPinToggle;
+
   const RoomMessageBubble({
     super.key,
     required this.message,
@@ -25,6 +28,8 @@ class RoomMessageBubble extends StatefulWidget {
     this.onEdit,
     this.onDelete,
     this.onReact,
+    this.isPinned = false,
+    this.onPinToggle,
   });
 
   @override
@@ -111,13 +116,17 @@ class _RoomMessageBubbleState extends State<RoomMessageBubble> with SingleTicker
     final isMe = widget.message.userId == currentUserId;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final bubbleColor = isMe
-        ? Theme.of(context).colorScheme.primary
-        : (isDark ? const Color(0xFF262626) : const Color(0xFFEFEFEF));
+    final bubbleColor = isDark
+        ? (isMe
+            ? const Color(0xFF221F2F) // Subtle dark grey-purple for me
+            : const Color(0xFF3B2E68)) // Very light purple for incoming
+        : (isMe
+            ? const Color(0xFFF5F4F0) // Clean cream-white for me
+            : const Color(0xFFFFEAD2)); // Very light orange for incoming
 
-    final textColor = isMe
+    final textColor = isDark
         ? Colors.white
-        : (isDark ? const Color(0xFFE4E6EB) : const Color(0xFF0F1419));
+        : (isMe ? const Color(0xFF2C1D00) : const Color(0xFF6D4C00));
 
     final timeStr = _formatTimestamp(widget.message.createdAt);
 
@@ -294,9 +303,9 @@ class _RoomMessageBubbleState extends State<RoomMessageBubble> with SingleTicker
                                             margin: const EdgeInsets.only(bottom: 6),
                                             padding: const EdgeInsets.all(8),
                                             decoration: BoxDecoration(
-                                              color: isMe
-                                                  ? Colors.white.withOpacity(0.15)
-                                                  : (isDark ? const Color(0xFF1E1E1E) : const Color(0xFFE2E2E2)),
+                                              color: isDark
+                                                  ? Colors.white.withOpacity(0.12)
+                                                  : Colors.black.withOpacity(0.06),
                                               borderRadius: BorderRadius.circular(12),
                                             ),
                                             child: Column(
@@ -610,6 +619,14 @@ class _RoomMessageBubbleState extends State<RoomMessageBubble> with SingleTicker
                 ),
               ),
               Divider(color: isDark ? Colors.grey[800] : Colors.grey[300], thickness: 0.5),
+              ListTile(
+                leading: Icon(widget.isPinned ? Icons.pin_drop_rounded : Icons.push_pin_rounded),
+                title: Text(widget.isPinned ? 'Unpin Message' : 'Pin Message', style: GoogleFonts.outfit()),
+                onTap: () {
+                  Navigator.pop(context);
+                  if (widget.onPinToggle != null) widget.onPinToggle!();
+                },
+              ),
               ListTile(
                 leading: const Icon(Icons.copy_rounded),
                 title: Text('Copy Text', style: GoogleFonts.outfit()),
