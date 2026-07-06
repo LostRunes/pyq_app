@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:focus_fox/core/providers/prefs_provider.dart';
 import 'package:focus_fox/core/providers/auth_provider.dart';
 import 'package:focus_fox/services/push_notification_service.dart';
+import 'package:focus_fox/services/update_service.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -88,7 +89,21 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       return (routeName: '/login', arguments: {'showUsernameDialog': true});
     }
 
-    // Profile exists, perform email mapping
+    // Profile exists: Check SharedPreferences for previously saved branch & semester first
+    final prefs = ref.read(sharedPrefsProvider);
+    final savedBranchId = prefs.getString('selected_branch_id');
+    final savedSemester = prefs.getInt('selected_semester');
+
+    if (savedBranchId != null &&
+        savedBranchId.isNotEmpty &&
+        savedSemester != null) {
+      return (routeName: '/main_navigation', arguments: {
+        'branchId': savedBranchId,
+        'semester': savedSemester,
+      });
+    }
+
+    // Otherwise, perform email mapping to determine default redirect
     final email = session.user.email ?? '';
     final kiitRegex = RegExp(r'^(\d+)@kiit\.ac\.in$', caseSensitive: false);
     final isKiit = kiitRegex.hasMatch(email);
@@ -96,20 +111,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     if (isKiit) {
       final redirect = await ref.read(authRepositoryProvider).getRedirectResult(email);
       return (routeName: redirect.routeName, arguments: redirect.arguments);
-    } else {
-      // Non-KIIT user: Check SharedPreferences for previously saved branch & semester
-      final prefs = ref.read(sharedPrefsProvider);
-      final savedBranchId = prefs.getString('selected_branch_id');
-      final savedSemester = prefs.getInt('selected_semester');
-
-      if (savedBranchId != null &&
-          savedBranchId.isNotEmpty &&
-          savedSemester != null) {
-        return (routeName: '/main_navigation', arguments: {
-          'branchId': savedBranchId,
-          'semester': savedSemester,
-        });
-      }
     }
 
     return (routeName: '/selection', arguments: null);
@@ -122,8 +123,13 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       _isLoading = true;
     });
 
+    // Run the update check and the auth/animation in parallel.
+    // The update check is intentionally fire-and-forget for flexible updates,
+    // but for immediate updates it will block until Play Store handles the flow.
     final authCheckFuture = _determineDestination();
     final animationDelayFuture = Future.delayed(const Duration(milliseconds: 1800));
+    // Update check runs concurrently — doesn't delay the splash animation.
+    unawaited(UpdateService.instance.checkForUpdates());
 
     try {
       final results = await Future.wait([

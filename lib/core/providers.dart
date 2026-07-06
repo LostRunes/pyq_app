@@ -44,7 +44,11 @@ Future<void> signOutCompletely({WidgetRef? ref}) async {
     await PushNotificationService.deleteDeviceToken();
   } catch (_) {}
   try {
-    // 1. Revoke Google token so account picker shows next time
+    // 1. Clear Google's local cached session so the account picker always shows next time.
+    // We use signOut() (not disconnect()) — disconnect() revokes the OAuth token server-side
+    // and causes PlatformException on the next signIn() call. signOut() is enough because
+    // we already removed signInSilently() from the sign-in flow, which was the root cause
+    // of the auto-login skipping the account picker.
     final googleSignIn = GoogleSignIn();
     await googleSignIn.signOut();
   } catch (_) {

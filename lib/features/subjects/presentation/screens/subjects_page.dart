@@ -208,8 +208,8 @@ class SubjectsPage extends ConsumerWidget {
                   padding: const EdgeInsets.all(2),
                   child: Image.asset(
                     isDark
-                        ? 'assets/images/ourple_honey.png'
-                        : 'assets/images/yello_honey.png',
+                        ? 'assets/images/honey_dark.png'
+                        : 'assets/images/honey_light.png',
                     fit: BoxFit.contain,
                   ),
                 );

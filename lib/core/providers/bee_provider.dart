@@ -19,10 +19,20 @@ class BeeTapCountNotifier extends Notifier<int> {
       Future.microtask(() => _syncWithSupabase(user, localCount));
     }
 
-    // Listen for future auth state changes
+      // Listen for future auth state changes
     ref.listen<AsyncValue<User?>>(authUserProvider, (previous, next) {
+      final prevUser = previous?.value;
       final newUser = next.value;
+
       if (newUser != null) {
+        // If the user identity changed (account switch or fresh login after logout),
+        // reset the local count to 0 first so we don't push stale data into the new
+        // user's record. The sync will then pull the correct remote count.
+        if (prevUser?.id != newUser.id) {
+          state = 0;
+          final prefs = ref.read(sharedPrefsProvider);
+          prefs.setInt(_key, 0);
+        }
         _syncWithSupabase(newUser, state);
       }
     });
