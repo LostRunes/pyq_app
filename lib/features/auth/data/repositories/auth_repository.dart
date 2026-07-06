@@ -29,8 +29,10 @@ class AuthRepository {
 
   Future<void> signInWithGoogle() async {
     try {
-      GoogleSignInAccount? googleUser = await _googleSignIn.signInSilently();
-      googleUser ??= await _googleSignIn.signIn();
+      // Do NOT call signInSilently() here — it bypasses the account picker and
+      // auto-selects the previously cached account without user confirmation.
+      // We always want the explicit account picker after a logout.
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
 
       if (googleUser == null) {
         // User dismissed the picker
