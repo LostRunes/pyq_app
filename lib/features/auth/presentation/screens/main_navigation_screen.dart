@@ -320,7 +320,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
                 } else if (value == 'logout') {
                   _showLogoutDialog(context);
                 } else if (value == 'bee_leaderboard') {
-                  _showBeeLeaderboard(context);
+                  Navigator.pushNamed(context, '/bee_dashboard');
                 }
               },
               itemBuilder: (BuildContext context) {
@@ -902,15 +902,6 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
           ),
         ],
       ),
-    );
-  }
-
-  void _showBeeLeaderboard(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => const BeeLeaderboardSheet(),
     );
   }
 }
