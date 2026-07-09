@@ -11,6 +11,7 @@ import 'package:focus_fox/features/profile/presentation/screens/profile_screen.d
 import 'package:focus_fox/features/settings/presentation/screens/settings_screen.dart';
 import 'package:focus_fox/features/settings/presentation/screens/about_screen.dart';
 import 'package:focus_fox/features/auth/presentation/screens/login_screen.dart';
+import 'package:focus_fox/features/auth/presentation/screens/bee_dashboard_screen.dart';
 import 'package:focus_fox/features/pyqs/data/models/subject.dart';
 import 'package:focus_fox/features/uploads/presentation/screens/upload_notes_screen.dart';
 import 'package:focus_fox/features/utilities/presentation/screens/gpa_calculator_screen.dart';
@@ -71,6 +72,11 @@ class AppRouter {
             branchId: args['branchId'],
             semester: args['semester'],
           ),
+          settings: settings,
+        );
+      case '/bee_dashboard':
+        return ParallaxPageRoute(
+          child: const BeeDashboardScreen(),
           settings: settings,
         );
       case '/subject_dashboard':

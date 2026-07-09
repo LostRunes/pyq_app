@@ -104,6 +104,10 @@ flutter:
     - json/hybrid_logo.json
     - json/coding.json
     - json/Honey_bee.json
+    - json/Confeti.json
+    - json/robot_syllabus.json
+    - json/aptitude.json
+    - json/gate_fox.json
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
