@@ -41,6 +41,24 @@ class PrepZonePage extends ConsumerWidget {
         'isComingSoon': false,
         'lottie': 'json/robot_syllabus.json',
       },
+      {
+        'title': 'Aptitude',
+        'desc': 'Quantitative, logical reasoning & verbal ability',
+        'icon': Icons.psychology_rounded,
+        'route': '',
+        'color': const Color(0xFF8B5CF6), // Purple
+        'isComingSoon': true,
+        'lottie': 'json/aptitude.json',
+      },
+      {
+        'title': 'GATE',
+        'desc': 'Graduate Aptitude Test in Engineering prep',
+        'icon': Icons.school_rounded,
+        'route': '',
+        'color': const Color(0xFF10B981), // Emerald
+        'isComingSoon': true,
+        'lottie': 'json/gate_fox.json',
+      },
     ];
 
     final filteredItems = prepItems.where((item) {
@@ -106,9 +124,20 @@ class PrepZonePage extends ConsumerWidget {
                       delay: Duration(milliseconds: index * 100),
                       duration: const Duration(milliseconds: 500),
                       child: InkWell(
-                        onTap: () {
-                          Navigator.pushNamed(context, item['route'] as String);
-                        },
+                        onTap: (item['isComingSoon'] as bool? ?? false)
+                            ? () {
+                                ScaffoldMessenger.of(context).clearSnackBars();
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('${item['title']} is coming soon!'),
+                                    duration: const Duration(seconds: 2),
+                                    behavior: SnackBarBehavior.floating,
+                                  ),
+                                );
+                              }
+                            : () {
+                                Navigator.pushNamed(context, item['route'] as String);
+                              },
                         borderRadius: BorderRadius.circular(32),
                         child: Container(
                           decoration: BoxDecoration(
@@ -184,6 +213,27 @@ class PrepZonePage extends ConsumerWidget {
                                         height: 1.4,
                                       ),
                                     ),
+                                    if (item['isComingSoon'] as bool? ?? false) ...[
+                                      const SizedBox(height: 12),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 10,
+                                          vertical: 4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: Colors.black.withOpacity(0.18),
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Text(
+                                          'Coming soon..',
+                                          style: GoogleFonts.outfit(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w800,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ],
                                 ),
                               ),
