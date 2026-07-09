@@ -6,6 +6,7 @@ import '../widgets/active_lobby_card.dart';
 import '../widgets/subject_room_card.dart';
 import '../widgets/community_space_tile.dart';
 import '../widgets/personal_room_card.dart';
+import '../widgets/study_together_skeleton.dart';
 import 'package:focus_fox/shared/widgets/custom_search_bar.dart';
 import 'package:focus_fox/utils/fuzzy_search.dart';
 import 'package:focus_fox/shared/presentation/widgets/entrance_animations.dart';
@@ -727,8 +728,7 @@ class StudyTogetherScreenState extends ConsumerState<StudyTogetherScreen> {
                 ),
                 // 1. COMMUNITY SPACES SECTION (Top, always visible, non-collapsible)
                 communityAsync.when(
-                  loading: () =>
-                      const Center(child: CircularProgressIndicator()),
+                  loading: () => const StudyTogetherSkeleton.community(),
                   error: (err, stack) => const SizedBox.shrink(),
                   data: (communitySpaces) {
                     if (communitySpaces.isEmpty) return const SizedBox.shrink();
@@ -929,8 +929,7 @@ class StudyTogetherScreenState extends ConsumerState<StudyTogetherScreen> {
 
                 // 1.5 PERSONAL ROOMS SECTION (Collapsible with +/- toggle)
                 personalAsync.when(
-                  loading: () =>
-                      const Center(child: CircularProgressIndicator()),
+                  loading: () => const StudyTogetherSkeleton.personal(),
                   error: (err, stack) => const SizedBox.shrink(),
                   data: (personalRooms) {
                     if (personalRooms.isEmpty) return const SizedBox.shrink();
@@ -1018,8 +1017,7 @@ class StudyTogetherScreenState extends ConsumerState<StudyTogetherScreen> {
 
                 // 2. SUBJECT ROOMS SECTION (Middle, collapsible with +/- toggle)
                 subjectsAsync.when(
-                  loading: () =>
-                      const Center(child: CircularProgressIndicator()),
+                  loading: () => const StudyTogetherSkeleton.subject(),
                   error: (err, stack) => const SizedBox.shrink(),
                   data: (subjectRooms) {
                     if (subjectRooms.isEmpty) return const SizedBox.shrink();
@@ -1185,10 +1183,7 @@ class StudyTogetherScreenState extends ConsumerState<StudyTogetherScreen> {
 
                 // 3. ACTIVE LOBBIES SECTION (Bottom, collapsible with +/- toggle)
                 lobbiesAsync.when(
-                  loading: () => const SizedBox(
-                    height: 140,
-                    child: Center(child: CircularProgressIndicator()),
-                  ),
+                  loading: () => const StudyTogetherSkeleton.lobby(),
                   error: (err, stack) => const SizedBox.shrink(),
                   data: (lobbies) {
                     if (lobbies.isEmpty) return const SizedBox.shrink();
