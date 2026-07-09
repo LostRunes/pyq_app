@@ -320,7 +320,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
                 } else if (value == 'logout') {
                   _showLogoutDialog(context);
                 } else if (value == 'bee_leaderboard') {
-                  _showBeeLeaderboard(context);
+                  Navigator.pushNamed(context, '/bee_dashboard');
                 }
               },
               itemBuilder: (BuildContext context) {
@@ -585,18 +585,19 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: isDark
-            ? BoxDecoration(
-                image: DecorationImage(
+        decoration: BoxDecoration(
+          color: isDark ? null : Theme.of(context).colorScheme.surface,
+          image: isDark
+              ? DecorationImage(
                   image: const AssetImage('assets/images/darktheme_bg.png'),
                   fit: BoxFit.cover,
                   colorFilter: ColorFilter.mode(
                     const Color(0xFF171330).withOpacity(0.55),
                     BlendMode.srcOver,
                   ),
-                ),
-              )
-            : null,
+                )
+              : null,
+        ),
         child: SafeArea(
           bottom: false,
           child: Padding(
@@ -901,15 +902,6 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
           ),
         ],
       ),
-    );
-  }
-
-  void _showBeeLeaderboard(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => const BeeLeaderboardSheet(),
     );
   }
 }

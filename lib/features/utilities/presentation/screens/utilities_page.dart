@@ -51,13 +51,6 @@ class UtilitiesPage extends ConsumerWidget {
         'color': const Color(0xFF6366F1), // Indigo
       },
       {
-        'title': 'Syllabus',
-        'desc': 'Explore subjects & credits',
-        'icon': Icons.collections_bookmark_rounded,
-        'route': '/syllabus',
-        'color': const Color(0xFFF59E0B), // Amber
-      },
-      {
         'title': 'Focus Timer',
         'desc': 'Set a timer to stay focused',
         'icon': Icons.timer_rounded,

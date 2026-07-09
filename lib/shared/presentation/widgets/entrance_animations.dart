@@ -429,13 +429,13 @@ class _SubjectCardFadeState extends State<SubjectCardFade>
     super.initState();
     _ctrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 280),
+      duration: const Duration(milliseconds: 950),
     );
     _opacity = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
     _slide = Tween<Offset>(
-      begin: const Offset(0, 0.05), // 5% = ~8px downward offset
+      begin: const Offset(-0.25, 0.0), // slide in from left to right
       end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
+    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic));
 
     if (_SubjectsActivation.isWithinWindow()) {
       Future.delayed(widget.delay, () {
@@ -456,10 +456,7 @@ class _SubjectCardFadeState extends State<SubjectCardFade>
   Widget build(BuildContext context) {
     return FadeTransition(
       opacity: _opacity,
-      child: SlideTransition(
-        position: _slide,
-        child: widget.child,
-      ),
+      child: SlideTransition(position: _slide, child: widget.child),
     );
   }
 }
