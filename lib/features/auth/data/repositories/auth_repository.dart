@@ -29,8 +29,10 @@ class AuthRepository {
 
   Future<void> signInWithGoogle() async {
     try {
-      GoogleSignInAccount? googleUser = await _googleSignIn.signInSilently();
-      googleUser ??= await _googleSignIn.signIn();
+      // Do NOT call signInSilently() here — it bypasses the account picker and
+      // auto-selects the previously cached account without user confirmation.
+      // We always want the explicit account picker after a logout.
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
 
       if (googleUser == null) {
         // User dismissed the picker
@@ -73,6 +75,20 @@ class AuthRepository {
         .select()
         .eq('id', user.id)
         .maybeSingle();
+
+    // A Supabase trigger auto-creates the user_profiles row on signup,
+    // with a default username like 'user_xxxxxxxx' and null avatar_url.
+    // Treat it as a new profile if username/avatar is missing or default.
+    if (profile == null) return null;
+    final username = profile['username'] as String?;
+    final avatarUrl = profile['avatar_url'] as String?;
+    final isNewProfile = username == null ||
+        username.trim().isEmpty ||
+        avatarUrl == null ||
+        avatarUrl.trim().isEmpty ||
+        (username.startsWith('user_') && username.length == 13);
+
+    if (isNewProfile) return null;
 
     return profile;
   }
@@ -177,7 +193,7 @@ class AuthRepository {
     final res = await Supabase.instance.client
         .from('user_profiles')
         .select('id')
-        .eq('username', username)
+        .eq('username', username.toLowerCase())
         .maybeSingle();
     return res == null;
   }
@@ -188,9 +204,9 @@ class AuthRepository {
     required String? displayName,
     required String avatarUrl,
   }) async {
-    await Supabase.instance.client.from('user_profiles').insert({
+    await Supabase.instance.client.from('user_profiles').upsert({
       'id': userId,
-      'username': username,
+      'username': username.toLowerCase(),
       'display_name': displayName,
       'avatar_url': avatarUrl,
     });

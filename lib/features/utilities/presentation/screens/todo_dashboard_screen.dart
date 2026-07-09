@@ -256,13 +256,18 @@ class _ToDoDashboardState extends ConsumerState<ToDoDashboard> {
             Column(
               children: [
                 DropdownButtonFormField<String>(
+                  isExpanded: true,
                   value: _selectedBranchId,
                   hint: Text('Select Branch', style: GoogleFonts.outfit(fontSize: 12)),
                   dropdownColor: isDark ? const Color(0xFF1A1A2E) : Colors.white,
                   items: branches.map((branch) {
                     return DropdownMenuItem<String>(
                       value: branch.id,
-                      child: Text(branch.name, style: GoogleFonts.outfit(fontSize: 12)),
+                      child: Text(
+                        branch.name,
+                        style: GoogleFonts.outfit(fontSize: 12),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     );
                   }).toList(),
                   onChanged: (val) {
@@ -279,13 +284,18 @@ class _ToDoDashboardState extends ConsumerState<ToDoDashboard> {
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<int>(
+                  isExpanded: true,
                   value: _selectedSemester,
                   hint: Text('Select Semester', style: GoogleFonts.outfit(fontSize: 12)),
                   dropdownColor: isDark ? const Color(0xFF1A1A2E) : Colors.white,
                   items: List.generate(8, (index) => index + 1).map((sem) {
                     return DropdownMenuItem<int>(
                       value: sem,
-                      child: Text('Semester $sem', style: GoogleFonts.outfit(fontSize: 12)),
+                      child: Text(
+                        'Semester $sem',
+                        style: GoogleFonts.outfit(fontSize: 12),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     );
                   }).toList(),
                   onChanged: (val) {
@@ -303,13 +313,18 @@ class _ToDoDashboardState extends ConsumerState<ToDoDashboard> {
                 if (_selectedBranchId != null && _selectedSemester != null) ...[
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
+                    isExpanded: true,
                     value: _selectedSubjectId,
                     hint: Text('Select Subject', style: GoogleFonts.outfit(fontSize: 12)),
                     dropdownColor: isDark ? const Color(0xFF1A1A2E) : Colors.white,
                     items: subjects.map((sub) {
                       return DropdownMenuItem<String>(
                         value: sub.id,
-                        child: Text(sub.name, style: GoogleFonts.outfit(fontSize: 12)),
+                        child: Text(
+                          sub.name,
+                          style: GoogleFonts.outfit(fontSize: 12),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       );
                     }).toList(),
                     onChanged: (val) {
@@ -327,13 +342,18 @@ class _ToDoDashboardState extends ConsumerState<ToDoDashboard> {
                 if (_selectedSubjectId != null) ...[
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
+                    isExpanded: true,
                     value: _selectedTopicId,
                     hint: Text('Select Topic', style: GoogleFonts.outfit(fontSize: 12)),
                     dropdownColor: isDark ? const Color(0xFF1A1A2E) : Colors.white,
                     items: topics.map((top) {
                       return DropdownMenuItem<String>(
                         value: top.id,
-                        child: Text(top.name, style: GoogleFonts.outfit(fontSize: 12)),
+                        child: Text(
+                          top.name,
+                          style: GoogleFonts.outfit(fontSize: 12),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       );
                     }).toList(),
                     onChanged: (val) {
@@ -351,13 +371,18 @@ class _ToDoDashboardState extends ConsumerState<ToDoDashboard> {
             )
           else if (_selectedType == 'Algo')
             DropdownButtonFormField<String>(
+              isExpanded: true,
               value: _selectedAlgoTopic,
               hint: Text('Select Algo & Code Topic', style: GoogleFonts.outfit(fontSize: 12)),
               dropdownColor: isDark ? const Color(0xFF1A1A2E) : Colors.white,
               items: _algoTopics.map((topic) {
                 return DropdownMenuItem<String>(
                   value: topic,
-                  child: Text(topic, style: GoogleFonts.outfit(fontSize: 12)),
+                  child: Text(
+                    topic,
+                    style: GoogleFonts.outfit(fontSize: 12),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 );
               }).toList(),
               onChanged: (val) {

@@ -1,4 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter/foundation.dart';
 import '../../../../core/providers.dart';
 import '../../../../core/providers/prefs_provider.dart';
 import '../../data/models/topic.dart';
@@ -80,7 +82,8 @@ class ProgressNotifier extends Notifier<Map<String, bool>> {
 
   @override
   Map<String, bool> build() {
-    _syncFromSupabase();
+    // Defer sync to after build to avoid "modified provider during build" error
+    Future.microtask(_syncFromSupabase);
     final prefs = ref.watch(sharedPrefsProvider);
     final String? data = prefs.getString(_key);
     if (data != null) {
@@ -106,8 +109,9 @@ class ProgressNotifier extends Notifier<Map<String, bool>> {
   }
 
   Future<void> _syncFromSupabase() async {
-    final supabase = ref.read(supabase1ClientProvider);
-    final user = supabase.auth.currentUser;
+    final supabase = ref.read(supabase2ClientProvider);
+    // Auth session lives on the secondary DB (Supabase.instance.client)
+    final user = Supabase.instance.client.auth.currentUser;
     if (user == null) return;
     try {
       final response = await supabase
@@ -156,8 +160,9 @@ class ProgressNotifier extends Notifier<Map<String, bool>> {
     }
 
     // Sync to Supabase
-    final supabase = ref.read(supabase1ClientProvider);
-    final user = supabase.auth.currentUser;
+    final supabase = ref.read(supabase2ClientProvider);
+    // Auth session lives on the secondary DB (Supabase.instance.client)
+    final user = Supabase.instance.client.auth.currentUser;
     if (user != null) {
       try {
         await supabase.from('student_topic_progress').upsert({
@@ -166,7 +171,9 @@ class ProgressNotifier extends Notifier<Map<String, bool>> {
           'is_completed': isCompleted,
           'updated_at': DateTime.now().toIso8601String(),
         });
-      } catch (_) {}
+      } catch (e, st) {
+        debugPrint('Error syncing topic progress to secondary Supabase: $e\n$st');
+      }
     }
   }
 
@@ -182,15 +189,17 @@ class TrackedTopicsNotifier extends Notifier<Set<String>> {
 
   @override
   Set<String> build() {
-    _syncFromSupabase();
+    // Defer sync to after build to avoid "modified provider during build" error
+    Future.microtask(_syncFromSupabase);
     final prefs = ref.watch(sharedPrefsProvider);
     final List<String>? list = prefs.getStringList(_key);
     return list?.toSet() ?? {};
   }
 
   Future<void> _syncFromSupabase() async {
-    final supabase = ref.read(supabase1ClientProvider);
-    final user = supabase.auth.currentUser;
+    final supabase = ref.read(supabase2ClientProvider);
+    // Auth session lives on the secondary DB (Supabase.instance.client)
+    final user = Supabase.instance.client.auth.currentUser;
     if (user == null) return;
     try {
       final response = await supabase
@@ -242,8 +251,9 @@ class TrackedTopicsNotifier extends Notifier<Set<String>> {
     await prefs.setStringList(_key, newState.toList());
 
     // Sync to Supabase
-    final supabase = ref.read(supabase1ClientProvider);
-    final user = supabase.auth.currentUser;
+    final supabase = ref.read(supabase2ClientProvider);
+    // Auth session lives on the secondary DB (Supabase.instance.client)
+    final user = Supabase.instance.client.auth.currentUser;
     if (user != null) {
       try {
         await supabase.from('student_topic_progress').upsert({
@@ -252,7 +262,9 @@ class TrackedTopicsNotifier extends Notifier<Set<String>> {
           'is_tracked': isTracked,
           'updated_at': DateTime.now().toIso8601String(),
         });
-      } catch (_) {}
+      } catch (e, st) {
+        debugPrint('Error syncing tracked topic to secondary Supabase: $e\n$st');
+      }
     }
   }
 
@@ -286,7 +298,8 @@ class LeetCodeProgressNotifier extends Notifier<Map<String, bool>> {
 
   @override
   Map<String, bool> build() {
-    _syncFromSupabase();
+    // Defer sync to after build to avoid "modified provider during build" error
+    Future.microtask(_syncFromSupabase);
     final prefs = ref.watch(sharedPrefsProvider);
     final String? data = prefs.getString(_key);
     if (data != null) {
@@ -312,8 +325,9 @@ class LeetCodeProgressNotifier extends Notifier<Map<String, bool>> {
   }
 
   Future<void> _syncFromSupabase() async {
-    final supabase = ref.read(supabase1ClientProvider);
-    final user = supabase.auth.currentUser;
+    final supabase = ref.read(supabase2ClientProvider);
+    // Auth session lives on the secondary DB (Supabase.instance.client)
+    final user = Supabase.instance.client.auth.currentUser;
     if (user == null) return;
     try {
       final response = await supabase
@@ -362,8 +376,9 @@ class LeetCodeProgressNotifier extends Notifier<Map<String, bool>> {
     }
 
     // Sync to Supabase
-    final supabase = ref.read(supabase1ClientProvider);
-    final user = supabase.auth.currentUser;
+    final supabase = ref.read(supabase2ClientProvider);
+    // Auth session lives on the secondary DB (Supabase.instance.client)
+    final user = Supabase.instance.client.auth.currentUser;
     if (user != null) {
       try {
         await supabase.from('student_leetcode_progress').upsert({
@@ -372,7 +387,9 @@ class LeetCodeProgressNotifier extends Notifier<Map<String, bool>> {
           'is_completed': isCompleted,
           'updated_at': DateTime.now().toIso8601String(),
         });
-      } catch (_) {}
+      } catch (e, st) {
+        debugPrint('Error syncing LeetCode progress to secondary Supabase: $e\n$st');
+      }
     }
   }
 

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:focus_fox/core/providers.dart';
 import 'package:focus_fox/features/prep_zone/presentation/screens/leetcode_webview_screen.dart';
 
-class SolutionViewerScreen extends StatefulWidget {
+class SolutionViewerScreen extends ConsumerStatefulWidget {
   final String questionId;
   final String questionName;
   final String difficulty;
@@ -21,14 +21,10 @@ class SolutionViewerScreen extends StatefulWidget {
   });
 
   @override
-  State<SolutionViewerScreen> createState() => _SolutionViewerScreenState();
+  ConsumerState<SolutionViewerScreen> createState() => _SolutionViewerScreenState();
 }
 
-class _SolutionViewerScreenState extends State<SolutionViewerScreen> {
-  final _supabase = SupabaseClient(
-    dotenv.env['SUPABASE_URL']!,
-    dotenv.env['SUPABASE_KEY']!,
-  );
+class _SolutionViewerScreenState extends ConsumerState<SolutionViewerScreen> {
   bool _isLoading = true;
   List<Map<String, dynamic>> _solutions = [];
   
@@ -59,7 +55,8 @@ class _SolutionViewerScreenState extends State<SolutionViewerScreen> {
 
   Future<void> _fetchSolutions() async {
     try {
-      final response = await _supabase
+      final supabase = ref.read(supabase1ClientProvider);
+      final response = await supabase
           .from('leet_solution')
           .select('*')
           .eq('question_id', widget.questionId)

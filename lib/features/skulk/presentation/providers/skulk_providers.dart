@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/providers.dart';
 import '../../../../core/providers/prefs_provider.dart';
+import '../../../../core/providers/user_profile_provider.dart';
 import '../../../subjects/presentation/providers/subjects_providers.dart';
 import '../../data/models/comment.dart';
 import '../../data/models/doubt.dart';
@@ -93,6 +94,16 @@ class SkulkFeedNotifier extends AsyncNotifier<List<Doubt>> {
 
   @override
   Future<List<Doubt>> build() async {
+    // Watch auth state — rebuilds automatically whenever auth state changes.
+    // Awaiting .future ensures we stay in AsyncLoading until the stream emits
+    // its first value (i.e. the session is restored or confirmed absent).
+    // This is the core fix for "empty feed on first open": without this guard,
+    // build() would fire before the Supabase session is restored, the query
+    // would run unauthenticated, and RLS would silently return 0 rows.
+    final user = await ref.watch(authUserProvider.future);
+    // If no session, return empty (user is logged out).
+    if (user == null) return [];
+
     // Re-run when any filter changes
     final filter = ref.watch(skulkFeedFilterProvider);
     ref.watch(skulkFeedSearchProvider);
@@ -137,18 +148,21 @@ class SkulkFeedNotifier extends AsyncNotifier<List<Doubt>> {
       }
     }
 
-    final page = await repo.getDoubts(
-      filterType: filter,
-      searchQuery: search,
-      subjectId: subjectId,
-      tagFilter: tag,
-      subjectIds: mySubjectIds,
-      limit: _pageSize,
-      offset: _offset,
-    );
-
-    if (page.length < _pageSize) _hasMore = false;
-    return page;
+    try {
+      final page = await repo.getDoubts(
+        filterType: filter,
+        searchQuery: search,
+        subjectId: subjectId,
+        tagFilter: tag,
+        subjectIds: mySubjectIds,
+        limit: _pageSize,
+        offset: _offset,
+      );
+      if (page.length < _pageSize) _hasMore = false;
+      return page;
+    } catch (e) {
+      rethrow;
+    }
   }
 
   /// Load next page and append
@@ -217,9 +231,9 @@ class SkulkFeedNotifier extends AsyncNotifier<List<Doubt>> {
   }
 }
 
-final skulkFeedProvider = AsyncNotifierProvider<SkulkFeedNotifier, List<Doubt>>(
+final skulkFeedProvider =
+    AsyncNotifierProvider<SkulkFeedNotifier, List<Doubt>>(
   SkulkFeedNotifier.new,
-  isAutoDispose: true,
 );
 
 /// Active Upvotes Tracker Provider (Maps postId/answerId -> boolean upvoted)
@@ -314,7 +328,7 @@ class UserVotesNotifier extends AsyncNotifier<Map<String, bool>> {
     } catch (_) {
       // Revert on error
       state = AsyncData(previousState);
-      
+
       // Revert feed count
       if (feedNotifier.state.hasValue) {
         final list = feedNotifier.state.value!;
@@ -329,7 +343,7 @@ class UserVotesNotifier extends AsyncNotifier<Map<String, bool>> {
           }).toList(),
         );
       }
-      
+
       // Revert detail count
       if (detailNotifier.state.hasValue) {
         final d = detailNotifier.state.value;
@@ -387,7 +401,7 @@ class UserVotesNotifier extends AsyncNotifier<Map<String, bool>> {
     } catch (_) {
       // Revert on error
       state = AsyncData(previousState);
-      
+
       // Revert solution count
       final revertedList = solutionsNotifier.state;
       solutionsNotifier.state = revertedList.map((s) {
@@ -404,42 +418,36 @@ class UserVotesNotifier extends AsyncNotifier<Map<String, bool>> {
 
 final userVotesProvider =
     AsyncNotifierProvider<UserVotesNotifier, Map<String, bool>>(
-      UserVotesNotifier.new,
-      isAutoDispose: true,
-    );
+  UserVotesNotifier.new,
+);
 
-/// Single Doubt detail thread loader (allows local state mutation for upvote counts)
-class DoubtDetailNotifier extends Notifier<AsyncValue<Doubt?>> {
-  DoubtDetailNotifier(this.doubtId);
-  final String doubtId;
+// ---------------------------------------------------------------------------
+// Single Doubt detail thread loader
+// ---------------------------------------------------------------------------
+
+class DoubtDetailNotifier extends AsyncNotifier<Doubt?> {
+  DoubtDetailNotifier(this._doubtId);
+  final String _doubtId;
 
   @override
-  AsyncValue<Doubt?> build() {
-    _loadDoubt();
-    return const AsyncValue.loading();
-  }
-
-  Future<void> _loadDoubt() async {
-    try {
-      final repo = ref.read(skulkRepositoryProvider);
-      final res = await repo.getDoubtDetail(doubtId);
-      state = AsyncValue.data(res);
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
-    }
+  Future<Doubt?> build() async {
+    final repo = ref.read(skulkRepositoryProvider);
+    return await repo.getDoubtDetail(_doubtId);
   }
 }
 
 final doubtDetailProvider =
-    NotifierProvider.family<DoubtDetailNotifier, AsyncValue<Doubt?>, String>(
-      DoubtDetailNotifier.new,
-      isAutoDispose: true,
-    );
+    AsyncNotifierProvider.family<DoubtDetailNotifier, Doubt?, String>(
+  (arg) => DoubtDetailNotifier(arg),
+);
 
-/// Solutions notifier family to manage answers in a thread
+// ---------------------------------------------------------------------------
+// Solutions notifier family to manage answers in a thread
+// ---------------------------------------------------------------------------
+
 class SolutionsNotifier extends Notifier<List<Solution>> {
-  SolutionsNotifier(this.arg);
-  final String arg;
+  SolutionsNotifier(this._arg);
+  final String _arg;
 
   @override
   List<Solution> build() {
@@ -450,7 +458,7 @@ class SolutionsNotifier extends Notifier<List<Solution>> {
   Future<void> _loadSolutions() async {
     final repo = ref.read(skulkRepositoryProvider);
     try {
-      final list = await repo.getSolutions(arg);
+      final list = await repo.getSolutions(_arg);
       state = list;
     } catch (_) {}
   }
@@ -465,21 +473,21 @@ class SolutionsNotifier extends Notifier<List<Solution>> {
   }) async {
     final repo = ref.read(skulkRepositoryProvider);
     final newSol = await repo.createSolution(
-      postId: arg,
+      postId: _arg,
       body: body,
       imageUrls: imageUrls,
     );
     state = [newSol, ...state];
     ref.invalidate(skulkFeedProvider);
-    ref.invalidate(doubtDetailProvider(arg));
+    ref.invalidate(doubtDetailProvider(_arg));
   }
 
   Future<void> deleteSolution(String solutionId) async {
     final repo = ref.read(skulkRepositoryProvider);
-    await repo.deleteSolution(solutionId, arg);
+    await repo.deleteSolution(solutionId, _arg);
     state = state.where((element) => element.id != solutionId).toList();
     ref.invalidate(skulkFeedProvider);
-    ref.invalidate(doubtDetailProvider(arg));
+    ref.invalidate(doubtDetailProvider(_arg));
   }
 
   Future<void> editSolution(String solutionId, String body) async {
@@ -492,25 +500,27 @@ class SolutionsNotifier extends Notifier<List<Solution>> {
 
   Future<void> toggleAcceptSolution(String solutionId, bool isAccepted) async {
     final repo = ref.read(skulkRepositoryProvider);
-    await repo.toggleSolutionAccepted(solutionId, arg, isAccepted);
+    await repo.toggleSolutionAccepted(solutionId, _arg, isAccepted);
 
     // Refresh to reload accurate is_accepted values
     await _loadSolutions();
     ref.invalidate(skulkFeedProvider);
-    ref.invalidate(doubtDetailProvider(arg));
+    ref.invalidate(doubtDetailProvider(_arg));
   }
 }
 
 final solutionsNotifierProvider =
     NotifierProvider.family<SolutionsNotifier, List<Solution>, String>(
-      SolutionsNotifier.new,
-      isAutoDispose: true,
-    );
+  (arg) => SolutionsNotifier(arg),
+);
 
-/// Comments notifier family to manage one-level replies linked to a thread
+// ---------------------------------------------------------------------------
+// Comments notifier family to manage one-level replies linked to a thread
+// ---------------------------------------------------------------------------
+
 class CommentsNotifier extends Notifier<List<Comment>> {
-  CommentsNotifier(this.arg);
-  final String arg;
+  CommentsNotifier(this._arg);
+  final String _arg;
 
   @override
   List<Comment> build() {
@@ -521,7 +531,7 @@ class CommentsNotifier extends Notifier<List<Comment>> {
   Future<void> _loadComments() async {
     final repo = ref.read(skulkRepositoryProvider);
     try {
-      final list = await repo.getComments(arg);
+      final list = await repo.getComments(_arg);
       state = list;
     } catch (_) {}
   }
@@ -529,32 +539,31 @@ class CommentsNotifier extends Notifier<List<Comment>> {
   Future<void> addComment(String body, {String? answerId}) async {
     final repo = ref.read(skulkRepositoryProvider);
     final newComment = await repo.createComment(
-      postId: arg,
+      postId: _arg,
       answerId: answerId,
       body: body,
     );
     state = [...state, newComment];
     ref.invalidate(skulkFeedProvider);
-    ref.invalidate(doubtDetailProvider(arg));
+    ref.invalidate(doubtDetailProvider(_arg));
   }
 
   Future<void> editComment(String commentId, String body) async {
     final repo = ref.read(skulkRepositoryProvider);
-    final updated = await repo.editComment(commentId, body, arg);
+    final updated = await repo.editComment(commentId, body, _arg);
     state = state.map((c) => c.id == commentId ? updated : c).toList();
   }
 
   Future<void> deleteComment(String commentId) async {
     final repo = ref.read(skulkRepositoryProvider);
-    await repo.deleteComment(commentId, arg);
+    await repo.deleteComment(commentId, _arg);
     state = state.where((c) => c.id != commentId).toList();
     ref.invalidate(skulkFeedProvider);
-    ref.invalidate(doubtDetailProvider(arg));
+    ref.invalidate(doubtDetailProvider(_arg));
   }
 }
 
 final commentsNotifierProvider =
     NotifierProvider.family<CommentsNotifier, List<Comment>, String>(
-      CommentsNotifier.new,
-      isAutoDispose: true,
-    );
+  (arg) => CommentsNotifier(arg),
+);

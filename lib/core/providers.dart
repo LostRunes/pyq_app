@@ -10,12 +10,14 @@ import '../services/push_notification_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'providers/prefs_provider.dart';
 
-/// Lazily-cached singleton for Supabase client 1.
-/// Uses keepAlive so it is never disposed while the app is running.
+/// Primary DB client using the service role key.
+/// This bypasses RLS — necessary because the user's auth session lives on
+/// the secondary DB (Supabase.instance.client), so auth.uid() is always
+/// null on this client and RLS policies would silently block all writes.
 final supabase1ClientProvider = Provider<SupabaseClient>((ref) {
   return SupabaseClient(
     dotenv.env['SUPABASE_URL']!,
-    dotenv.env['SUPABASE_KEY']!,
+    dotenv.env['SUPABASE_SERVICE']!,
   );
 });
 
@@ -42,7 +44,11 @@ Future<void> signOutCompletely({WidgetRef? ref}) async {
     await PushNotificationService.deleteDeviceToken();
   } catch (_) {}
   try {
-    // 1. Revoke Google token so account picker shows next time
+    // 1. Clear Google's local cached session so the account picker always shows next time.
+    // We use signOut() (not disconnect()) — disconnect() revokes the OAuth token server-side
+    // and causes PlatformException on the next signIn() call. signOut() is enough because
+    // we already removed signInSilently() from the sign-in flow, which was the root cause
+    // of the auto-login skipping the account picker.
     final googleSignIn = GoogleSignIn();
     await googleSignIn.signOut();
   } catch (_) {
