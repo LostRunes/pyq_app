@@ -72,11 +72,29 @@ class _LeetCodeWebViewScreenState extends State<LeetCodeWebViewScreen> {
           TextButton.icon(
             onPressed: () async {
               final uri = Uri.parse(widget.url);
-              if (await canLaunchUrl(uri)) {
-                await launchUrl(uri, mode: LaunchMode.externalApplication);
+              try {
+                final launched = await launchUrl(
+                  uri,
+                  mode: LaunchMode.externalApplication,
+                );
+                if (!launched && mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Could not open LeetCode link.')),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error launching link: $e')),
+                  );
+                }
               }
             },
-            icon: Icon(Icons.open_in_new, size: 16, color: isDark ? const Color(0xFF38BDF8) : theme.primaryColor),
+            icon: Icon(
+              Icons.open_in_new,
+              size: 16,
+              color: isDark ? const Color(0xFF38BDF8) : theme.primaryColor,
+            ),
             label: Text(
               'View on LeetCode',
               style: GoogleFonts.outfit(
