@@ -23,6 +23,13 @@ class UtilitiesPage extends ConsumerWidget {
         'color': const Color(0xFF6366F1), // Indigo
       },
       {
+        'title': 'Global Resource',
+        'desc': 'Drive contains all the resources you are looking for. If you can\'t find a subject in the app, look for it in the drive.',
+        'icon': Icons.folder_shared_rounded,
+        'route': '/global_resources',
+        'color': const Color(0xFF0EA5E9), // Sky blue
+      },
+      {
         'title': 'Scientific Calculator',
         'desc': 'Casio-style advanced math tool',
         'icon': Icons.calculate_rounded,

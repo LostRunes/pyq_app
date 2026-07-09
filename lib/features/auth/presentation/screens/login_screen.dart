@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/providers/auth_provider.dart';
+import '../../../../core/providers.dart';
 import '../../../../shared/styles/app_text_styles.dart';
 import '../../../../shared/widgets/app_text_field.dart';
 import '../widgets/google_sign_in_button.dart';
@@ -131,11 +132,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       return;
     }
 
-    if (!RegExp(r'^[a-zA-Z0-9_]+$').hasMatch(cleanValue)) {
+    if (!RegExp(r'^[a-z0-9_]+$').hasMatch(cleanValue)) {
       setState(() {
         _isCheckingUsername = false;
         _isUsernameUnique = null;
-        _usernameError = 'Only letters, numbers, and underscores allowed';
+        _usernameError = 'Only lowercase letters, numbers, and underscores allowed';
       });
       return;
     }
@@ -230,7 +231,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       setState(() {
         _isLoading = false;
       });
-      _showErrorSnackBar('Failed to save profile: $e');
+      if (e is PostgrestException && e.code == '23503') {
+        _showErrorSnackBar('Stale session detected. Please sign in again.');
+        await signOutCompletely(ref: ref);
+        if (mounted) {
+          setState(() {
+            _showUsernamePopup = false;
+          });
+        }
+      } else {
+        _showErrorSnackBar('Failed to save profile: $e');
+      }
     }
   }
 
@@ -266,7 +277,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       setState(() {
         _isLoading = false;
       });
-      _showErrorSnackBar('Failed to save profile: $e');
+      if (e is PostgrestException && e.code == '23503') {
+        _showErrorSnackBar('Stale session detected. Please sign in again.');
+        await signOutCompletely(ref: ref);
+        if (mounted) {
+          setState(() {
+            _showUsernamePopup = false;
+          });
+        }
+      } else {
+        _showErrorSnackBar('Failed to save profile: $e');
+      }
     }
   }
 
@@ -521,10 +542,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(
-                              'UNIQUE USERNAME (REQUIRED)',
-                              style: AppTextStyles.label(context),
+                            Expanded(
+                              child: Text(
+                                'UNIQUE USERNAME (REQUIRED)',
+                                style: AppTextStyles.label(context),
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
+                            const SizedBox(width: 8),
                             TextButton.icon(
                               onPressed: _generateUsername,
                               icon: Icon(

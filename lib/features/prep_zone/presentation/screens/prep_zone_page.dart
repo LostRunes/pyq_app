@@ -83,6 +83,7 @@ class PrepZonePage extends ConsumerWidget {
                 )
               : ListView.separated(
                   shrinkWrap: true,
+                  padding: EdgeInsets.zero,
                   physics: const NeverScrollableScrollPhysics(),
                   itemCount: filteredItems.length,
                   separatorBuilder: (context, index) =>

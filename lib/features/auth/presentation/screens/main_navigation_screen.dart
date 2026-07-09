@@ -22,6 +22,7 @@ import 'package:focus_fox/features/utilities/presentation/screens/utilities_page
 import 'package:focus_fox/services/analytics_service.dart';
 import 'package:focus_fox/shared/widgets/theme_toggle_button.dart';
 import 'package:focus_fox/shared/presentation/widgets/entrance_animations.dart';
+import 'package:focus_fox/features/auth/presentation/widgets/bee_leaderboard_sheet.dart';
 
 class MainNavigationScreen extends ConsumerStatefulWidget {
   final String branchId;
@@ -122,6 +123,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
+      extendBody: true,
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         automaticallyImplyLeading: false,
@@ -317,6 +319,8 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
                   ref.read(themeModeProvider.notifier).toggle();
                 } else if (value == 'logout') {
                   _showLogoutDialog(context);
+                } else if (value == 'bee_leaderboard') {
+                  _showBeeLeaderboard(context);
                 }
               },
               itemBuilder: (BuildContext context) {
@@ -373,6 +377,26 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
                         const SizedBox(width: 12),
                         Text(
                           'About',
+                          style: GoogleFonts.outfit(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'bee_leaderboard',
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.emoji_events_rounded,
+                          color: Color(0xFFFF9F0A),
+                          size: 20,
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          'Bee Leaderboard',
                           style: GoogleFonts.outfit(
                             fontWeight: FontWeight.bold,
                             fontSize: 13,
@@ -574,34 +598,40 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
               )
             : null,
         child: SafeArea(
-          child: PageView(
-            key: const PageStorageKey('main_navigation_page_view'),
-            controller: _pageController,
-            onPageChanged: (index) {
-              // Skip intermediate callbacks fired during a programmatic
-              // animateToPage() call — this is what caused the blob to flicker.
-              if (_isAnimatingPage) return;
-              // All 5 nav indices map 1:1 to PageView pages now.
-              ref.read(mainNavigationIndexProvider.notifier).setIndex(index);
-              setState(() {
-                // Do NOT reset _isSearching here — that would dismiss the
-                // keyboard unexpectedly when the user swipes between tabs.
-                _skulkSearchController.clear();
-                ref.read(subjectsSearchProvider.notifier).updateSearch('');
-                ref.read(prepZoneSearchProvider.notifier).updateSearch('');
-                ref.read(utilitiesSearchProvider.notifier).updateSearch('');
-                ref.read(skulkFeedSearchProvider.notifier).updateSearch('');
-              });
-              // When swiping to subjects tab, open the fade animation window
-              if (index == 0) SubjectCardFade.onPageActivated();
-            },
-            children: [
-              const SubjectsPage(),
-              const PrepZonePage(),
-              const UtilitiesPage(),
-              StudyTogetherScreen(key: _studyRoomsKey, embeddedMode: true),
-              _buildSkulkPage(context),
-            ],
+          bottom: false,
+          child: Padding(
+            padding: EdgeInsets.only(
+              bottom: 76 + MediaQuery.of(context).padding.bottom,
+            ),
+            child: PageView(
+              key: const PageStorageKey('main_navigation_page_view'),
+              controller: _pageController,
+              onPageChanged: (index) {
+                // Skip intermediate callbacks fired during a programmatic
+                // animateToPage() call — this is what caused the blob to flicker.
+                if (_isAnimatingPage) return;
+                // All 5 nav indices map 1:1 to PageView pages now.
+                ref.read(mainNavigationIndexProvider.notifier).setIndex(index);
+                setState(() {
+                  // Do NOT reset _isSearching here — that would dismiss the
+                  // keyboard unexpectedly when the user swipes between tabs.
+                  _skulkSearchController.clear();
+                  ref.read(subjectsSearchProvider.notifier).updateSearch('');
+                  ref.read(prepZoneSearchProvider.notifier).updateSearch('');
+                  ref.read(utilitiesSearchProvider.notifier).updateSearch('');
+                  ref.read(skulkFeedSearchProvider.notifier).updateSearch('');
+                });
+                // When swiping to subjects tab, open the fade animation window
+                if (index == 0) SubjectCardFade.onPageActivated();
+              },
+              children: [
+                const SubjectsPage(),
+                const PrepZonePage(),
+                const UtilitiesPage(),
+                StudyTogetherScreen(key: _studyRoomsKey, embeddedMode: true),
+                _buildSkulkPage(context),
+              ],
+            ),
           ),
         ),
       ),
@@ -819,9 +849,9 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
   }
 
   Widget _buildSkulkPage(BuildContext context) {
-    // Read directly from providers — no local duplicate state.
-    final branchId = ref.read(selectedBranchIdProvider);
-    final semester = ref.read(selectedSemesterProvider);
+    // Watch directly from providers — reactive state updates.
+    final branchId = ref.watch(selectedBranchIdProvider);
+    final semester = ref.watch(selectedSemesterProvider);
     return SkulkFeedScreen(branchId: branchId, semester: semester);
   }
 
@@ -871,6 +901,15 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
           ),
         ],
       ),
+    );
+  }
+
+  void _showBeeLeaderboard(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => const BeeLeaderboardSheet(),
     );
   }
 }

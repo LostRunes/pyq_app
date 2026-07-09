@@ -13,6 +13,8 @@ import '../providers/study_together_providers.dart';
 import '../widgets/room_message_bubble.dart';
 import '../widgets/voice_panel.dart';
 import '../../../../../app/app.dart' show appRouteObserver;
+import 'package:url_launcher/url_launcher.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class StudyRoomChatScreen extends ConsumerStatefulWidget {
   final StudyRoom room;
@@ -42,6 +44,8 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen>
   List<Map<String, dynamic>> _allUsers = [];
   List<Map<String, dynamic>> _filteredUsers = [];
   String? _tagQuery;
+  String? _pinnedMessageId;
+  String? _pinnedMessageText;
 
   void _showImageSourceBottomSheet() {
     final theme = Theme.of(context);
@@ -249,6 +253,74 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen>
       }
     } catch (e) {
       debugPrint('Error fetching user profiles: $e');
+    }
+  }
+
+  Future<void> _fetchPinnedMessageDetails(String msgId) async {
+    try {
+      final res = await Supabase.instance.client
+          .from('room_messages')
+          .select()
+          .eq('id', msgId)
+          .maybeSingle();
+      if (res != null && mounted) {
+        setState(() {
+          _pinnedMessageId = msgId;
+          _pinnedMessageText = RoomMessage.fromJson(res).message;
+          // Clean the message text for display in the banner
+          _pinnedMessageText = _pinnedMessageText!
+              .replaceAll(RegExp(r'^\[reply:[^\]]*\]'), '')
+              .replaceAll(RegExp(r'\[image:[^\]]*\]'), '')
+              .trim();
+          if (_pinnedMessageText!.isEmpty && res['message']?.contains('[image:')) {
+            _pinnedMessageText = 'Image';
+          }
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching pinned message: $e');
+    }
+  }
+
+  Future<void> _pinMessage(RoomMessage msg) async {
+    try {
+      await Supabase.instance.client
+          .from('study_rooms')
+          .update({'pinned_message_id': msg.id})
+          .eq('id', widget.room.id);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Message pinned')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to pin message: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _unpinMessage() async {
+    try {
+      await Supabase.instance.client
+          .from('study_rooms')
+          .update({'pinned_message_id': null})
+          .eq('id', widget.room.id);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Message unpinned')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to unpin message: $e')),
+        );
+      }
     }
   }
 
@@ -517,87 +589,89 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen>
 
     final activeRoom = roomAsync.value ?? widget.room;
 
-    return Scaffold(
-      backgroundColor: isDark
-          ? const Color(0xFF0F0F0F) // Solid Instagram-style dark mode background
-          : Colors.white,
-      appBar: AppBar(
-        backgroundColor: isDark ? const Color(0xFF0F0F0F) : Colors.white,
-        elevation: 0,
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1.0),
-          child: Container(
-            color: isDark ? const Color(0xFF262626) : const Color(0xFFEFEFEF),
-            height: 1.0,
+    if (activeRoom.pinnedMessageId != _pinnedMessageId) {
+      _pinnedMessageId = activeRoom.pinnedMessageId;
+      if (_pinnedMessageId != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _fetchPinnedMessageDetails(_pinnedMessageId!);
+        });
+      } else {
+        _pinnedMessageText = null;
+      }
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        image: DecorationImage(
+          image: AssetImage(
+            isDark
+                ? 'assets/images/skulk_bg_dark2.jpg'
+                : 'assets/images/skulk_bg5.jpg',
           ),
-        ),
-        iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black87),
-        title: Row(
-          children: [
-            Icon(
-              activeRoom.isVoiceEnabled ? Icons.volume_up_rounded : Icons.chat_bubble_outline_rounded,
-              size: 20,
-              color: isDark ? Colors.white70 : Colors.black87,
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    activeRoom.name,
-                    style: GoogleFonts.outfit(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      color: isDark ? Colors.white : Colors.black87,
-                    ),
-                  ),
-                  const SizedBox(height: 1),
-                  Row(
-                    children: [
-                      Container(
-                        width: 6,
-                        height: 6,
-                        decoration: const BoxDecoration(
-                          color: Colors.greenAccent,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '$presenceCount studying now',
-                        style: GoogleFonts.outfit(
-                          fontSize: 11,
-                          color: Colors.grey,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
+          fit: BoxFit.cover,
+          colorFilter: ColorFilter.mode(
+            isDark
+                ? Colors.black.withOpacity(0.30)
+                : Colors.white.withOpacity(0.45),
+            BlendMode.srcOver,
+          ),
         ),
       ),
-      body: Container(
-        decoration: BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage(
-              isDark
-                  ? 'assets/images/skulk_bg_dark2.jpg'
-                  : 'assets/images/skulk_bg5.jpg',
-            ),
-            fit: BoxFit.cover,
-            colorFilter: ColorFilter.mode(
-              isDark
-                  ? Colors.black.withOpacity(0.30)
-                  : Colors.white.withOpacity(0.45),
-              BlendMode.srcOver,
-            ),
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black87),
+          title: Row(
+            children: [
+              Icon(
+                activeRoom.isVoiceEnabled ? Icons.volume_up_rounded : Icons.chat_bubble_outline_rounded,
+                size: 20,
+                color: isDark ? Colors.white70 : Colors.black87,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      activeRoom.name,
+                      style: GoogleFonts.outfit(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: isDark ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 1),
+                    Row(
+                      children: [
+                        Container(
+                          width: 6,
+                          height: 6,
+                          decoration: const BoxDecoration(
+                            color: Colors.greenAccent,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '$presenceCount studying now',
+                          style: GoogleFonts.outfit(
+                            fontSize: 11,
+                            color: Colors.grey,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
-        child: SafeArea(
+        body: SafeArea(
           child: Column(
             children: [
             // If custom voice room has ended, show the countdown banner with download option
@@ -620,6 +694,68 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen>
                 child: VoicePanel(room: activeRoom),
               ),
             ],
+            // Pinned Message Banner
+            if (_pinnedMessageId != null)
+              GestureDetector(
+                onTap: () => _scrollToMessage(_pinnedMessageId!),
+                child: Container(
+                  margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? const Color(0xFFFFF0D4).withOpacity(0.08)
+                        : const Color(0xFFFF9F0A).withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: isDark
+                          ? const Color(0xFFFFF0D4).withOpacity(0.15)
+                          : const Color(0xFFFF9F0A).withOpacity(0.15),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.push_pin_rounded,
+                        color: Color(0xFFFF9F0A),
+                        size: 18,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Pinned Message',
+                              style: GoogleFonts.outfit(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                                color: isDark ? Colors.white70 : Colors.black87,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              _pinnedMessageText ?? '',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.outfit(
+                                fontSize: 13,
+                                color: isDark ? Colors.white60 : Colors.black54,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded, size: 18),
+                        onPressed: _unpinMessage,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             // Message List Area
             Expanded(
               child: GestureDetector(
@@ -692,6 +828,8 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen>
                               key: key,
                               message: msg,
                               dragOffset: offset,
+                              isPinned: _pinnedMessageId == msg.id,
+                              onPinToggle: () => _pinnedMessageId == msg.id ? _unpinMessage() : _pinMessage(msg),
                               onReply: () {
                                 setState(() {
                                   _replyingTo = msg;
@@ -750,6 +888,8 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen>
                             key: key,
                             message: msg,
                             dragOffset: offset,
+                            isPinned: _pinnedMessageId == msg.id,
+                            onPinToggle: () => _pinnedMessageId == msg.id ? _unpinMessage() : _pinMessage(msg),
                             onReply: () {
                               setState(() {
                                 _replyingTo = msg;
@@ -1046,35 +1186,121 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen>
             if (!activeRoom.isActive)
               Container(
                 padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF0F0F0F) : Colors.white,
-                  border: Border(
-                    top: BorderSide(
-                      color: isDark ? const Color(0xFF262626) : const Color(0xFFEFEFEF),
-                    ),
-                  ),
+                decoration: const BoxDecoration(
+                  color: Colors.transparent,
                 ),
-                child: Center(
-                  child: Text(
-                    "This room has ended and is read-only.",
-                    style: GoogleFonts.outfit(
-                      color: Colors.grey,
-                      fontSize: 14,
-                      fontStyle: FontStyle.italic,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      "This room has ended and is read-only.",
+                      style: GoogleFonts.outfit(
+                        color: Colors.grey,
+                        fontSize: 13.5,
+                        fontStyle: FontStyle.italic,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
-                  ),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        ElevatedButton.icon(
+                          onPressed: () async {
+                            try {
+                              await ref.read(studyTogetherRepositoryProvider).downloadChatHistory(
+                                activeRoom.id,
+                                activeRoom.name,
+                              );
+                            } catch (e) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text("Error exporting chat: $e")),
+                                );
+                              }
+                            }
+                          },
+                          icon: const Icon(Icons.download_rounded, size: 16),
+                          label: Text(
+                            'Download Chat',
+                            style: GoogleFonts.outfit(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12.5,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: isDark ? const Color(0xFF2C256E) : Theme.of(context).colorScheme.primaryContainer,
+                            foregroundColor: isDark ? Colors.white : Theme.of(context).colorScheme.onPrimaryContainer,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          ),
+                        ),
+                        if (activeRoom.type == 'personal') ...[
+                          const SizedBox(width: 12),
+                          ElevatedButton.icon(
+                            onPressed: () async {
+                              final creatorId = activeRoom.createdBy;
+                              final creatorProfile = _allUsers.firstWhere(
+                                (u) => u['id'] == creatorId,
+                                orElse: () => <String, dynamic>{},
+                              );
+                              final creatorName = creatorProfile['display_name'] ?? creatorProfile['username'] ?? creatorId ?? 'Unknown Creator';
+                              
+                              final emailSubject = Uri.encodeComponent("Request to Reopen Study Room: ${activeRoom.name}");
+                              final emailBody = Uri.encodeComponent(
+                                "Hello Admin,\n\n"
+                                "I would like to request to reopen the following personal study room:\n\n"
+                                "Room Name: ${activeRoom.name}\n"
+                                "Room ID: ${activeRoom.id}\n"
+                                "Room Creator: $creatorName\n"
+                                "Creator ID: $creatorId\n\n"
+                                "Thank you!"
+                              );
+                              
+                              final Uri emailUri = Uri.parse(
+                                "mailto:focusfox.admin@gmail.com?subject=$emailSubject&body=$emailBody"
+                              );
+                              
+                              try {
+                                await launchUrl(emailUri, mode: LaunchMode.externalApplication);
+                              } catch (e) {
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text("Could not launch email client.")),
+                                  );
+                                }
+                              }
+                            },
+                            icon: const Icon(Icons.refresh_rounded, size: 16),
+                            label: Text(
+                              'Request Reopen',
+                              style: GoogleFonts.outfit(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12.5,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.amber[800],
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
                 ),
               )
             else
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF0F0F0F) : Colors.white,
-                  border: Border(
-                    top: BorderSide(
-                      color: isDark ? const Color(0xFF262626) : const Color(0xFFEFEFEF),
-                    ),
-                  ),
+                decoration: const BoxDecoration(
+                  color: Colors.transparent,
                 ),
                 child: Row(
                   children: [
@@ -1084,7 +1310,7 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen>
                         padding: const EdgeInsets.only(right: 12),
                         child: Icon(
                           Icons.add_photo_alternate_outlined,
-                          color: Theme.of(context).colorScheme.primary,
+                          color: isDark ? const Color(0xFFC0A6FF) : const Color(0xFFFF9F0A),
                           size: 24,
                         ),
                       ),
@@ -1093,8 +1319,8 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen>
                       child: Container(
                         decoration: BoxDecoration(
                           color: isDark
-                              ? const Color(0xFF262626)
-                              : const Color(0xFFF2F2F2),
+                              ? const Color(0xFF231B42) // Subtle dark purple
+                              : const Color(0xFFFFEBD3), // Very light orange/cream
                           borderRadius: BorderRadius.circular(24),
                         ),
                         padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -1129,7 +1355,9 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen>
                       child: Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primary,
+                          color: isDark
+                              ? const Color(0xFFC0A6FF) // Light purple for dark theme
+                              : const Color(0xFFFF9F0A), // Light orange for light theme
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(

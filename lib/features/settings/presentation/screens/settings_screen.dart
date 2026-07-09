@@ -7,6 +7,7 @@ import 'package:focus_fox/core/providers/theme_provider.dart';
 import 'package:focus_fox/features/subjects/presentation/providers/subjects_providers.dart';
 import 'package:focus_fox/features/subjects/data/models/branch.dart';
 import 'package:focus_fox/services/push_notification_service.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -122,6 +123,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
                 // Information & Version Card
                 _buildInfoCard(context, isDark),
+                const SizedBox(height: 24),
+
+                // Support & Feedback Group
+                _buildSectionHeader(
+                  context,
+                  isDark,
+                  'Support & Feedback',
+                  Icons.help_outline_rounded,
+                ),
+                const SizedBox(height: 12),
+                _buildContactCard(context, isDark),
                 const SizedBox(height: 24),
 
                 // Danger Zone — Logout
@@ -690,6 +702,125 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           color: Colors.redAccent.withOpacity(0.7),
         ),
         onTap: _confirmSignOut,
+      ),
+    );
+  }
+
+  Future<void> _launchEmail() async {
+    final Uri emailLaunchUri = Uri(
+      scheme: 'mailto',
+      path: 'focusfox.admin@gmail.com',
+      query: 'subject=Focus%20Fox%20Support%20%26%20Feedback',
+    );
+    try {
+      await launchUrl(emailLaunchUri, mode: LaunchMode.externalApplication);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not launch email client.'),
+          ),
+        );
+      }
+    }
+  }
+
+  Widget _buildContactCard(BuildContext context, bool isDark) {
+    final theme = Theme.of(context);
+    final cardColor = isDark
+        ? const Color(0xFF251E4E).withOpacity(0.85)
+        : Colors.white;
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(
+          color: isDark ? const Color(0xFF382F7E) : const Color(0xFFF6DDB7),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: isDark ? Colors.black38 : Colors.black.withOpacity(0.04),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.mail_outline_rounded,
+                  color: isDark ? const Color(0xFFC0A6FF) : theme.colorScheme.primary,
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Contact Support',
+                      style: GoogleFonts.outfit(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16,
+                        color: isDark ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                    Text(
+                      'focusfox.admin@gmail.com',
+                      style: GoogleFonts.outfit(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? const Color(0xFFC0A6FF) : theme.colorScheme.primary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Text(
+            "Have a question, found a bug, or want to suggest a new feature? We'd love to hear from you! Reach out to our support team directly.",
+            style: GoogleFonts.outfit(
+              fontSize: 13,
+              height: 1.45,
+              color: isDark ? Colors.white70 : Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: isDark ? const Color(0xFF3D357F) : theme.colorScheme.primary,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              padding: const EdgeInsets.symmetric(vertical: 14),
+            ),
+            onPressed: _launchEmail,
+            icon: const Icon(Icons.send_rounded, size: 16),
+            label: Text(
+              'Send Email',
+              style: GoogleFonts.outfit(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
