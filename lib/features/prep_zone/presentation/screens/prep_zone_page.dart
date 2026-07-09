@@ -169,21 +169,11 @@ class PrepZonePage extends ConsumerWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              Expanded(
-                                child: Padding(
-                                  padding: const EdgeInsets.all(12.0),
-                                  child: Center(
-                                    child: Lottie.asset(
-                                      item['lottie'] as String,
-                                      fit: BoxFit.contain,
-                                    ),
-                                  ),
-                                ),
-                              ),
                               Container(
+                                height: 85,
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 14,
-                                  vertical: 12,
+                                  vertical: 10,
                                 ),
                                 decoration: BoxDecoration(
                                   gradient: LinearGradient(
@@ -192,13 +182,13 @@ class PrepZonePage extends ConsumerWidget {
                                     end: Alignment.bottomCenter,
                                   ),
                                   borderRadius: const BorderRadius.only(
-                                    bottomLeft: Radius.circular(22),
-                                    bottomRight: Radius.circular(22),
+                                    topLeft: Radius.circular(22),
+                                    topRight: Radius.circular(22),
                                   ),
                                 ),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisSize: MainAxisSize.min,
+                                  mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     Text(
                                       item['title'] as String,
@@ -225,30 +215,54 @@ class PrepZonePage extends ConsumerWidget {
                                         height: 1.3,
                                       ),
                                     ),
-                                    if (item['isComingSoon'] as bool? ??
-                                        false) ...[
-                                      const SizedBox(height: 8),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 8,
-                                          vertical: 3,
+                                  ],
+                                ),
+                              ),
+                              Expanded(
+                                child: Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    Padding(
+                                      padding: const EdgeInsets.all(12.0),
+                                      child: Center(
+                                        child: Lottie.asset(
+                                          item['lottie'] as String,
+                                          fit: BoxFit.contain,
                                         ),
-                                        decoration: BoxDecoration(
-                                          color: Colors.black.withOpacity(0.18),
-                                          borderRadius: BorderRadius.circular(
-                                            6,
+                                      ),
+                                    ),
+                                    if (item['isComingSoon'] as bool? ?? false)
+                                      Positioned(
+                                        bottom: 12,
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 10,
+                                            vertical: 5,
                                           ),
-                                        ),
-                                        child: Text(
-                                          'Coming soon..',
-                                          style: GoogleFonts.outfit(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w800,
-                                            color: Colors.white,
+                                          decoration: BoxDecoration(
+                                            color: Colors.black.withOpacity(
+                                              0.6,
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              20,
+                                            ),
+                                            border: Border.all(
+                                              color: Colors.white.withOpacity(
+                                                0.2,
+                                              ),
+                                              width: 1,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            'Coming soon..',
+                                            style: GoogleFonts.outfit(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w900,
+                                              color: Colors.white,
+                                            ),
                                           ),
                                         ),
                                       ),
-                                    ],
                                   ],
                                 ),
                               ),
