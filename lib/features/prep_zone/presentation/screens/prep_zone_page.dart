@@ -30,6 +30,16 @@ class PrepZonePage extends ConsumerWidget {
         'route': '/algo_code',
         'color': orangeBgStart,
         'isComingSoon': false,
+        'lottie': 'json/coding.json',
+      },
+      {
+        'title': 'KIIT Syllabus',
+        'desc': 'Explore subjects & credits',
+        'icon': Icons.collections_bookmark_rounded,
+        'route': '/syllabus',
+        'color': const Color(0xFFF59E0B), // Amber
+        'isComingSoon': false,
+        'lottie': 'json/robot_syllabus.json',
       },
     ];
 
@@ -128,7 +138,7 @@ class PrepZonePage extends ConsumerWidget {
                                     width: 180,
                                     height: 180,
                                     child: Lottie.asset(
-                                      'json/coding.json',
+                                      item['lottie'] as String,
                                       fit: BoxFit.contain,
                                     ),
                                   ),
