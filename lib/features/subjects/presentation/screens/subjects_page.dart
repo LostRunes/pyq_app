@@ -30,6 +30,7 @@ class SubjectsPage extends ConsumerWidget {
     final searchQuery = ref.watch(subjectsSearchProvider);
 
     final beeEnabled = ref.watch(beeEnabledProvider);
+    final selectedIndex = ref.watch(mainNavigationIndexProvider);
 
     return FlyingBeeOverlay(
       beeEnabled: beeEnabled,
@@ -59,6 +60,7 @@ class SubjectsPage extends ConsumerWidget {
                 });
 
             return ListView.builder(
+              key: ValueKey(selectedIndex),
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               itemCount: filtered.isEmpty ? 3 : filtered.length + 2,
