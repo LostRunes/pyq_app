@@ -109,13 +109,17 @@ class PrepZonePage extends ConsumerWidget {
                     ),
                   ),
                 )
-              : ListView.separated(
+              : GridView.builder(
                   shrinkWrap: true,
                   padding: EdgeInsets.zero,
                   physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                    childAspectRatio: 0.62,
+                  ),
                   itemCount: filteredItems.length,
-                  separatorBuilder: (context, index) =>
-                      const SizedBox(height: 24),
                   itemBuilder: (context, index) {
                     final item = filteredItems[index];
                     final Color itemColor = item['color'] as Color;
@@ -129,22 +133,27 @@ class PrepZonePage extends ConsumerWidget {
                                 ScaffoldMessenger.of(context).clearSnackBars();
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
-                                    content: Text('${item['title']} is coming soon!'),
+                                    content: Text(
+                                      '${item['title']} is coming soon!',
+                                    ),
                                     duration: const Duration(seconds: 2),
                                     behavior: SnackBarBehavior.floating,
                                   ),
                                 );
                               }
                             : () {
-                                Navigator.pushNamed(context, item['route'] as String);
+                                Navigator.pushNamed(
+                                  context,
+                                  item['route'] as String,
+                                );
                               },
-                        borderRadius: BorderRadius.circular(32),
+                        borderRadius: BorderRadius.circular(24),
                         child: Container(
                           decoration: BoxDecoration(
                             color: theme.brightness == Brightness.dark
                                 ? Colors.white.withOpacity(0.06)
                                 : Colors.white.withOpacity(0.7),
-                            borderRadius: BorderRadius.circular(32),
+                            borderRadius: BorderRadius.circular(24),
                             border: Border.all(
                               color: itemColor.withOpacity(0.2),
                               width: 1.5,
@@ -160,12 +169,10 @@ class PrepZonePage extends ConsumerWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              Padding(
-                                padding: const EdgeInsets.all(28.0),
-                                child: Center(
-                                  child: SizedBox(
-                                    width: 180,
-                                    height: 180,
+                              Expanded(
+                                child: Padding(
+                                  padding: const EdgeInsets.all(12.0),
+                                  child: Center(
                                     child: Lottie.asset(
                                       item['lottie'] as String,
                                       fit: BoxFit.contain,
@@ -175,8 +182,8 @@ class PrepZonePage extends ConsumerWidget {
                               ),
                               Container(
                                 padding: const EdgeInsets.symmetric(
-                                  horizontal: 24,
-                                  vertical: 20,
+                                  horizontal: 14,
+                                  vertical: 12,
                                 ),
                                 decoration: BoxDecoration(
                                   gradient: LinearGradient(
@@ -185,49 +192,57 @@ class PrepZonePage extends ConsumerWidget {
                                     end: Alignment.bottomCenter,
                                   ),
                                   borderRadius: const BorderRadius.only(
-                                    bottomLeft: Radius.circular(30),
-                                    bottomRight: Radius.circular(30),
+                                    bottomLeft: Radius.circular(22),
+                                    bottomRight: Radius.circular(22),
                                   ),
                                 ),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Text(
                                       item['title'] as String,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                       style: GoogleFonts.outfit(
-                                        fontSize: 22,
+                                        fontSize: 16,
                                         fontWeight: FontWeight.w900,
                                         color: isDark
                                             ? Colors.white
                                             : Colors.black,
                                       ),
                                     ),
-                                    const SizedBox(height: 6),
+                                    const SizedBox(height: 4),
                                     Text(
                                       item['desc'] as String,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
                                       style: GoogleFonts.outfit(
-                                        fontSize: 14,
+                                        fontSize: 11,
                                         color: isDark
                                             ? Colors.white.withOpacity(0.75)
                                             : Colors.black.withOpacity(0.7),
-                                        height: 1.4,
+                                        height: 1.3,
                                       ),
                                     ),
-                                    if (item['isComingSoon'] as bool? ?? false) ...[
-                                      const SizedBox(height: 12),
+                                    if (item['isComingSoon'] as bool? ??
+                                        false) ...[
+                                      const SizedBox(height: 8),
                                       Container(
                                         padding: const EdgeInsets.symmetric(
-                                          horizontal: 10,
-                                          vertical: 4,
+                                          horizontal: 8,
+                                          vertical: 3,
                                         ),
                                         decoration: BoxDecoration(
                                           color: Colors.black.withOpacity(0.18),
-                                          borderRadius: BorderRadius.circular(8),
+                                          borderRadius: BorderRadius.circular(
+                                            6,
+                                          ),
                                         ),
                                         child: Text(
                                           'Coming soon..',
                                           style: GoogleFonts.outfit(
-                                            fontSize: 12,
+                                            fontSize: 10,
                                             fontWeight: FontWeight.w800,
                                             color: Colors.white,
                                           ),
