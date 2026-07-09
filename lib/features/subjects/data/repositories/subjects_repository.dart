@@ -2,6 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/branch.dart';
 import '../models/year.dart';
 import '../../../pyqs/data/models/subject.dart';
+import '../../../../utils/first_year_branch_mapper.dart';
 
 class SubjectsRepository {
   final SupabaseClient _supabase;
@@ -22,13 +23,19 @@ class SubjectsRepository {
     required String branchId,
     required int semester,
   }) async {
+    final effectiveBranchId = await FirstYearBranchMapper.getEffectiveBranchId(
+      supabase: _supabase,
+      originalBranchId: branchId,
+      semester: semester,
+    );
+
     // 1. Fetch global default subjects
     final res = await _supabase
         .from('branch_subjects')
         .select(
           'subjects(id, name, code, pyq_drive_link, notes_drive_link, course_outcome_link, priority, subject_credit, subject_type)',
         )
-        .eq('branch_id', branchId)
+        .eq('branch_id', effectiveBranchId)
         .eq('semester', semester);
     
     final List<Subject> subjects = (res as List)
@@ -45,7 +52,7 @@ class SubjectsRepository {
             'action, subjects(id, name, code, pyq_drive_link, notes_drive_link, course_outcome_link, priority, subject_credit, subject_type)',
           )
           .eq('user_id', userId)
-          .eq('branch_id', branchId)
+          .eq('branch_id', effectiveBranchId)
           .eq('semester', semester);
 
       for (var custom in customRes as List) {
@@ -77,12 +84,18 @@ class SubjectsRepository {
     required String branchId,
     required int semester,
   }) async {
+    final effectiveBranchId = await FirstYearBranchMapper.getEffectiveBranchId(
+      supabase: _supabase,
+      originalBranchId: branchId,
+      semester: semester,
+    );
+
     final res = await _supabase
         .from('branch_subjects')
         .select(
           'subjects(id, name, code, pyq_drive_link, notes_drive_link, course_outcome_link, priority, subject_credit, subject_type)',
         )
-        .eq('branch_id', branchId)
+        .eq('branch_id', effectiveBranchId)
         .eq('semester', semester);
     
     final List<Subject> subjects = (res as List)
@@ -161,6 +174,12 @@ class SubjectsRepository {
     required int semester,
     required String subjectId,
   }) async {
+    final effectiveBranchId = await FirstYearBranchMapper.getEffectiveBranchId(
+      supabase: _supabase,
+      originalBranchId: branchId,
+      semester: semester,
+    );
+
     final userId = Supabase.instance.client.auth.currentUser?.id;
     if (userId == null) {
       throw Exception('User is not logged in');
@@ -171,7 +190,7 @@ class SubjectsRepository {
         .from('user_subject_customizations')
         .select()
         .eq('user_id', userId)
-        .eq('branch_id', branchId)
+        .eq('branch_id', effectiveBranchId)
         .eq('semester', semester)
         .eq('subject_id', subjectId)
         .maybeSingle();
@@ -192,7 +211,7 @@ class SubjectsRepository {
     final existingGlobal = await _supabase
         .from('branch_subjects')
         .select()
-        .eq('branch_id', branchId)
+        .eq('branch_id', effectiveBranchId)
         .eq('semester', semester)
         .eq('subject_id', subjectId)
         .maybeSingle();
@@ -201,7 +220,7 @@ class SubjectsRepository {
       // If it exists in the global syllabus, we insert a 'remove' customization to hide it for this user
       await _supabase.from('user_subject_customizations').insert({
         'user_id': userId,
-        'branch_id': branchId,
+        'branch_id': effectiveBranchId,
         'semester': semester,
         'subject_id': subjectId,
         'action': 'remove',
@@ -214,6 +233,12 @@ class SubjectsRepository {
     required int semester,
     required String subjectId,
   }) async {
+    final effectiveBranchId = await FirstYearBranchMapper.getEffectiveBranchId(
+      supabase: _supabase,
+      originalBranchId: branchId,
+      semester: semester,
+    );
+
     final userId = Supabase.instance.client.auth.currentUser?.id;
     if (userId == null) {
       throw Exception('User is not logged in');
@@ -224,7 +249,7 @@ class SubjectsRepository {
         .from('user_subject_customizations')
         .select()
         .eq('user_id', userId)
-        .eq('branch_id', branchId)
+        .eq('branch_id', effectiveBranchId)
         .eq('semester', semester)
         .eq('subject_id', subjectId)
         .maybeSingle();
@@ -245,7 +270,7 @@ class SubjectsRepository {
     final existingGlobal = await _supabase
         .from('branch_subjects')
         .select()
-        .eq('branch_id', branchId)
+        .eq('branch_id', effectiveBranchId)
         .eq('semester', semester)
         .eq('subject_id', subjectId)
         .maybeSingle();
@@ -258,7 +283,7 @@ class SubjectsRepository {
     // Otherwise, insert an 'add' customization
     await _supabase.from('user_subject_customizations').insert({
       'user_id': userId,
-      'branch_id': branchId,
+      'branch_id': effectiveBranchId,
       'semester': semester,
       'subject_id': subjectId,
       'action': 'add',

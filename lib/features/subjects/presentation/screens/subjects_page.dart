@@ -216,13 +216,16 @@ class SubjectsPage extends ConsumerWidget {
 
                 final textWidget = Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
                       subject.name,
-                      maxLines: 1,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w800,
+                        height: 1.2,
                       ),
                     ),
                     const SizedBox(height: 6),
@@ -271,95 +274,115 @@ class SubjectsPage extends ConsumerWidget {
                   ],
                 );
 
-                return SubjectCardFade(
-                  delay: Duration(milliseconds: (i - 1).clamp(0, 5) * 60),
-                  child: ExpandingSubjectCard(
-                    isIconLeft: isIconLeft,
-                    delay: Duration(milliseconds: (i - 1).clamp(0, 6) * 150),
-                    duration: const Duration(milliseconds: 900),
-                    child: Padding(
-                      padding: const EdgeInsets.only(bottom: 16),
-                      child: InkWell(
-                        onTap: () {
-                          Navigator.pushNamed(
-                            context,
-                            '/subject_dashboard',
-                            arguments: {'subject': subject},
-                          );
-                        },
-                        onLongPress: () {
-                          _showDeleteConfirmationDialog(
-                            context,
-                            ref,
-                            currentBranchId,
-                            currentSemester,
-                            subject,
-                          );
-                        },
-                        borderRadius: BorderRadius.circular(32),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color:
-                                Theme.of(context).brightness == Brightness.dark
-                                ? Colors.white.withOpacity(0.03)
-                                : Colors.white.withOpacity(0.65),
-                            borderRadius: BorderRadius.circular(32),
-                            border: Border.all(
-                              color:
-                                  (Theme.of(context).brightness ==
-                                      Brightness.dark
-                                  ? Colors.white.withOpacity(0.08)
-                                  : const Color(0xFFFF9F0A).withOpacity(0.28)),
-                              width: 1.5,
-                            ),
-                            boxShadow: [
-                              if (!isDark)
-                                BoxShadow(
-                                  color: const Color(
-                                    0xFFFF9F0A,
-                                  ).withOpacity(0.12),
-                                  blurRadius: 24,
-                                  spreadRadius: 1,
-                                  offset: const Offset(0, 8),
-                                ),
-                              BoxShadow(
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.primary.withValues(alpha: 0.04),
-                                blurRadius: 16,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
+                Widget cardWidget = InkWell(
+                  onTap: () {
+                    Navigator.pushNamed(
+                      context,
+                      '/subject_dashboard',
+                      arguments: {'subject': subject},
+                    );
+                  },
+                  onLongPress: () {
+                    _showDeleteConfirmationDialog(
+                      context,
+                      ref,
+                      currentBranchId,
+                      currentSemester,
+                      subject,
+                    );
+                  },
+                  borderRadius: BorderRadius.circular(32),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white.withOpacity(0.03)
+                          : Colors.white.withOpacity(0.65),
+                      borderRadius: BorderRadius.circular(32),
+                      border: Border.all(
+                        color: (Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white.withOpacity(0.08)
+                            : const Color(0xFFFF9F0A).withOpacity(0.28)),
+                        width: 1.5,
+                      ),
+                      boxShadow: [
+                        if (!isDark)
+                          BoxShadow(
+                            color: const Color(0xFFFF9F0A).withOpacity(0.12),
+                            blurRadius: 24,
+                            spreadRadius: 1,
+                            offset: const Offset(0, 8),
                           ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(32),
-                            child: BackdropFilter(
-                              filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 24,
-                                  vertical: 12,
-                                ),
-                                child: Row(
-                                  children: [
-                                    if (isIconLeft) ...[
-                                      iconWidget,
-                                      const SizedBox(width: 20),
-                                    ],
-                                    Expanded(child: textWidget),
-                                    if (!isIconLeft) ...[
-                                      const SizedBox(width: 20),
-                                      iconWidget,
-                                    ],
-                                  ],
-                                ),
-                              ),
-                            ),
+                        BoxShadow(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.primary.withValues(alpha: 0.04),
+                          blurRadius: 16,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(32),
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 12,
+                          ),
+                          child: Row(
+                            children: [
+                              if (isIconLeft) ...[
+                                iconWidget,
+                                const SizedBox(width: 20),
+                              ],
+                              Expanded(child: textWidget),
+                              if (!isIconLeft) ...[
+                                const SizedBox(width: 20),
+                                iconWidget,
+                              ],
+                            ],
                           ),
                         ),
                       ),
                     ),
                   ),
+                );
+
+                Widget cardAnimWidget = ExpandingSubjectCard(
+                  isIconLeft: isIconLeft,
+                  delay: Duration(milliseconds: (i - 1).clamp(0, 6) * 150),
+                  duration: const Duration(milliseconds: 900),
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: cardWidget,
+                  ),
+                );
+
+                if (filtered.isNotEmpty && i == filtered.length) {
+                  cardAnimWidget = Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      cardAnimWidget,
+                      Positioned(
+                        top:
+                            -28, // Sits perfectly on top of the card's top edge
+                        left: isIconLeft
+                            ? -25
+                            : -20, // Positioned on top of the card/icon
+                        child: Image.asset(
+                          'assets/images/eat_fox.png',
+                          width: 85,
+                          height: 85,
+                        ),
+                      ),
+                    ],
+                  );
+                }
+
+                return SubjectCardFade(
+                  delay: Duration(milliseconds: (i - 1).clamp(0, 5) * 60),
+                  child: cardAnimWidget,
                 );
               },
             );

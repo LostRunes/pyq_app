@@ -4,7 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../subjects/presentation/providers/subjects_providers.dart';
 import '../providers/skulk_providers.dart';
 import '../widgets/doubt_card.dart';
-import 'package:lottie/lottie.dart';
+import '../widgets/doubt_card_skeleton.dart';
 
 class SkulkFeedScreen extends ConsumerStatefulWidget {
   final String branchId;
@@ -101,15 +101,12 @@ class _SkulkFeedScreenState extends ConsumerState<SkulkFeedScreen> {
 
             // Main feed content
             doubtsAsync.when(
-              loading: () => Center(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 80.0),
-                  child: Lottie.asset(
-                    'json/hybrid_logo.json',
-                    width: 150,
-                    height: 150,
-                  ),
-                ),
+              loading: () => const Column(
+                children: [
+                  DoubtCardSkeleton(),
+                  DoubtCardSkeleton(),
+                  DoubtCardSkeleton(),
+                ],
               ),
               error: (err, stack) => Center(
                 child: Padding(

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../../core/providers/prefs_provider.dart';
 import '../../../../core/providers.dart';
 import '../../../subjects/presentation/providers/subjects_providers.dart';
 import '../../data/models/doubt.dart';
@@ -106,6 +107,13 @@ class _CreateDoubtScreenState extends ConsumerState<CreateDoubtScreen> {
         _doubtToEdit = args['doubtToEdit'] as Doubt?;
         _prefilledTitle = args['prefilledTitle'] as String?;
         _prefilledBody = args['prefilledBody'] as String?;
+      }
+      if (_branchId == null || _branchId!.isEmpty) {
+        _branchId = ref.read(selectedBranchIdProvider);
+      }
+      if (_semester == null || _semester == 0) {
+        final currentSem = ref.read(selectedSemesterProvider);
+        _semester = currentSem == 0 ? 1 : currentSem;
       }
       _argsParsed = true;
       _initFields();
