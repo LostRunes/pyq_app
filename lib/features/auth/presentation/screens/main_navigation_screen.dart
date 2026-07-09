@@ -585,18 +585,19 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: isDark
-            ? BoxDecoration(
-                image: DecorationImage(
+        decoration: BoxDecoration(
+          color: isDark ? null : Theme.of(context).colorScheme.surface,
+          image: isDark
+              ? DecorationImage(
                   image: const AssetImage('assets/images/darktheme_bg.png'),
                   fit: BoxFit.cover,
                   colorFilter: ColorFilter.mode(
                     const Color(0xFF171330).withOpacity(0.55),
                     BlendMode.srcOver,
                   ),
-                ),
-              )
-            : null,
+                )
+              : null,
+        ),
         child: SafeArea(
           bottom: false,
           child: Padding(
