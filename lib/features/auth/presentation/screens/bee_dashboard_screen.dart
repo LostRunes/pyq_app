@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:lottie/lottie.dart';
 import 'package:focus_fox/core/providers/user_profile_provider.dart';
 import 'package:focus_fox/core/providers/bee_provider.dart';
 import 'package:focus_fox/features/auth/presentation/widgets/bee_leaderboard_sheet.dart'; // import beeLeaderboardProvider
@@ -16,6 +17,9 @@ class BeeDashboardScreen extends ConsumerStatefulWidget {
 class _BeeDashboardScreenState extends ConsumerState<BeeDashboardScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _pulseController;
+  bool _showConfetti = true;
+  int? _globalRank;
+  bool _isLoadingRank = true;
 
   @override
   void initState() {
@@ -24,6 +28,62 @@ class _BeeDashboardScreenState extends ConsumerState<BeeDashboardScreen>
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     )..repeat(reverse: true);
+
+    _fetchGlobalRank();
+
+    // Hide confetti after 2 seconds
+    Future.delayed(const Duration(seconds: 4), () {
+      if (mounted) {
+        setState(() {
+          _showConfetti = false;
+        });
+      }
+    });
+  }
+
+  Future<void> _fetchGlobalRank() async {
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) {
+      if (mounted) {
+        setState(() {
+          _globalRank = null;
+          _isLoadingRank = false;
+        });
+      }
+      return;
+    }
+
+    try {
+      final killsResponse = await Supabase.instance.client
+          .from('user_bee_kills')
+          .select('kills')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+      final kills = killsResponse?['kills'] as int? ?? 0;
+
+      final response = await Supabase.instance.client
+          .from('user_bee_kills')
+          .select('user_id')
+          .gt('kills', kills);
+
+      final count = (response as List).length;
+
+      if (mounted) {
+        setState(() {
+          _globalRank = count + 1;
+          _isLoadingRank = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching global rank: $e');
+      if (mounted) {
+        setState(() {
+          _globalRank = null;
+          _isLoadingRank = false;
+        });
+      }
+    }
   }
 
   @override
@@ -53,7 +113,7 @@ class _BeeDashboardScreenState extends ConsumerState<BeeDashboardScreen>
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final leaderboardAsync = ref.watch(beeLeaderboardProvider);
     final currentUser = Supabase.instance.client.auth.currentUser;
-    
+
     // User profile and bee taps
     final userProfileAsync = ref.watch(userProfileProvider);
     final totalKills = ref.watch(beeTapCountProvider);
@@ -88,166 +148,310 @@ class _BeeDashboardScreenState extends ConsumerState<BeeDashboardScreen>
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: BoxDecoration(
-          gradient: bgGradient,
-        ),
-        child: SafeArea(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Custom AppBar
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: Icon(
-                        Icons.arrow_back_ios_new_rounded,
-                        color: isDark ? Colors.white : const Color(0xFF3D2F27),
-                      ),
-                      onPressed: () => Navigator.pop(context),
+        decoration: BoxDecoration(gradient: bgGradient),
+        child: Stack(
+          children: [
+            SafeArea(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Custom AppBar
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16.0,
+                      vertical: 8.0,
                     ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Bee Dashboard',
-                      style: GoogleFonts.outfit(
-                        fontSize: 24,
-                        fontWeight: FontWeight.w900,
-                        color: titleColor,
-                      ),
-                    ),
-                    const Spacer(),
-                    Text(
-                      '🐝',
-                      style: GoogleFonts.outfit(fontSize: 26),
-                    ),
-                  ],
-                ),
-              ),
-
-              Expanded(
-                child: RefreshIndicator(
-                  color: const Color(0xFFFF9F0A),
-                  onRefresh: () async {
-                    ref.invalidate(beeLeaderboardProvider);
-                    ref.invalidate(userProfileProvider);
-                  },
-                  child: ListView(
-                    padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8.0),
-                    children: [
-                      // 1. STATS OVERVIEW CARD
-                      userProfileAsync.when(
-                        loading: () => const Center(
-                          child: CircularProgressIndicator(color: Color(0xFFFF9F0A)),
+                    child: Row(
+                      children: [
+                        IconButton(
+                          icon: Icon(
+                            Icons.arrow_back_ios_new_rounded,
+                            color: isDark
+                                ? Colors.white
+                                : const Color(0xFF3D2F27),
+                          ),
+                          onPressed: () => Navigator.pop(context),
                         ),
-                        error: (err, stack) => const SizedBox.shrink(),
-                        data: (profile) {
-                          final displayName = profile?['display_name']?.toString() ??
-                              profile?['username']?.toString() ??
-                              'Fox Explorer';
-                          final username = profile?['username']?.toString() ?? 'anonymous';
-                          final avatarUrl = profile?['avatar_url']?.toString() ??
-                              'assets/images/pikachu.png';
+                        const SizedBox(width: 8),
+                        Text(
+                          'Bee Dashboard',
+                          style: GoogleFonts.outfit(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w900,
+                            color: titleColor,
+                          ),
+                        ),
+                        const Spacer(),
+                        Text('🐝', style: GoogleFonts.outfit(fontSize: 26)),
+                      ],
+                    ),
+                  ),
 
-                          final ImageProvider imageProvider = avatarUrl.startsWith('http')
-                              ? NetworkImage(avatarUrl)
-                              : AssetImage(avatarUrl) as ImageProvider;
-
-                          return Container(
-                            decoration: BoxDecoration(
-                              color: cardBgColor,
-                              borderRadius: BorderRadius.circular(28),
-                              border: Border.all(color: borderColor, width: 1.5),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: isDark ? Colors.black38 : Colors.black.withOpacity(0.04),
-                                  blurRadius: 15,
-                                  offset: const Offset(0, 5),
-                                ),
-                              ],
+                  Expanded(
+                    child: RefreshIndicator(
+                      color: const Color(0xFFFF9F0A),
+                      onRefresh: () async {
+                        ref.invalidate(beeLeaderboardProvider);
+                        ref.invalidate(userProfileProvider);
+                        await _fetchGlobalRank();
+                      },
+                      child: ListView(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16.0,
+                          vertical: 6.0,
+                        ),
+                        children: [
+                          // 1. STATS OVERVIEW CARD
+                          userProfileAsync.when(
+                            loading: () => const Center(
+                              child: CircularProgressIndicator(
+                                color: Color(0xFFFF9F0A),
+                              ),
                             ),
-                            padding: const EdgeInsets.all(20),
-                            child: Column(
-                              children: [
-                                Row(
+                            error: (err, stack) => const SizedBox.shrink(),
+                            data: (profile) {
+                              final displayName =
+                                  profile?['display_name']?.toString() ??
+                                  profile?['username']?.toString() ??
+                                  'Fox Explorer';
+                              final username =
+                                  profile?['username']?.toString() ??
+                                  'anonymous';
+                              final avatarUrl =
+                                  profile?['avatar_url']?.toString() ??
+                                  'assets/images/pikachu.png';
+
+                              final ImageProvider imageProvider =
+                                  avatarUrl.startsWith('http')
+                                  ? NetworkImage(avatarUrl)
+                                  : AssetImage(avatarUrl) as ImageProvider;
+
+                              return Container(
+                                decoration: BoxDecoration(
+                                  color: cardBgColor,
+                                  borderRadius: BorderRadius.circular(24),
+                                  border: Border.all(
+                                    color: borderColor,
+                                    width: 1.5,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: isDark
+                                          ? Colors.black38
+                                          : Colors.black.withOpacity(0.04),
+                                      blurRadius: 15,
+                                      offset: const Offset(0, 5),
+                                    ),
+                                  ],
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 12,
+                                ),
+                                child: Column(
                                   children: [
-                                    // Glow animated circular avatar
-                                    AnimatedBuilder(
-                                      animation: _pulseController,
-                                      builder: (context, child) {
-                                        return Container(
-                                          decoration: BoxDecoration(
-                                            shape: BoxShape.circle,
-                                            boxShadow: [
-                                              BoxShadow(
-                                                color: const Color(0xFFFF9F0A).withOpacity(
-                                                  0.2 + 0.3 * _pulseController.value,
+                                    Row(
+                                      children: [
+                                        // Glow animated circular avatar
+                                        AnimatedBuilder(
+                                          animation: _pulseController,
+                                          builder: (context, child) {
+                                            return Container(
+                                              decoration: BoxDecoration(
+                                                shape: BoxShape.circle,
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color:
+                                                        const Color(
+                                                          0xFFFF9F0A,
+                                                        ).withOpacity(
+                                                          0.2 +
+                                                              0.3 *
+                                                                  _pulseController
+                                                                      .value,
+                                                        ),
+                                                    blurRadius:
+                                                        8 +
+                                                        8 *
+                                                            _pulseController
+                                                                .value,
+                                                    spreadRadius:
+                                                        1 +
+                                                        2 *
+                                                            _pulseController
+                                                                .value,
+                                                  ),
+                                                ],
+                                              ),
+                                              child: child,
+                                            );
+                                          },
+                                          child: Container(
+                                            decoration: BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              border: Border.all(
+                                                color: const Color(0xFFFF9F0A),
+                                                width: 2.0,
+                                              ),
+                                            ),
+                                            child: CircleAvatar(
+                                              radius: 28,
+                                              backgroundImage: imageProvider,
+                                              backgroundColor:
+                                                  Colors.transparent,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 14),
+                                        // User Names & Rank Title
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                displayName,
+                                                style: GoogleFonts.outfit(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: titleColor,
                                                 ),
-                                                blurRadius: 10 + 10 * _pulseController.value,
-                                                spreadRadius: 2 + 3 * _pulseController.value,
+                                              ),
+                                              Text(
+                                                '@$username',
+                                                style: GoogleFonts.outfit(
+                                                  fontSize: 12,
+                                                  color: textColor,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 8,
+                                                      vertical: 2,
+                                                    ),
+                                                decoration: BoxDecoration(
+                                                  color: _getRankColor(
+                                                    totalKills,
+                                                  ).withOpacity(0.12),
+                                                  borderRadius:
+                                                      BorderRadius.circular(20),
+                                                  border: Border.all(
+                                                    color: _getRankColor(
+                                                      totalKills,
+                                                    ).withOpacity(0.4),
+                                                    width: 1.0,
+                                                  ),
+                                                ),
+                                                child: Text(
+                                                  _getRankTitle(totalKills),
+                                                  style: GoogleFonts.outfit(
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: _getRankColor(
+                                                      totalKills,
+                                                    ),
+                                                  ),
+                                                ),
                                               ),
                                             ],
                                           ),
-                                          child: child,
-                                        );
-                                      },
-                                      child: Container(
-                                        decoration: BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          border: Border.all(
-                                            color: const Color(0xFFFF9F0A),
-                                            width: 2.5,
-                                          ),
                                         ),
-                                        child: CircleAvatar(
-                                          radius: 36,
-                                          backgroundImage: imageProvider,
-                                          backgroundColor: Colors.transparent,
+                                      ],
+                                    ),
+                                    const Divider(height: 18, thickness: 1.2),
+                                    // Bee Statistics Details
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceAround,
+                                      children: [
+                                        _buildStatMetric(
+                                          '$totalKills',
+                                          'Bees Exterminated',
+                                          '🐝',
+                                          isDark,
+                                        ),
+                                        _buildStatMetric(
+                                          _isLoadingRank
+                                              ? '...'
+                                              : _globalRank != null
+                                              ? '#$_globalRank'
+                                              : 'Unranked',
+                                          'Global Rank',
+                                          '🏆',
+                                          isDark,
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    // Interactive Quest Toggle
+                                    Container(
+                                      margin: const EdgeInsets.only(top: 6),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: isDark
+                                            ? const Color(0xFF281E48)
+                                            : const Color(0xFFFFF2EC),
+                                        borderRadius: BorderRadius.circular(14),
+                                        border: Border.all(
+                                          color: isDark
+                                              ? const Color(0xFF3B2D68)
+                                              : const Color(0xFFFFE0D6),
                                         ),
                                       ),
-                                    ),
-                                    const SizedBox(width: 16),
-                                    // User Names & Rank Title
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                      child: Row(
                                         children: [
-                                          Text(
-                                            displayName,
-                                            style: GoogleFonts.outfit(
-                                              fontSize: 18,
-                                              fontWeight: FontWeight.bold,
-                                              color: titleColor,
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  'Active Quest 🐝',
+                                                  style: GoogleFonts.outfit(
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.w800,
+                                                    color: titleColor,
+                                                  ),
+                                                ),
+                                                Text(
+                                                  beeEnabled
+                                                      ? 'Bees are currently buzzing around!'
+                                                      : 'Bee swarm is hidden.',
+                                                  style: GoogleFonts.outfit(
+                                                    fontSize: 10,
+                                                    color: beeEnabled
+                                                        ? const Color(
+                                                            0xFFFF9F0A,
+                                                          )
+                                                        : textColor,
+                                                  ),
+                                                ),
+                                              ],
                                             ),
                                           ),
-                                          Text(
-                                            '@$username',
-                                            style: GoogleFonts.outfit(
-                                              fontSize: 13,
-                                              color: textColor,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 6),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 10,
-                                              vertical: 4,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: _getRankColor(totalKills).withOpacity(0.12),
-                                              borderRadius: BorderRadius.circular(20),
-                                              border: Border.all(
-                                                color: _getRankColor(totalKills).withOpacity(0.4),
-                                                width: 1.2,
+                                          Transform.scale(
+                                            scale: 0.85,
+                                            child: Switch(
+                                              value: beeEnabled,
+                                              activeColor: const Color(
+                                                0xFFFF9F0A,
                                               ),
-                                            ),
-                                            child: Text(
-                                              _getRankTitle(totalKills),
-                                              style: GoogleFonts.outfit(
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.bold,
-                                                color: _getRankColor(totalKills),
-                                              ),
+                                              activeTrackColor: const Color(
+                                                0xFFFF9F0A,
+                                              ).withOpacity(0.3),
+                                              onChanged: (val) {
+                                                ref
+                                                    .read(
+                                                      beeEnabledProvider
+                                                          .notifier,
+                                                    )
+                                                    .toggle();
+                                              },
                                             ),
                                           ),
                                         ],
@@ -255,277 +459,286 @@ class _BeeDashboardScreenState extends ConsumerState<BeeDashboardScreen>
                                     ),
                                   ],
                                 ),
-                                const Divider(height: 32, thickness: 1.2),
-                                // Bee Statistics Details
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                                  children: [
-                                    _buildStatMetric(
-                                      '$totalKills',
-                                      'Bees Exterminated',
-                                      '🐝',
-                                      isDark,
-                                    ),
-                                    _buildStatMetric(
-                                      totalKills >= 100 ? 'MAX' : '${100 - totalKills}',
-                                      'Kills for Next Rank',
-                                      '⚔️',
-                                      isDark,
-                                    ),
-                                  ],
+                              );
+                            },
+                          ),
+
+                          const SizedBox(height: 18),
+                          // 2. LEADERBOARD HEADER
+                          Row(
+                            children: [
+                              Text(
+                                'Global Leaderboard',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w900,
+                                  color: titleColor,
                                 ),
-                                const SizedBox(height: 12),
-                                // Interactive Quest Toggle
-                                Container(
-                                  margin: const EdgeInsets.only(top: 8),
-                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                                  decoration: BoxDecoration(
-                                    color: isDark ? const Color(0xFF281E48) : const Color(0xFFFFF2EC),
-                                    borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(
-                                      color: isDark ? const Color(0xFF3B2D68) : const Color(0xFFFFE0D6),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                '🏆',
+                                style: GoogleFonts.outfit(fontSize: 18),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+
+                          // 3. LEADERBOARD LIST
+                          leaderboardAsync.when(
+                            loading: () => const Center(
+                              child: Padding(
+                                padding: EdgeInsets.symmetric(vertical: 40.0),
+                                child: CircularProgressIndicator(
+                                  color: Color(0xFFFF9F0A),
+                                ),
+                              ),
+                            ),
+                            error: (err, stack) => Center(
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 40.0,
+                                ),
+                                child: Text(
+                                  'Failed to load leaderboard.',
+                                  style: GoogleFonts.outfit(
+                                    color: Colors.redAccent,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            data: (entries) {
+                              if (entries.isEmpty) {
+                                return Center(
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 40.0,
+                                    ),
+                                    child: Text(
+                                      'No records yet. Taps bees to join!',
+                                      style: GoogleFonts.outfit(
+                                        color: textColor,
+                                      ),
                                     ),
                                   ),
-                                  child: Row(
-                                    children: [
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              'Active Quest 🐝',
-                                              style: GoogleFonts.outfit(
-                                                fontSize: 13,
-                                                fontWeight: FontWeight.w800,
-                                                color: titleColor,
+                                );
+                              }
+
+                              return Column(
+                                children: entries.asMap().entries.map((item) {
+                                  final index = item.key;
+                                  final entry = item.value;
+                                  final kills = entry['kills'] as int;
+                                  final userId = entry['user_id'] as String;
+                                  final isMe =
+                                      currentUser != null &&
+                                      userId == currentUser.id;
+
+                                  final profile =
+                                      entry['user_profiles']
+                                          as Map<String, dynamic>?;
+                                  final displayName =
+                                      profile?['display_name']?.toString() ??
+                                      profile?['username']?.toString() ??
+                                      'Exterminator';
+                                  final username =
+                                      profile?['username']?.toString() ??
+                                      'anonymous';
+                                  final avatarUrl =
+                                      profile?['avatar_url']?.toString() ??
+                                      'assets/images/pikachu.png';
+
+                                  final rank = index + 1;
+
+                                  // UI highlight for current user
+                                  final itemBg = isMe
+                                      ? (isDark
+                                            ? const Color(0xFF2C2258)
+                                            : const Color(0xFFFFEFEB))
+                                      : cardBgColor;
+
+                                  final itemBorder = isMe
+                                      ? Border.all(
+                                          color: const Color(0xFFFF9F0A),
+                                          width: 1.5,
+                                        )
+                                      : Border.all(
+                                          color: borderColor,
+                                          width: 1.0,
+                                        );
+
+                                  final ImageProvider imageProvider =
+                                      avatarUrl.startsWith('http')
+                                      ? NetworkImage(avatarUrl)
+                                      : AssetImage(avatarUrl) as ImageProvider;
+
+                                  return Container(
+                                    margin: const EdgeInsets.only(bottom: 10),
+                                    decoration: BoxDecoration(
+                                      color: itemBg,
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: itemBorder,
+                                      boxShadow: isMe
+                                          ? [
+                                              BoxShadow(
+                                                color: const Color(
+                                                  0xFFFF9F0A,
+                                                ).withOpacity(0.15),
+                                                blurRadius: 10,
+                                                spreadRadius: 1,
                                               ),
-                                            ),
-                                            Text(
-                                              beeEnabled
-                                                  ? 'Bees are currently buzzing around!'
-                                                  : 'Bee swarm is hidden.',
-                                              style: GoogleFonts.outfit(
-                                                fontSize: 11,
-                                                color: beeEnabled ? const Color(0xFFFF9F0A) : textColor,
+                                            ]
+                                          : [],
+                                    ),
+                                    child: ListTile(
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                            horizontal: 16,
+                                            vertical: 6,
+                                          ),
+                                      leading: SizedBox(
+                                        width: 80,
+                                        child: Row(
+                                          children: [
+                                            _buildRankBadge(rank, isDark),
+                                            const SizedBox(width: 12),
+                                            Container(
+                                              decoration: BoxDecoration(
+                                                shape: BoxShape.circle,
+                                                border: Border.all(
+                                                  color: isMe
+                                                      ? const Color(0xFFFF9F0A)
+                                                      : Colors.transparent,
+                                                  width: 1.5,
+                                                ),
+                                              ),
+                                              child: CircleAvatar(
+                                                radius: 18,
+                                                backgroundImage: imageProvider,
+                                                backgroundColor:
+                                                    Colors.transparent,
                                               ),
                                             ),
                                           ],
                                         ),
                                       ),
-                                      Switch(
-                                        value: beeEnabled,
-                                        activeColor: const Color(0xFFFF9F0A),
-                                        activeTrackColor: const Color(0xFFFF9F0A).withOpacity(0.3),
-                                        onChanged: (val) {
-                                          ref.read(beeEnabledProvider.notifier).toggle();
-                                        },
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-                      
-                      const SizedBox(height: 28),
-                      // 2. LEADERBOARD HEADER
-                      Row(
-                        children: [
-                          Text(
-                            'Global Leaderboard',
-                            style: GoogleFonts.outfit(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w900,
-                              color: titleColor,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            '🏆',
-                            style: GoogleFonts.outfit(fontSize: 18),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-
-                      // 3. LEADERBOARD LIST
-                      leaderboardAsync.when(
-                        loading: () => const Center(
-                          child: Padding(
-                            padding: EdgeInsets.symmetric(vertical: 40.0),
-                            child: CircularProgressIndicator(color: Color(0xFFFF9F0A)),
-                          ),
-                        ),
-                        error: (err, stack) => Center(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 40.0),
-                            child: Text(
-                              'Failed to load leaderboard.',
-                              style: GoogleFonts.outfit(color: Colors.redAccent),
-                            ),
-                          ),
-                        ),
-                        data: (entries) {
-                          if (entries.isEmpty) {
-                            return Center(
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 40.0),
-                                child: Text(
-                                  'No records yet. Taps bees to join!',
-                                  style: GoogleFonts.outfit(color: textColor),
-                                ),
-                              ),
-                            );
-                          }
-
-                          return Column(
-                            children: entries.asMap().entries.map((item) {
-                              final index = item.key;
-                              final entry = item.value;
-                              final kills = entry['kills'] as int;
-                              final userId = entry['user_id'] as String;
-                              final isMe = currentUser != null && userId == currentUser.id;
-
-                              final profile = entry['user_profiles'] as Map<String, dynamic>?;
-                              final displayName = profile?['display_name']?.toString() ??
-                                  profile?['username']?.toString() ??
-                                  'Exterminator';
-                              final username = profile?['username']?.toString() ?? 'anonymous';
-                              final avatarUrl = profile?['avatar_url']?.toString() ??
-                                  'assets/images/pikachu.png';
-
-                              final rank = index + 1;
-
-                              // UI highlight for current user
-                              final itemBg = isMe
-                                  ? (isDark ? const Color(0xFF2C2258) : const Color(0xFFFFEFEB))
-                                  : cardBgColor;
-
-                              final itemBorder = isMe
-                                  ? Border.all(color: const Color(0xFFFF9F0A), width: 1.5)
-                                  : Border.all(color: borderColor, width: 1.0);
-
-                              final ImageProvider imageProvider = avatarUrl.startsWith('http')
-                                  ? NetworkImage(avatarUrl)
-                                  : AssetImage(avatarUrl) as ImageProvider;
-
-                              return Container(
-                                margin: const EdgeInsets.only(bottom: 10),
-                                decoration: BoxDecoration(
-                                  color: itemBg,
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: itemBorder,
-                                  boxShadow: isMe
-                                      ? [
-                                          BoxShadow(
-                                            color: const Color(0xFFFF9F0A).withOpacity(0.15),
-                                            blurRadius: 10,
-                                            spreadRadius: 1,
-                                          )
-                                        ]
-                                      : [],
-                                ),
-                                child: ListTile(
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                                  leading: SizedBox(
-                                    width: 80,
-                                    child: Row(
-                                      children: [
-                                        _buildRankBadge(rank, isDark),
-                                        const SizedBox(width: 12),
-                                        Container(
-                                          decoration: BoxDecoration(
-                                            shape: BoxShape.circle,
-                                            border: Border.all(
-                                              color: isMe ? const Color(0xFFFF9F0A) : Colors.transparent,
-                                              width: 1.5,
+                                      title: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            displayName,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: GoogleFonts.outfit(
+                                              fontWeight: isMe
+                                                  ? FontWeight.w900
+                                                  : FontWeight.bold,
+                                              color: isMe
+                                                  ? (isDark
+                                                        ? Colors.white
+                                                        : const Color(
+                                                            0xFF5A2900,
+                                                          ))
+                                                  : (isDark
+                                                        ? Colors.white
+                                                        : const Color(
+                                                            0xFF3D2F27,
+                                                          )),
+                                              fontSize: 14,
                                             ),
                                           ),
-                                          child: CircleAvatar(
-                                            radius: 18,
-                                            backgroundImage: imageProvider,
-                                            backgroundColor: Colors.transparent,
+                                          Text(
+                                            '@$username',
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: GoogleFonts.outfit(
+                                              fontSize: 11,
+                                              color: isMe
+                                                  ? const Color(0xFFFF9F0A)
+                                                  : textColor,
+                                              fontWeight: isMe
+                                                  ? FontWeight.bold
+                                                  : FontWeight.normal,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      trailing: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 12,
+                                          vertical: 6,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: isDark
+                                              ? const Color(0xFF281E48)
+                                              : const Color(0xFFFFF2EC),
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                          border: Border.all(
+                                            color: isDark
+                                                ? const Color(0xFF3B2D68)
+                                                : const Color(0xFFFFE0D6),
                                           ),
                                         ),
-                                      ],
-                                    ),
-                                  ),
-                                  title: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        displayName,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: GoogleFonts.outfit(
-                                          fontWeight: isMe ? FontWeight.w900 : FontWeight.bold,
-                                          color: isMe
-                                              ? (isDark ? Colors.white : const Color(0xFF5A2900))
-                                              : (isDark ? Colors.white : const Color(0xFF3D2F27)),
-                                          fontSize: 14,
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Text(
+                                              '$kills',
+                                              style: GoogleFonts.outfit(
+                                                fontWeight: FontWeight.w900,
+                                                fontSize: 13,
+                                                color: const Color(0xFFFF9F0A),
+                                              ),
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              '🐝',
+                                              style: GoogleFonts.outfit(
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ),
-                                      Text(
-                                        '@$username',
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: GoogleFonts.outfit(
-                                          fontSize: 11,
-                                          color: isMe ? const Color(0xFFFF9F0A) : textColor,
-                                          fontWeight: isMe ? FontWeight.bold : FontWeight.normal,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  trailing: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                    decoration: BoxDecoration(
-                                      color: isDark ? const Color(0xFF281E48) : const Color(0xFFFFF2EC),
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(
-                                        color: isDark ? const Color(0xFF3B2D68) : const Color(0xFFFFE0D6),
-                                      ),
                                     ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Text(
-                                          '$kills',
-                                          style: GoogleFonts.outfit(
-                                            fontWeight: FontWeight.w900,
-                                            fontSize: 13,
-                                            color: const Color(0xFFFF9F0A),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          '🐝',
-                                          style: GoogleFonts.outfit(fontSize: 12),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
+                                  );
+                                }).toList(),
                               );
-                            }).toList(),
-                          );
-                        },
+                            },
+                          ),
+                          const SizedBox(height: 20),
+                        ],
                       ),
-                      const SizedBox(height: 20),
-                    ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (_showConfetti)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: Lottie.asset(
+                    'json/Confeti.json',
+                    fit: BoxFit.cover,
+                    repeat: false,
                   ),
                 ),
               ),
-            ],
-          ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildStatMetric(String value, String label, String icon, bool isDark) {
+  Widget _buildStatMetric(
+    String value,
+    String label,
+    String icon,
+    bool isDark,
+  ) {
     final titleColor = isDark ? Colors.white : const Color(0xFF3D2F27);
     final textColor = isDark ? Colors.white60 : const Color(0xFF7A6456);
 
@@ -534,10 +747,7 @@ class _BeeDashboardScreenState extends ConsumerState<BeeDashboardScreen>
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              icon,
-              style: GoogleFonts.outfit(fontSize: 16),
-            ),
+            Text(icon, style: GoogleFonts.outfit(fontSize: 16)),
             const SizedBox(width: 6),
             Text(
               value,
