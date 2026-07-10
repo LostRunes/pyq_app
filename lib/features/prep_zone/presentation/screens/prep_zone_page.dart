@@ -45,9 +45,9 @@ class PrepZonePage extends ConsumerWidget {
         'title': 'Aptitude',
         'desc': 'Quantitative, logical reasoning & verbal ability',
         'icon': Icons.psychology_rounded,
-        'route': '',
+        'route': '/aptitude_topics',
         'color': const Color(0xFF8B5CF6), // Purple
-        'isComingSoon': true,
+        'isComingSoon': false,
         'lottie': 'json/aptitude.json',
       },
       {

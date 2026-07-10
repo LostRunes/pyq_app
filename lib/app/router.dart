@@ -18,6 +18,9 @@ import 'package:focus_fox/features/utilities/presentation/screens/gpa_calculator
 import 'package:focus_fox/features/prep_zone/presentation/screens/syllabus_screen.dart';
 import 'package:focus_fox/features/prep_zone/presentation/screens/algo_code_screen.dart';
 import 'package:focus_fox/features/prep_zone/presentation/screens/gate_prep_screen.dart';
+import 'package:focus_fox/features/prep_zone/presentation/screens/aptitude_topics_screen.dart';
+import 'package:focus_fox/features/prep_zone/presentation/screens/aptitude_questions_screen.dart';
+import 'package:focus_fox/features/prep_zone/presentation/screens/aptitude_question_detail_screen.dart';
 import 'package:focus_fox/features/focus_timer/presentation/screens/focus_timer_screen.dart';
 import 'package:focus_fox/features/skulk/presentation/screens/create_doubt_screen.dart';
 import 'package:focus_fox/features/skulk/presentation/screens/doubt_detail_screen.dart';
@@ -199,6 +202,21 @@ class AppRouter {
       case '/gate_prep':
         return ParallaxPageRoute(
           child: const GatePrepScreen(),
+          settings: settings,
+        );
+      case '/aptitude_topics':
+        return ParallaxPageRoute(
+          child: const AptitudeTopicsScreen(),
+          settings: settings,
+        );
+      case '/aptitude_questions':
+        return ParallaxPageRoute(
+          child: const AptitudeQuestionsScreen(),
+          settings: settings,
+        );
+      case '/aptitude_question_detail':
+        return ParallaxPageRoute(
+          child: const AptitudeQuestionDetailScreen(),
           settings: settings,
         );
       case '/focus_timer':
