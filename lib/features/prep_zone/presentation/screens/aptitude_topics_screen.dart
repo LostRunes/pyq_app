@@ -225,17 +225,12 @@ class AptitudeTopicsScreen extends ConsumerWidget {
               },
             ),
 
-            const SizedBox(height: 28),
-            GridView.builder(
+            const SizedBox(height: 24),
+            ListView.separated(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-                childAspectRatio: 0.72,
-              ),
               itemCount: topics.length,
+              separatorBuilder: (context, index) => const SizedBox(height: 16),
               itemBuilder: (context, index) {
                 final topic = topics[index];
                 final Color topicColor = topic['color'] as Color;
@@ -281,68 +276,103 @@ class AptitudeTopicsScreen extends ConsumerWidget {
                               ),
                             ],
                           ),
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  color: topicColor.withOpacity(0.12),
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                child: Icon(
-                                  topic['icon'] as IconData,
-                                  color: topicColor,
-                                  size: 24,
-                                ),
-                              ),
-                              const Spacer(),
-                              Text(
-                                topic['title'] as String,
-                                style: GoogleFonts.outfit(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                  color: isDark ? Colors.white : Colors.black87,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                topic['desc'] as String,
-                                style: GoogleFonts.outfit(
-                                  fontSize: 10,
-                                  color: isDark ? Colors.white54 : Colors.black54,
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 12),
-                              const Divider(height: 1, thickness: 1),
-                              const SizedBox(height: 8),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(22),
+                            child: IntrinsicHeight(
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
-                                  Text(
-                                    'Solved: $solvedCount',
-                                    style: GoogleFonts.outfit(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
-                                      color: theme.colorScheme.primary,
+                                  // Left side color block containing the icon
+                                  Container(
+                                    width: 80,
+                                    color: topicColor.withOpacity(0.12),
+                                    child: Center(
+                                      child: Icon(
+                                        topic['icon'] as IconData,
+                                        color: topicColor,
+                                        size: 32,
+                                      ),
                                     ),
                                   ),
-                                  Text(
-                                    '${topicScore >= 0 ? "+" : ""}$topicScore pts',
-                                    style: GoogleFonts.outfit(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
-                                      color: topicScore >= 0 ? Colors.green : Colors.redAccent,
+                                  // Right side content
+                                  Expanded(
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Text(
+                                            topic['title'] as String,
+                                            style: GoogleFonts.outfit(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 16,
+                                              color: isDark ? Colors.white : Colors.black87,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            topic['desc'] as String,
+                                            style: GoogleFonts.outfit(
+                                              fontSize: 12,
+                                              color: isDark ? Colors.white54 : Colors.black54,
+                                            ),
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          const SizedBox(height: 12),
+                                          const Divider(height: 1, thickness: 1),
+                                          const SizedBox(height: 8),
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Row(
+                                                children: [
+                                                  Icon(
+                                                    Icons.check_circle_outline_rounded,
+                                                    size: 14,
+                                                    color: theme.colorScheme.primary,
+                                                  ),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    'Solved: $solvedCount',
+                                                    style: GoogleFonts.outfit(
+                                                      fontSize: 12,
+                                                      fontWeight: FontWeight.bold,
+                                                      color: theme.colorScheme.primary,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              Row(
+                                                children: [
+                                                  Icon(
+                                                    Icons.emoji_events_outlined,
+                                                    size: 14,
+                                                    color: topicScore >= 0 ? Colors.green : Colors.redAccent,
+                                                  ),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    '${topicScore >= 0 ? "+" : ""}$topicScore pts',
+                                                    style: GoogleFonts.outfit(
+                                                      fontSize: 12,
+                                                      fontWeight: FontWeight.bold,
+                                                      color: topicScore >= 0 ? Colors.green : Colors.redAccent,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ],
                               ),
-                            ],
+                            ),
                           ),
                         ),
                       ),
