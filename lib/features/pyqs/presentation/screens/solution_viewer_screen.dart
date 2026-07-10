@@ -510,12 +510,14 @@ class _SolutionViewerScreenState extends ConsumerState<SolutionViewerScreen> {
                   )
                 ],
               ),
-              child: SelectableText(
-                _processCode(activeSolution['solution'] ?? ''),
+              child: SelectableText.rich(
+                _buildHighlightedCode(
+                  _processCode(activeSolution['solution'] ?? ''),
+                  isDark,
+                ),
                 style: GoogleFonts.sourceCodePro(
                   fontSize: 13,
                   height: 1.5,
-                  color: const Color(0xFFF8F8F2),
                 ),
               ),
             ),
@@ -534,6 +536,69 @@ class _SolutionViewerScreenState extends ConsumerState<SolutionViewerScreen> {
         .split('\n')
         .where((line) => !line.trim().startsWith('//') && !line.trim().startsWith('#'))
         .join('\n');
+  }
+
+  TextSpan _buildHighlightedCode(String code, bool isDark) {
+    final List<InlineSpan> spans = [];
+    final regex = RegExp(
+      r'(//[^\n]*|/\*[\s\S]*?\*/)' // 1: Comments
+      r'|("[^"\\]*(?:\\.[^"\\]*)*")' // 2: Double-quoted Strings
+      r"|('[^'\\]*(?:\\.[^'\\]*)*')" // 3: Single-quoted Chars
+      r'|(\b(?:int|double|float|char|void|long|boolean|bool|short|byte|class|interface|public|private|protected|static|final|const|volatile|transient|synchronized|native|if|else|for|while|do|switch|case|default|break|continue|return|try|catch|finally|throw|throws|new|this|super|import|package|struct|typedef|template|typename|using|namespace|virtual|override|nullptr|true|false)\b)' // 4: Keywords
+      r'|(\b\d+(?:\.\d+)?\b)' // 5: Numbers
+      r'|(#[a-zA-Z_]+|@[a-zA-Z_]+)' // 6: Preprocessor/Annotations
+    );
+
+    int lastIndex = 0;
+    final defaultTextColor = const Color(0xFFF8F8F2);
+
+    for (final match in regex.allMatches(code)) {
+      // Add text before the match (whitespaces, operators, punctuation, etc.)
+      if (match.start > lastIndex) {
+        spans.add(TextSpan(
+          text: code.substring(lastIndex, match.start),
+          style: GoogleFonts.sourceCodePro(color: defaultTextColor),
+        ));
+      }
+
+      final matchedText = match.group(0)!;
+      Color color = defaultTextColor;
+      FontWeight fontWeight = FontWeight.normal;
+
+      if (match.group(1) != null) {
+        // Comment
+        color = const Color(0xFF6272A4); // Dracula comment color (greyish blue)
+      } else if (match.group(2) != null || match.group(3) != null) {
+        // String or Char
+        color = const Color(0xFFF1FA8C); // Dracula yellow string
+      } else if (match.group(4) != null) {
+        // Keyword
+        color = const Color(0xFFFF79C6); // Dracula pink keyword
+        fontWeight = FontWeight.bold;
+      } else if (match.group(5) != null) {
+        // Number
+        color = const Color(0xFFBD93F9); // Dracula purple number
+      } else if (match.group(6) != null) {
+        // Preprocessor or Annotation
+        color = const Color(0xFFFFB86C); // Dracula orange annotation
+      }
+
+      spans.add(TextSpan(
+        text: matchedText,
+        style: GoogleFonts.sourceCodePro(color: color, fontWeight: fontWeight),
+      ));
+      lastIndex = match.end;
+    }
+
+    // Add remaining text
+    if (lastIndex < code.length) {
+      spans.add(TextSpan(
+        text: code.substring(lastIndex),
+        style: GoogleFonts.sourceCodePro(color: defaultTextColor),
+      ));
+    }
+
+    return TextSpan(children: spans);
   }
 
   Widget _buildComplexityBadge(String text, Color color) {
