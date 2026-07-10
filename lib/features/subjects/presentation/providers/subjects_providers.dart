@@ -53,3 +53,14 @@ class SubjectsSearchNotifier extends Notifier<String> {
 final subjectsSearchProvider = NotifierProvider<SubjectsSearchNotifier, String>(
   SubjectsSearchNotifier.new,
 );
+
+class SubjectTitleAnimationNotifier extends Notifier<bool> {
+  @override
+  bool build() => false;
+
+  void setShown(bool value) => state = value;
+}
+
+final hasShownSubjectTitleAnimationProvider = NotifierProvider<SubjectTitleAnimationNotifier, bool>(
+  SubjectTitleAnimationNotifier.new,
+);
