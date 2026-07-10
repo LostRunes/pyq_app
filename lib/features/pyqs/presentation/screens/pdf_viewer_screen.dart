@@ -11,12 +11,14 @@ class PdfViewerScreen extends StatefulWidget {
   final String pdfUrl;
   final String title;
   final String webViewLink;
+  final bool preventDownload;
 
   const PdfViewerScreen({
     super.key,
     required this.pdfUrl,
     required this.title,
     required this.webViewLink,
+    this.preventDownload = false,
   });
 
   @override
@@ -83,13 +85,15 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
           widget.title,
           style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.open_in_browser_rounded),
-            tooltip: 'Open in Browser',
-            onPressed: _launchExternal,
-          ),
-        ],
+        actions: widget.preventDownload
+            ? null
+            : [
+                IconButton(
+                  icon: const Icon(Icons.open_in_browser_rounded),
+                  tooltip: 'Open in Browser',
+                  onPressed: _launchExternal,
+                ),
+              ],
       ),
       body: _isLoading
           ? Center(
@@ -137,21 +141,23 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
                       ),
                       textAlign: TextAlign.center,
                     ),
-                    const SizedBox(height: 24),
-                    ElevatedButton.icon(
-                      onPressed: _launchExternal,
-                      icon: const Icon(Icons.open_in_browser_rounded),
-                      label: const Text('Open in Browser'),
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 14,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
+                    if (!widget.preventDownload) ...[
+                      const SizedBox(height: 24),
+                      ElevatedButton.icon(
+                        onPressed: _launchExternal,
+                        icon: const Icon(Icons.open_in_browser_rounded),
+                        label: const Text('Open in Browser'),
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 14,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
                         ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ),
@@ -174,18 +180,34 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
                     // Successfully rendered
                   },
                 ),
-                Positioned(
-                  bottom: 16,
-                  right: 16,
-                  child: FloatingActionButton.small(
-                    heroTag: 'fallback_browser',
-                    onPressed: _launchExternal,
-                    tooltip: 'Having trouble? Open in Browser',
-                    child: const Icon(Icons.open_in_browser_rounded),
+                if (!widget.preventDownload)
+                  Positioned(
+                    bottom: 16,
+                    right: 16,
+                    child: FloatingActionButton.small(
+                      heroTag: 'fallback_browser',
+                      onPressed: _launchExternal,
+                      tooltip: 'Having trouble? Open in Browser',
+                      child: const Icon(Icons.open_in_browser_rounded),
+                    ),
                   ),
-                ),
               ],
             ),
     );
+  }
+
+  @override
+  void dispose() {
+    if (_localPath != null) {
+      final file = File(_localPath!);
+      if (file.existsSync()) {
+        try {
+          file.deleteSync();
+        } catch (e) {
+          debugPrint('Error deleting temporary PDF file: $e');
+        }
+      }
+    }
+    super.dispose();
   }
 }

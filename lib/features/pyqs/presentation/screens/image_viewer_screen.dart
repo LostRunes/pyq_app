@@ -6,12 +6,14 @@ class ImageViewerScreen extends StatelessWidget {
   final String imageUrl;
   final String title;
   final String webViewLink;
+  final bool preventDownload;
 
   const ImageViewerScreen({
     super.key,
     required this.imageUrl,
     required this.title,
     required this.webViewLink,
+    this.preventDownload = false,
   });
 
   Future<void> _launchExternal(BuildContext context) async {
@@ -32,13 +34,15 @@ class ImageViewerScreen extends StatelessWidget {
           title,
           style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.open_in_browser_rounded),
-            tooltip: 'Open in Browser',
-            onPressed: () => _launchExternal(context),
-          ),
-        ],
+        actions: preventDownload
+            ? null
+            : [
+                IconButton(
+                  icon: const Icon(Icons.open_in_browser_rounded),
+                  tooltip: 'Open in Browser',
+                  onPressed: () => _launchExternal(context),
+                ),
+              ],
       ),
       body: Center(
         child: InteractiveViewer(
@@ -78,21 +82,23 @@ class ImageViewerScreen extends StatelessWidget {
                       ),
                       textAlign: TextAlign.center,
                     ),
-                    const SizedBox(height: 24),
-                    ElevatedButton.icon(
-                      onPressed: () => _launchExternal(context),
-                      icon: const Icon(Icons.open_in_browser_rounded),
-                      label: const Text('Open in Browser'),
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 14,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
+                    if (!preventDownload) ...[
+                      const SizedBox(height: 24),
+                      ElevatedButton.icon(
+                        onPressed: () => _launchExternal(context),
+                        icon: const Icon(Icons.open_in_browser_rounded),
+                        label: const Text('Open in Browser'),
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 14,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
                         ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
               );

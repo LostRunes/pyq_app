@@ -2,20 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../utils/drive_utils.dart';
-import 'package:focus_fox/features/pyqs/presentation/screens/pdf_viewer_screen.dart';
-import 'package:focus_fox/features/pyqs/presentation/screens/image_viewer_screen.dart';
 import '../providers/pyq_providers.dart';
 import 'drive_file_tile.dart';
 
 class DriveExplorerTab extends ConsumerStatefulWidget {
   final String title;
   final String? driveLink;
+  final bool preventDownload;
 
   const DriveExplorerTab({
     super.key,
     required this.title,
     required this.driveLink,
+    this.preventDownload = false,
   });
 
   @override
@@ -42,50 +43,59 @@ class _DriveExplorerTabState extends ConsumerState<DriveExplorerTab> {
               child: DriveExplorerTab(
                 title: item["name"],
                 driveLink: "https://drive.google.com/drive/folders/${item["id"]}",
+                preventDownload: widget.preventDownload,
               ),
             ),
           ),
         ),
       );
     } else {
-      final fileId = item["id"] as String? ?? '';
-      final name = item["name"] as String? ?? 'File';
-      final mimeType = item["mimeType"] as String? ?? '';
       final webViewLink = item["webViewLink"] as String? ?? '';
 
-      if (mimeType.contains("pdf") && fileId.isNotEmpty) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => PdfViewerScreen(
-              pdfUrl: "https://drive.google.com/uc?export=download&id=$fileId",
-              title: name,
-              webViewLink: webViewLink,
-            ),
-          ),
-        );
-      } else if (mimeType.startsWith("image/") && fileId.isNotEmpty) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ImageViewerScreen(
-              imageUrl: "https://drive.google.com/uc?export=view&id=$fileId",
-              title: name,
-              webViewLink: webViewLink,
-            ),
-          ),
-        );
-      } else {
-        if (webViewLink.isNotEmpty) {
-          final messenger = ScaffoldMessenger.of(context);
-          final Uri url = Uri.parse(webViewLink);
-          if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+      if (webViewLink.isNotEmpty) {
+        final messenger = ScaffoldMessenger.of(context);
+        final urlWithAuth = _appendAuthUser(webViewLink);
+        final Uri url = Uri.parse(urlWithAuth);
+        try {
+          launchUrl(
+            url,
+            mode: LaunchMode.inAppBrowserView,
+          ).then((launched) {
+            if (!launched) {
+              messenger.showSnackBar(
+                const SnackBar(content: Text('Could not open the file in app.')),
+              );
+            }
+          }).catchError((e) {
             messenger.showSnackBar(
-              const SnackBar(content: Text('Could not open the file link.')),
+              SnackBar(content: Text('Error opening file: $e')),
             );
-          }
+          });
+        } catch (e) {
+          messenger.showSnackBar(
+            SnackBar(content: Text('Error opening link: $e')),
+          );
         }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No link available for this file.')),
+        );
       }
+    }
+  }
+
+  String _appendAuthUser(String url) {
+    try {
+      final email = Supabase.instance.client.auth.currentUser?.email;
+      if (email == null || email.isEmpty) return url;
+      
+      final uri = Uri.parse(url);
+      final queryParams = Map<String, String>.from(uri.queryParameters);
+      queryParams['authuser'] = email;
+      
+      return uri.replace(queryParameters: queryParams).toString();
+    } catch (_) {
+      return url;
     }
   }
 

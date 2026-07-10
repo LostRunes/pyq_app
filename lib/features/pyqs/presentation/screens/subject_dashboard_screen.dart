@@ -32,28 +32,44 @@ class _SubjectDashboardScreenState
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
+    final topicsAsync = ref.watch(dashboardTopicsProvider(widget.subject.id));
+    final hasTopics = topicsAsync.maybeWhen(
+      data: (topics) => topics.isNotEmpty,
+      orElse: () => true,
+    );
+
+    final hasPyqs =
+        widget.subject.pyqDriveLink != null &&
+        widget.subject.pyqDriveLink!.isNotEmpty;
+
+    final hasNotes =
+        widget.subject.notesDriveLink != null &&
+        widget.subject.notesDriveLink!.isNotEmpty;
+
     final hasHandout =
         widget.subject.courseOutcomeLink != null &&
         widget.subject.courseOutcomeLink!.isNotEmpty;
 
     final tabs = [
-      const Tab(text: "Topics"),
-      const Tab(text: "PYQs"),
-      const Tab(text: "Notes"),
+      if (hasTopics) const Tab(text: "Topics"),
+      if (hasPyqs) const Tab(text: "PYQs"),
+      if (hasNotes) const Tab(text: "Notes"),
       if (hasHandout) const Tab(text: "Course Handout"),
       const Tab(text: "Progress"),
     ];
 
     final tabViews = [
-      TopicTab(subjectId: widget.subject.id),
-      DriveExplorerTab(
-        title: 'Subject PYQs',
-        driveLink: widget.subject.pyqDriveLink,
-      ),
-      DriveExplorerTab(
-        title: 'Subject Notes',
-        driveLink: widget.subject.notesDriveLink,
-      ),
+      if (hasTopics) TopicTab(subjectId: widget.subject.id),
+      if (hasPyqs)
+        DriveExplorerTab(
+          title: 'Subject PYQs',
+          driveLink: widget.subject.pyqDriveLink,
+        ),
+      if (hasNotes)
+        DriveExplorerTab(
+          title: 'Subject Notes',
+          driveLink: widget.subject.notesDriveLink,
+        ),
       if (hasHandout)
         LinkTab(
           title: 'Course Handout',
@@ -62,7 +78,7 @@ class _SubjectDashboardScreenState
           buttonLabel: 'Open Course Handout',
           icon: Icons.description_outlined,
           link: widget.subject.courseOutcomeLink,
-          imagePath: 'assets/images/lil_fox.png',
+          imagePath: 'assets/images/polar_bearr.png',
           subjectName: widget.subject.name,
         ),
       ProgressTab(subjectId: widget.subject.id),

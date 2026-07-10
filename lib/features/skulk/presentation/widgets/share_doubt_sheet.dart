@@ -17,17 +17,16 @@ class ShareDoubtSheet extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => ShareDoubtSheet(
-        doubtId: doubtId,
-        doubtTitle: doubtTitle,
-      ),
+      builder: (context) =>
+          ShareDoubtSheet(doubtId: doubtId, doubtTitle: doubtTitle),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final shareUrl = 'https://focusfox-cc167.web.app/skulk/doubt/$doubtId';
+    final shareUrl =
+        'https://lostrunes.github.io/focusfox-share/share.html?post_id=$doubtId';
 
     return Container(
       decoration: BoxDecoration(
@@ -67,7 +66,9 @@ class ShareDoubtSheet extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary.withOpacity(0.12),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.primary.withOpacity(0.12),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
@@ -168,7 +169,9 @@ class ShareDoubtSheet extends StatelessWidget {
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: Theme.of(context).colorScheme.primary.withOpacity(0.24),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.primary.withOpacity(0.24),
                   blurRadius: 15,
                   offset: const Offset(0, 8),
                 ),
@@ -183,11 +186,17 @@ class ShareDoubtSheet extends StatelessWidget {
                     SnackBar(
                       content: Row(
                         children: [
-                          const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                          const Icon(
+                            Icons.check_circle_rounded,
+                            color: Colors.white,
+                            size: 20,
+                          ),
                           const SizedBox(width: 10),
                           Text(
                             'Link copied to clipboard! 📋',
-                            style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+                            style: GoogleFonts.outfit(
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ],
                       ),
@@ -200,7 +209,11 @@ class ShareDoubtSheet extends StatelessWidget {
                   );
                 }
               },
-              icon: const Icon(Icons.content_copy_rounded, color: Colors.white, size: 18),
+              icon: const Icon(
+                Icons.content_copy_rounded,
+                color: Colors.white,
+                size: 18,
+              ),
               label: Text(
                 'Copy Link',
                 style: GoogleFonts.outfit(

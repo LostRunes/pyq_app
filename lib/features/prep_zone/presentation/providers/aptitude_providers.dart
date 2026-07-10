@@ -1,51 +1,76 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:focus_fox/core/providers/prefs_provider.dart';
+import 'package:focus_fox/core/providers.dart';
 import '../../data/models/aptitude_question.dart';
 
 class AptitudeService {
+  final SupabaseClient _client;
+
+  AptitudeService(this._client);
+
   Future<List<AptitudeQuestion>> fetchQuestions(String endpoint) async {
-    final baseUrl = dotenv.env['APTITUDE_API_URL'] ?? 'https://aptitude-gold.vercel.app';
-    final url = Uri.parse('$baseUrl/$endpoint');
-    
-    // Fire 20 requests concurrently
-    final List<Future<http.Response>> requests = List.generate(
-      20,
-      (_) => http.get(url).timeout(const Duration(seconds: 8)),
-    );
-    
-    // Prevent one failing request from crashing the entire batch
-    final futures = requests.map((req) => req.catchError((_) => http.Response('', 500)));
-    final responses = await Future.wait(futures);
-    
-    final List<AptitudeQuestion> questions = [];
-    final Set<String> questionTexts = {};
-    
-    for (var response in responses) {
-      if (response.statusCode == 200 && response.body.isNotEmpty) {
-        try {
-          final Map<String, dynamic> data = json.decode(response.body);
-          final q = AptitudeQuestion.fromJson(data);
-          if (q.question.isNotEmpty && !questionTexts.contains(q.question)) {
-            questionTexts.add(q.question);
-            questions.add(q);
+    try {
+      final response = await _client
+          .from('aptitude_questions')
+          .select('''
+            question_text,
+            explanation,
+            aptitude_options (
+              option_text,
+              is_correct
+            ),
+            aptitude_topics!inner (
+              slug
+            )
+          ''')
+          .eq('aptitude_topics.slug', endpoint);
+
+      final List<AptitudeQuestion> questions = [];
+      final Set<String> questionTexts = {};
+
+      for (final item in response as List<dynamic>) {
+        final String questionText = item['question_text'] ?? '';
+        final String? explanation = item['explanation'];
+
+        final List<dynamic> optionsList = item['aptitude_options'] ?? [];
+        final List<String> options = [];
+        String correctAnswer = '';
+
+        for (final opt in optionsList) {
+          final String optText = opt['option_text'] ?? '';
+          final bool isCorrect = opt['is_correct'] ?? false;
+          options.add(optText);
+          if (isCorrect) {
+            correctAnswer = optText;
           }
-        } catch (_) {
-          // Skip invalid JSON
+        }
+
+        if (questionText.isNotEmpty && !questionTexts.contains(questionText)) {
+          questionTexts.add(questionText);
+          questions.add(
+            AptitudeQuestion(
+              question: questionText,
+              answer: correctAnswer,
+              options: options,
+              explanation: explanation,
+            ),
+          );
         }
       }
+
+      if (questions.isEmpty) {
+        throw Exception('No questions found for this topic.');
+      }
+      return questions;
+    } catch (e) {
+      throw Exception('Failed to load aptitude questions: $e');
     }
-    
-    if (questions.isEmpty) {
-      throw Exception('Failed to load aptitude questions. Please check your connection.');
-    }
-    return questions;
   }
 }
 
-final aptitudeServiceProvider = Provider((ref) => AptitudeService());
+final aptitudeServiceProvider = Provider((ref) => AptitudeService(ref.watch(supabase1ClientProvider)));
 
 final aptitudeQuestionsProvider = FutureProvider.family<List<AptitudeQuestion>, String>((ref, endpoint) async {
   final service = ref.watch(aptitudeServiceProvider);
