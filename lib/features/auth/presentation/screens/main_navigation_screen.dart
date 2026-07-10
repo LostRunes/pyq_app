@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'package:focus_fox/app/app.dart';
 import 'package:focus_fox/services/push_notification_service.dart';
@@ -317,6 +318,9 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
                   Navigator.pushNamed(context, '/about');
                 } else if (value == 'theme_toggle') {
                   ref.read(themeModeProvider.notifier).toggle();
+                } else if (value == 'instagram') {
+                  final Uri url = Uri.parse('https://www.instagram.com/focusfox.exe?igsh=NDBlcXhsb2R0czlo');
+                  unawaited(launchUrl(url, mode: LaunchMode.externalApplication));
                 } else if (value == 'logout') {
                   _showLogoutDialog(context);
                 } else if (value == 'bee_leaderboard') {
@@ -532,19 +536,17 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
                   ),
 
                   PopupMenuItem(
-                    value: 'theme_toggle',
+                    value: 'instagram',
                     child: Row(
                       children: [
-                        Icon(
-                          isDark
-                              ? Icons.light_mode_rounded
-                              : Icons.dark_mode_rounded,
-                          color: Theme.of(context).colorScheme.primary,
+                        const Icon(
+                          Icons.camera_alt_outlined,
+                          color: Color(0xFFE1306C),
                           size: 20,
                         ),
                         const SizedBox(width: 12),
                         Text(
-                          isDark ? 'Light Theme' : 'Dark Theme',
+                          'Instagram',
                           style: GoogleFonts.outfit(
                             fontWeight: FontWeight.bold,
                             fontSize: 13,
