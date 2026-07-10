@@ -1,21 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:focus_fox/shared/presentation/widgets/entrance_animations.dart';
 import '../../data/models/aptitude_question.dart';
+import '../providers/aptitude_providers.dart';
 
-class AptitudeQuestionDetailScreen extends StatefulWidget {
+class AptitudeQuestionDetailScreen extends ConsumerStatefulWidget {
   const AptitudeQuestionDetailScreen({super.key});
 
   @override
-  State<AptitudeQuestionDetailScreen> createState() =>
+  ConsumerState<AptitudeQuestionDetailScreen> createState() =>
       _AptitudeQuestionDetailScreenState();
 }
 
 class _AptitudeQuestionDetailScreenState
-    extends State<AptitudeQuestionDetailScreen> {
+    extends ConsumerState<AptitudeQuestionDetailScreen> {
   late List<AptitudeQuestion> _questions;
   late int _currentIndex;
   late String _title;
+  late String _endpoint;
   bool _initialized = false;
 
   String? _selectedOption;
@@ -29,12 +32,32 @@ class _AptitudeQuestionDetailScreenState
       _questions = args['questions'] as List<AptitudeQuestion>;
       _currentIndex = args['initialIndex'] as int? ?? 0;
       _title = args['title'] ?? 'Question';
+      _endpoint = args['endpoint'] ?? '';
       _initialized = true;
+
+      // Restore previously saved answer if present
+      final stats = ref.read(aptitudeStatsProvider);
+      final savedAns = stats.answers[_questions[_currentIndex].question];
+      if (savedAns != null) {
+        _selectedOption = savedAns['selectedOption'];
+        _isAnswered = true;
+      }
     }
   }
 
   void _selectOption(String option) {
     if (_isAnswered) return;
+    
+    final question = _questions[_currentIndex];
+    final isCorrectAns = _isOptionCorrect(option, question.answer);
+
+    ref.read(aptitudeStatsProvider.notifier).recordAnswer(
+      topicEndpoint: _endpoint,
+      questionText: question.question,
+      selectedOption: option,
+      isCorrect: isCorrectAns,
+    );
+
     setState(() {
       _selectedOption = option;
       _isAnswered = true;
@@ -45,8 +68,15 @@ class _AptitudeQuestionDetailScreenState
     if (_currentIndex < _questions.length - 1) {
       setState(() {
         _currentIndex++;
-        _selectedOption = null;
-        _isAnswered = false;
+        final stats = ref.read(aptitudeStatsProvider);
+        final savedAns = stats.answers[_questions[_currentIndex].question];
+        if (savedAns != null) {
+          _selectedOption = savedAns['selectedOption'];
+          _isAnswered = true;
+        } else {
+          _selectedOption = null;
+          _isAnswered = false;
+        }
       });
     }
   }
@@ -55,8 +85,15 @@ class _AptitudeQuestionDetailScreenState
     if (_currentIndex > 0) {
       setState(() {
         _currentIndex--;
-        _selectedOption = null;
-        _isAnswered = false;
+        final stats = ref.read(aptitudeStatsProvider);
+        final savedAns = stats.answers[_questions[_currentIndex].question];
+        if (savedAns != null) {
+          _selectedOption = savedAns['selectedOption'];
+          _isAnswered = true;
+        } else {
+          _selectedOption = null;
+          _isAnswered = false;
+        }
       });
     }
   }

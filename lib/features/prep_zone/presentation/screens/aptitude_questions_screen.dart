@@ -64,6 +64,20 @@ class AptitudeQuestionsScreen extends ConsumerWidget {
             );
           }
 
+          final stats = ref.watch(aptitudeStatsProvider);
+          
+          // Calculate solved count and score for this specific batch of fetched questions
+          int solvedCount = 0;
+          int topicScore = 0;
+          for (final q in questions) {
+            final ans = stats.answers[q.question];
+            if (ans != null) {
+              solvedCount++;
+              final isCorrect = ans['isCorrect'] as bool? ?? false;
+              topicScore += isCorrect ? 4 : -1;
+            }
+          }
+
           return SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
             child: Column(
@@ -92,6 +106,99 @@ class AptitudeQuestionsScreen extends ConsumerWidget {
                     ),
                   ),
                 ),
+                const SizedBox(height: 20),
+
+                // Stats card
+                FadeInSlide(
+                  delay: const Duration(milliseconds: 100),
+                  duration: const Duration(milliseconds: 400),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primary.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: theme.colorScheme.primary.withOpacity(0.12),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Solved Questions',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 12,
+                                    color: theme.colorScheme.onSurface.withOpacity(0.6),
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '$solvedCount / ${questions.length}',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    color: theme.colorScheme.primary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  'Topic Score',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 12,
+                                    color: theme.colorScheme.onSurface.withOpacity(0.6),
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '${topicScore >= 0 ? "+" : ""}$topicScore pts',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    color: topicScore >= 0 ? Colors.green : Colors.redAccent,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        const Divider(height: 1, thickness: 1),
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.info_outline_rounded,
+                              size: 14,
+                              color: theme.colorScheme.onSurface.withOpacity(0.5),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Scoring Rules: +4 for correct, -1 for incorrect',
+                              style: GoogleFonts.outfit(
+                                fontSize: 11,
+                                color: theme.colorScheme.onSurface.withOpacity(0.5),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
                 const SizedBox(height: 24),
                 GridView.builder(
                   shrinkWrap: true,
@@ -103,6 +210,24 @@ class AptitudeQuestionsScreen extends ConsumerWidget {
                   ),
                   itemCount: questions.length,
                   itemBuilder: (context, index) {
+                    final question = questions[index];
+                    final ans = stats.answers[question.question];
+                    final isCorrect = ans != null ? ans['isCorrect'] as bool? : null;
+
+                    Color blockColor = isDark ? Colors.white.withOpacity(0.04) : Colors.white;
+                    Color borderColor = isDark ? Colors.white10 : theme.colorScheme.primary.withOpacity(0.15);
+                    Color textColor = isDark ? Colors.white : Colors.black87;
+
+                    if (isCorrect == true) {
+                      blockColor = Colors.green.withOpacity(isDark ? 0.2 : 0.1);
+                      borderColor = Colors.green;
+                      textColor = Colors.green;
+                    } else if (isCorrect == false) {
+                      blockColor = Colors.red.withOpacity(isDark ? 0.2 : 0.1);
+                      borderColor = Colors.red;
+                      textColor = Colors.red;
+                    }
+
                     return FadeInSlide(
                       delay: Duration(milliseconds: (index % 20) * 15),
                       duration: const Duration(milliseconds: 350),
@@ -115,21 +240,18 @@ class AptitudeQuestionsScreen extends ConsumerWidget {
                               'questions': questions,
                               'initialIndex': index,
                               'title': title,
+                              'endpoint': endpoint,
                             },
                           );
                         },
                         borderRadius: BorderRadius.circular(16),
                         child: Container(
                           decoration: BoxDecoration(
-                            color: isDark
-                                ? Colors.white.withOpacity(0.04)
-                                : Colors.white,
+                            color: blockColor,
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
-                              color: isDark
-                                  ? Colors.white10
-                                  : theme.colorScheme.primary.withOpacity(0.15),
-                              width: 1.5,
+                              color: borderColor,
+                              width: isCorrect != null ? 2.0 : 1.5,
                             ),
                           ),
                           alignment: Alignment.center,
@@ -138,7 +260,7 @@ class AptitudeQuestionsScreen extends ConsumerWidget {
                             style: GoogleFonts.outfit(
                               fontWeight: FontWeight.bold,
                               fontSize: 15,
-                              color: isDark ? Colors.white : Colors.black87,
+                              color: textColor,
                             ),
                           ),
                         ),
