@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:focus_fox/features/pyqs/presentation/screens/pdf_viewer_screen.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class LinkTab extends StatelessWidget {
   final String title;
@@ -79,43 +79,42 @@ class LinkTab extends StatelessWidget {
   }
 
   static void openCourseHandout(BuildContext context, String url, String title) {
-    if (url.contains("drive.google.com")) {
-      String? id;
-      final fileIdRegExp = RegExp(r'/file/d/([^/]+)');
-      final match = fileIdRegExp.firstMatch(url);
-      if (match != null && match.groupCount >= 1) {
-        id = match.group(1);
-      } else {
-        final idRegExp = RegExp(r'[?&]id=([^&]+)');
-        final matchId = idRegExp.firstMatch(url);
-        if (matchId != null && matchId.groupCount >= 1) {
-          id = matchId.group(1);
+    final messenger = ScaffoldMessenger.of(context);
+    final urlWithAuth = _appendAuthUser(url);
+    try {
+      launchUrl(
+        Uri.parse(urlWithAuth),
+        mode: LaunchMode.inAppBrowserView,
+      ).then((launched) {
+        if (!launched) {
+          messenger.showSnackBar(
+            const SnackBar(content: Text('Could not open handout link.')),
+          );
         }
-      }
-      if (id != null) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => PdfViewerScreen(
-              pdfUrl: "https://drive.google.com/uc?export=download&id=$id",
-              title: title,
-              webViewLink: url,
-            ),
-          ),
+      }).catchError((e) {
+        messenger.showSnackBar(
+          SnackBar(content: Text('Error opening handout link: $e')),
         );
-        return;
-      }
+      });
+    } catch (e) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('Error opening handout link: $e')),
+      );
     }
+  }
 
-    launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication).catchError((
-      e,
-    ) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not open handout link: $e')),
-        );
-      }
-      return false;
-    });
+  static String _appendAuthUser(String url) {
+    try {
+      final email = Supabase.instance.client.auth.currentUser?.email;
+      if (email == null || email.isEmpty) return url;
+      
+      final uri = Uri.parse(url);
+      final queryParams = Map<String, String>.from(uri.queryParameters);
+      queryParams['authuser'] = email;
+      
+      return uri.replace(queryParameters: queryParams).toString();
+    } catch (_) {
+      return url;
+    }
   }
 }

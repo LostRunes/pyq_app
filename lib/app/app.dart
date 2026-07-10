@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:app_links/app_links.dart';
 import '../theme/app_theme.dart';
 import '../core/providers/theme_provider.dart';
 import '../services/analytics_service.dart';
@@ -41,6 +43,50 @@ class _AppShell extends StatefulWidget {
 }
 
 class _AppShellState extends State<_AppShell> {
+  late final AppLinks _appLinks;
+  StreamSubscription<Uri>? _linkSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _initDeepLinks();
+  }
+
+  void _initDeepLinks() {
+    _appLinks = AppLinks();
+    
+    // Check initial link when app starts up
+    _appLinks.getInitialLink().then((uri) {
+      if (uri != null) {
+        _handleDeepLink(uri);
+      }
+    });
+
+    // Listen to incoming links while app is running
+    _linkSubscription = _appLinks.uriLinkStream.listen((uri) {
+      _handleDeepLink(uri);
+    });
+  }
+
+  void _handleDeepLink(Uri uri) {
+    debugPrint('Received deep link: $uri');
+    // Schema is focusfox, host is posts, path is /<id>
+    if (uri.scheme == 'focusfox' && uri.host == 'posts') {
+      final pathSegments = uri.pathSegments;
+      if (pathSegments.isNotEmpty) {
+        final doubtId = pathSegments.first;
+        // Navigate using the global navigator key
+        AppRouter.navigatorKey.currentState?.pushNamed('/skulk/doubt/$doubtId');
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _linkSubscription?.cancel();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(

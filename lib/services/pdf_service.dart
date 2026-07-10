@@ -42,17 +42,37 @@ class PdfService {
     final mathFontData = await rootBundle.load(
       "assets/fonts/NotoSansMath-Regular.ttf",
     );
+    final logoData = await rootBundle.load("assets/images/focus_fox_nobg.png");
     final ttf = pw.Font.ttf(fontData);
     final mathTtf = pw.Font.ttf(mathFontData);
+    final logoImage = pw.MemoryImage(logoData.buffer.asUint8List());
 
     pdf.addPage(
       pw.MultiPage(
-        pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.all(32),
-        theme: pw.ThemeData.withFont(
-          base: ttf,
-          bold: ttf,
-          fontFallback: [mathTtf],
+        pageTheme: pw.PageTheme(
+          pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.all(32),
+          theme: pw.ThemeData.withFont(
+            base: ttf,
+            bold: ttf,
+            fontFallback: [mathTtf],
+          ),
+          buildBackground: (context) {
+            return pw.FullPage(
+              ignoreMargins: true,
+              child: pw.Container(
+                alignment: pw.Alignment.center,
+                child: pw.Opacity(
+                  opacity: 0.04,
+                  child: pw.Image(
+                    logoImage,
+                    width: 350,
+                    height: 350,
+                  ),
+                ),
+              ),
+            );
+          },
         ),
         header: (context) => pw.Container(
           alignment: pw.Alignment.centerRight,
@@ -213,17 +233,37 @@ class PdfService {
     final mathFontData = await rootBundle.load(
       "assets/fonts/NotoSansMath-Regular.ttf",
     );
+    final logoData = await rootBundle.load("assets/images/focus_fox_nobg.png");
     final ttf = pw.Font.ttf(fontData);
     final mathTtf = pw.Font.ttf(mathFontData);
+    final logoImage = pw.MemoryImage(logoData.buffer.asUint8List());
 
     pdf.addPage(
       pw.MultiPage(
-        pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.all(32),
-        theme: pw.ThemeData.withFont(
-          base: ttf,
-          bold: ttf,
-          fontFallback: [mathTtf],
+        pageTheme: pw.PageTheme(
+          pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.all(32),
+          theme: pw.ThemeData.withFont(
+            base: ttf,
+            bold: ttf,
+            fontFallback: [mathTtf],
+          ),
+          buildBackground: (context) {
+            return pw.FullPage(
+              ignoreMargins: true,
+              child: pw.Container(
+                alignment: pw.Alignment.center,
+                child: pw.Opacity(
+                  opacity: 0.04,
+                  child: pw.Image(
+                    logoImage,
+                    width: 350,
+                    height: 350,
+                  ),
+                ),
+              ),
+            );
+          },
         ),
         header: (context) => pw.Container(
           alignment: pw.Alignment.centerRight,
