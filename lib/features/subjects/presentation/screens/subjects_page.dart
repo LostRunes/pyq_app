@@ -31,6 +31,13 @@ class SubjectsPage extends ConsumerWidget {
 
     final beeEnabled = ref.watch(beeEnabledProvider);
     final selectedIndex = ref.watch(mainNavigationIndexProvider);
+    final hasShownAnimation = ref.watch(hasShownSubjectTitleAnimationProvider);
+
+    if (!hasShownAnimation) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref.read(hasShownSubjectTitleAnimationProvider.notifier).setShown(true);
+      });
+    }
 
     return FlyingBeeOverlay(
       beeEnabled: beeEnabled,
@@ -135,26 +142,46 @@ class SubjectsPage extends ConsumerWidget {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    GhostText(
-                                      text: 'Choose your path!',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .headlineSmall
-                                          ?.copyWith(
-                                            fontWeight: FontWeight.w900,
-                                            color: isDark
-                                                ? const Color(0xFFFFFFFF)
-                                                : Colors.black,
-                                          ),
-                                    ),
+                                    if (hasShownAnimation)
+                                      Text(
+                                        'Choose your path!',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .headlineSmall
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.w900,
+                                              color: isDark
+                                                  ? const Color(0xFFFFFFFF)
+                                                  : Colors.black,
+                                            ),
+                                      )
+                                    else
+                                      GhostText(
+                                        text: 'Choose your path!',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .headlineSmall
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.w900,
+                                              color: isDark
+                                                  ? const Color(0xFFFFFFFF)
+                                                  : Colors.black,
+                                            ),
+                                      ),
                                     const SizedBox(height: 4),
-                                    GhostText(
-                                      text: 'Select a subject to begin.',
-                                      delay: const Duration(milliseconds: 350),
-                                      style: Theme.of(
-                                        context,
-                                      ).textTheme.bodyMedium,
-                                    ),
+                                    if (hasShownAnimation)
+                                      Text(
+                                        'Select a subject to begin.',
+                                        style: Theme.of(context).textTheme.bodyMedium,
+                                      )
+                                    else
+                                      GhostText(
+                                        text: 'Select a subject to begin.',
+                                        delay: const Duration(milliseconds: 350),
+                                        style: Theme.of(
+                                          context,
+                                        ).textTheme.bodyMedium,
+                                      ),
                                   ],
                                 ),
                               ),
