@@ -586,7 +586,6 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
         width: double.infinity,
         height: double.infinity,
         decoration: BoxDecoration(
-          color: isDark ? null : Theme.of(context).colorScheme.surface,
           image: isDark
               ? DecorationImage(
                   image: const AssetImage('assets/images/darktheme_bg.png'),
