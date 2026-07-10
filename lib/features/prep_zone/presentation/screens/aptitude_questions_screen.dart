@@ -204,9 +204,9 @@ class AptitudeQuestionsScreen extends ConsumerWidget {
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 5,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
+                    crossAxisCount: 4,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
                   ),
                   itemCount: questions.length,
                   itemBuilder: (context, index) {
@@ -259,7 +259,7 @@ class AptitudeQuestionsScreen extends ConsumerWidget {
                             '${index + 1}',
                             style: GoogleFonts.outfit(
                               fontWeight: FontWeight.bold,
-                              fontSize: 15,
+                              fontSize: 17,
                               color: textColor,
                             ),
                           ),
