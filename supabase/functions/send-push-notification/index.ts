@@ -69,9 +69,20 @@ serve(async (req) => {
     const fcmUrl = `https://fcm.googleapis.com/v1/projects/${serviceAccount.project_id}/messages:send`;
 
     // 5. Send FCM pushes
-    const sendPromises = tokenRows.map(async (row) => {
+    // We use a DATA-ONLY message (no top-level "notification" block).
+    //
+    // Why: when a "notification" block is present and the app is in the
+    // background or killed, the Android FCM SDK shows the notification
+    // automatically in the system tray but does NOT call the Dart
+    // onBackgroundMessage handler — so our data (post_id, type) is lost.
+    //
+    // With a data-only message, onBackgroundMessage is always called and we
+    // display the notification ourselves via flutter_local_notifications,
+    // giving us full control in all app states (foreground / background /
+    // terminated).
+    const sendPromises = tokenRows.map(async (row: { token: string }) => {
       const token = row.token;
-      
+
       const response = await fetch(fcmUrl, {
         method: 'POST',
         headers: {
@@ -81,26 +92,27 @@ serve(async (req) => {
         body: JSON.stringify({
           message: {
             token: token,
-            notification: {
-              title: 'Focus Fox',
-              body: record.message,
-            },
+            // Data-only — all fields must be strings.
             data: {
-              post_id: record.post_id || '',
-              type: record.type || '',
-              answer_id: record.answer_id || '',
+              title: 'Focus Fox',
+              body: String(record.message ?? ''),
+              post_id: String(record.post_id ?? ''),
+              type: String(record.type ?? ''),
+              answer_id: String(record.answer_id ?? ''),
             },
             android: {
+              // HIGH priority wakes the device even in Doze mode.
               priority: 'high',
-              notification: {
-                click_action: 'FLUTTER_NOTIFICATION_CLICK',
-              },
             },
             apns: {
+              headers: {
+                // Required for iOS data-only messages to be delivered in
+                // background (content-available = 1).
+                'apns-priority': '5',
+              },
               payload: {
                 aps: {
-                  sound: 'default',
-                  badge: 1,
+                  'content-available': 1,
                 },
               },
             },
@@ -111,9 +123,13 @@ serve(async (req) => {
       if (!response.ok) {
         const errText = await response.text();
         console.error(`FCM error for token ${token}:`, errText);
-        
-        // If token is invalid or unregistered, delete it from the table
-        if (response.status === 404 || errText.includes('UNREGISTERED') || errText.includes('INVALID_ARGUMENT')) {
+
+        // If token is invalid or unregistered, delete it from the table.
+        if (
+          response.status === 404 ||
+          errText.includes('UNREGISTERED') ||
+          errText.includes('INVALID_ARGUMENT')
+        ) {
           console.log(`Deleting invalid token: ${token}`);
           await supabase
             .from('user_fcm_tokens')
