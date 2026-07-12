@@ -40,7 +40,7 @@ class PushNotificationService {
 
     // 2. Local Notifications Setup
     const AndroidInitializationSettings androidInitSettings =
-        AndroidInitializationSettings('@mipmap/launcher_icon');
+        AndroidInitializationSettings('launcher_icon');
     const DarwinInitializationSettings iosInitSettings =
         DarwinInitializationSettings();
 
@@ -91,7 +91,7 @@ class PushNotificationService {
   /// system-tray notification so the user sees it while the app is closed.
   static Future<void> showBackgroundNotification(RemoteMessage message) async {
     const AndroidInitializationSettings androidInitSettings =
-        AndroidInitializationSettings('@mipmap/launcher_icon');
+        AndroidInitializationSettings('launcher_icon');
 
     await _localNotifications.initialize(
       settings: const InitializationSettings(

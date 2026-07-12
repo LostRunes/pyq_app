@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -28,6 +29,7 @@ import 'package:focus_fox/features/auth/presentation/widgets/bee_leaderboard_she
 class MainNavigationScreen extends ConsumerStatefulWidget {
   final String branchId;
   final int semester;
+  static final GlobalKey profileIconKey = GlobalKey();
   const MainNavigationScreen({
     super.key,
     required this.branchId,
@@ -49,6 +51,10 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
   // Guard flag: suppresses onPageChanged during programmatic animateToPage()
   // so the blob doesn't flicker through intermediate positions.
   bool _isAnimatingPage = false;
+
+  // Track back button presses
+  DateTime? _lastBackPressTime;
+  bool _dialogShowing = false;
 
   // Skulk Feed Header Search State
   bool _isSearching = false;
@@ -123,9 +129,113 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
     _currentIndex = ref.watch(mainNavigationIndexProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Scaffold(
-      extendBody: true,
-      extendBodyBehindAppBar: true,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+
+        // If search is active, close the search first
+        if (_isSearching) {
+          setState(() {
+            _isSearching = false;
+            _skulkSearchController.clear();
+            ref.read(subjectsSearchProvider.notifier).updateSearch('');
+            ref.read(prepZoneSearchProvider.notifier).updateSearch('');
+            ref.read(utilitiesSearchProvider.notifier).updateSearch('');
+            ref.read(skulkFeedSearchProvider.notifier).updateSearch('');
+          });
+          return;
+        }
+
+        // If not on the first tab, go to the first tab
+        if (_currentIndex != 0) {
+          ref.read(mainNavigationIndexProvider.notifier).setIndex(0);
+          _isAnimatingPage = true;
+          _pageController
+              .animateToPage(
+                0,
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+              )
+              .then((_) {
+                if (mounted) setState(() => _isAnimatingPage = false);
+              });
+          return;
+        }
+
+        // We are on index 0. Handle double back press / dialog exit.
+        final now = DateTime.now();
+        final backButtonHasNotBeenPressedRecently = _lastBackPressTime == null ||
+            now.difference(_lastBackPressTime!) > const Duration(seconds: 2);
+
+        if (backButtonHasNotBeenPressedRecently) {
+          _lastBackPressTime = now;
+          
+          if (!_dialogShowing) {
+            _dialogShowing = true;
+            showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(28),
+                ),
+                title: Text(
+                  'Exit App?',
+                  style: GoogleFonts.outfit(fontWeight: FontWeight.w900),
+                ),
+                content: Text(
+                  'Do you want to exit the app?',
+                  style: GoogleFonts.outfit(fontWeight: FontWeight.w500),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      _dialogShowing = false;
+                      Navigator.pop(context);
+                    },
+                    child: Text(
+                      'No',
+                      style: GoogleFonts.outfit(
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                  ),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.redAccent,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    onPressed: () {
+                      _dialogShowing = false;
+                      SystemNavigator.pop();
+                    },
+                    child: Text(
+                      'Exit',
+                      style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+            ).then((_) {
+              _dialogShowing = false;
+            });
+          }
+        } else {
+          // Second tap within 2 seconds
+          if (_dialogShowing) {
+            Navigator.pop(context); // Close dialog if open
+            _dialogShowing = false;
+          }
+          await SystemNavigator.pop();
+        }
+      },
+      child: Scaffold(
+        extendBody: true,
+        extendBodyBehindAppBar: true,
       appBar: AppBar(
         automaticallyImplyLeading: false,
         leadingWidth: _isSearching ? 56 : 110,
@@ -264,6 +374,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
                 borderRadius: BorderRadius.circular(24),
               ),
               icon: Container(
+                key: MainNavigationScreen.profileIconKey,
                 padding: const EdgeInsets.all(2),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
@@ -638,6 +749,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
         ),
       ),
       bottomNavigationBar: _buildCuteBottomNavBar(context),
+      ),
     );
   }
 
