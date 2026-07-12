@@ -53,12 +53,16 @@ serve(async (req) => {
     }
     const serviceAccount = JSON.parse(serviceAccountJson);
 
-    const jwtClient = new JWT(
-      serviceAccount.client_email,
-      null,
-      serviceAccount.private_key,
-      ['https://www.googleapis.com/auth/firebase.messaging']
-    );
+    let jwtClient;
+    try {
+      jwtClient = new JWT({
+        email: serviceAccount.client_email,
+        key: serviceAccount.private_key,
+        scopes: ['https://www.googleapis.com/auth/firebase.messaging'],
+      });
+    } catch (jwtErr) {
+      throw new Error(`JWT construction failed: ${jwtErr.message}. keys in serviceAccount: ${Object.keys(serviceAccount).join(', ')}`);
+    }
 
     const credentials = await jwtClient.authorize();
     const accessToken = credentials.access_token;
@@ -80,68 +84,82 @@ serve(async (req) => {
     // display the notification ourselves via flutter_local_notifications,
     // giving us full control in all app states (foreground / background /
     // terminated).
+    const results: any[] = [];
     const sendPromises = tokenRows.map(async (row: { token: string }) => {
       const token = row.token;
 
-      const response = await fetch(fcmUrl, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          message: {
-            token: token,
-            // Data-only — all fields must be strings.
-            data: {
-              title: 'Focus Fox',
-              body: String(record.message ?? ''),
-              post_id: String(record.post_id ?? ''),
-              type: String(record.type ?? ''),
-              answer_id: String(record.answer_id ?? ''),
-            },
-            android: {
-              // HIGH priority wakes the device even in Doze mode.
-              priority: 'high',
-            },
-            apns: {
-              headers: {
-                // Required for iOS data-only messages to be delivered in
-                // background (content-available = 1).
-                'apns-priority': '5',
+      try {
+        const response = await fetch(fcmUrl, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            message: {
+              token: token,
+              // Data-only — all fields must be strings.
+              data: {
+                title: 'Focus Fox',
+                body: String(record.message ?? ''),
+                post_id: String(record.post_id ?? ''),
+                type: String(record.type ?? ''),
+                answer_id: String(record.answer_id ?? ''),
               },
-              payload: {
-                aps: {
-                  'content-available': 1,
+              android: {
+                // HIGH priority wakes the device even in Doze mode.
+                priority: 'high',
+              },
+              apns: {
+                headers: {
+                  // Required for iOS data-only messages to be delivered in
+                  // background (content-available = 1).
+                  'apns-priority': '5',
+                },
+                payload: {
+                  aps: {
+                    'content-available': 1,
+                  },
                 },
               },
             },
-          },
-        }),
-      });
+          }),
+        });
 
-      if (!response.ok) {
-        const errText = await response.text();
-        console.error(`FCM error for token ${token}:`, errText);
+        const respText = await response.text();
+        results.push({
+          token: token.substring(0, 15) + '...',
+          status: response.status,
+          response: respText
+        });
 
-        // If token is invalid or unregistered, delete it from the table.
-        if (
-          response.status === 404 ||
-          errText.includes('UNREGISTERED') ||
-          errText.includes('INVALID_ARGUMENT')
-        ) {
-          console.log(`Deleting invalid token: ${token}`);
-          await supabase
-            .from('user_fcm_tokens')
-            .delete()
-            .eq('token', token);
+        if (!response.ok) {
+          console.error(`FCM error for token ${token}:`, respText);
+
+          // If token is invalid or unregistered, delete it from the table.
+          if (
+            response.status === 404 ||
+            respText.includes('UNREGISTERED') ||
+            respText.includes('INVALID_ARGUMENT')
+          ) {
+            console.log(`Deleting invalid token: ${token}`);
+            await supabase
+              .from('user_fcm_tokens')
+              .delete()
+              .eq('token', token);
+          }
         }
+      } catch (err) {
+        results.push({
+          token: token.substring(0, 15) + '...',
+          error: err.message
+        });
       }
     });
 
     await Promise.all(sendPromises);
 
-    return new Response(JSON.stringify({ success: true, count: tokenRows.length }), {
+    return new Response(JSON.stringify({ success: true, count: tokenRows.length, results }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

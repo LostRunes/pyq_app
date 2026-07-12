@@ -118,10 +118,10 @@ class _RoomMessageBubbleState extends State<RoomMessageBubble> with SingleTicker
 
     final bubbleColor = isDark
         ? (isMe
-            ? const Color(0xFF221F2F) // Subtle dark grey-purple for me
+            ? const Color(0xFFB0500B) // Rich dark burnt orange for me
             : const Color(0xFF3B2E68)) // Very light purple for incoming
         : (isMe
-            ? const Color(0xFFF5F4F0) // Clean cream-white for me
+            ? const Color(0xFFFFD5A5) // Rich warm peach-orange for me
             : const Color(0xFFFFEAD2)); // Very light orange for incoming
 
     final textColor = isDark
@@ -513,7 +513,10 @@ class _RoomMessageBubbleState extends State<RoomMessageBubble> with SingleTicker
 
     final currentUserId = Supabase.instance.client.auth.currentUser?.id;
     final isMe = widget.message.userId == currentUserId;
-    final tagColor = isMe ? Colors.white.withOpacity(0.9) : Theme.of(context).colorScheme.primary;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final tagColor = isMe
+        ? (isDark ? const Color(0xFFFFCC80) : const Color(0xFFD84315))
+        : Theme.of(context).colorScheme.primary;
 
     final List<TextSpan> spans = [];
     int start = 0;
@@ -528,7 +531,9 @@ class _RoomMessageBubbleState extends State<RoomMessageBubble> with SingleTicker
           TextSpan(
             text: url,
             style: baseStyle.copyWith(
-              color: isMe ? Colors.white.withOpacity(0.9) : Colors.blueAccent,
+              color: isMe
+                  ? (isDark ? const Color(0xFF90CAF9) : const Color(0xFF0D47A1))
+                  : Colors.blueAccent,
               decoration: TextDecoration.underline,
             ),
             recognizer: TapGestureRecognizer()

@@ -98,6 +98,7 @@ class _AppShellState extends State<_AppShell> {
       themeMode: widget.themeMode,
       navigatorObservers: [
         AnalyticsService.observer,
+        CustomAnalyticsObserver(),
         appRouteObserver,
       ],
       onGenerateRoute: AppRouter.generateRoute,
