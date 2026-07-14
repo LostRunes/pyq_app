@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Focus Fox - Analytics Dashboard</title>
+  <!-- Google Font: Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Supabase JS Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Custom Styles -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Background decorative glows -->
+  <div class="glow glow-1"></div>
+  <div class="glow glow-2"></div>
+
+  <div class="dashboard-container">
+    
+    <!-- Sidebar / Brand -->
+    <header class="header">
+      <div class="brand">
+        <img src="https://bjmrsrypznobolwumjhe.supabase.co/storage/v1/object/public/images/focus_fox_nobg.png" alt="Focus Fox Mascot" class="logo">
+        <div>
+          <h1>Focus Fox</h1>
+          <p class="subtitle">Analytics Console</p>
+        </div>
+      </div>
+      
+      <!-- Connection Status indicator -->
+      <div class="status-container">
+        <span id="connection-status" class="status-badge status-loading">
+          <i class="fa-solid fa-circle-notch fa-spin"></i> Connecting...
+        </span>
+      </div>
+    </header>
+
+    <!-- Stats Grid -->
+    <section class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon"><i class="fa-solid fa-chart-line"></i></div>
+        <div class="stat-details">
+          <span class="stat-label">Total Tracked Events</span>
+          <h2 id="stat-total-events">-</h2>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon"><i class="fa-solid fa-users"></i></div>
+        <div class="stat-details">
+          <span class="stat-label">Active Users</span>
+          <h2 id="stat-active-users">-</h2>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon"><i class="fa-solid fa-fire"></i></div>
+        <div class="stat-details">
+          <span class="stat-label">Most Used Feature</span>
+          <h2 id="stat-top-feature">-</h2>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon"><i class="fa-solid fa-database"></i></div>
+        <div class="stat-details">
+          <span class="stat-label">Neon Archived / Supabase</span>
+          <h2 id="stat-db-split">- / -</h2>
+        </div>
+      </div>
+    </section>
+
+    <!-- Charts Section -->
+    <section class="charts-section">
+      <div class="chart-card">
+        <h3><i class="fa-regular fa-calendar-days"></i> Event Volume Over Time</h3>
+        <div class="chart-container">
+          <canvas id="timelineChart"></canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <h3><i class="fa-solid fa-chart-pie"></i> Feature Distribution</h3>
+        <div class="chart-container">
+          <canvas id="featuresChart"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- Controls & Table Section -->
+    <section class="table-section">
+      
+      <!-- Search & Filters -->
+      <div class="controls-bar">
+        <div class="search-box">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <input type="text" id="search-input" placeholder="Search by name, email, event, or screen...">
+        </div>
+        
+        <div class="filters-group">
+          <select id="filter-event-type">
+            <option value="all">All Event Types</option>
+            <option value="feature_use">Feature Use</option>
+            <option value="page_entry">Page Entry</option>
+            <option value="page_view">Page View</option>
+            <option value="auth">Auth Events</option>
+            <option value="app_lifecycle">App Lifecycle</option>
+          </select>
+          
+          <select id="filter-source">
+            <option value="all">All DB Sources</option>
+            <option value="supabase">Supabase (Recent)</option>
+            <option value="neon">Neon DB (Archived)</option>
+          </select>
+
+          <button id="btn-refresh" class="btn btn-secondary">
+            <i class="fa-solid fa-rotate"></i> Refresh
+          </button>
+          
+          <button id="btn-export" class="btn btn-primary">
+            <i class="fa-solid fa-file-export"></i> Export CSV
+          </button>
+        </div>
+      </div>
+
+      <!-- Events Table -->
+      <div class="table-wrapper">
+        <table class="events-table">
+          <thead>
+            <tr>
+              <th>Date & Time</th>
+              <th>User Details</th>
+              <th>Event Type</th>
+              <th>Event Name</th>
+              <th>Screen Path</th>
+              <th>Storage Source</th>
+              <th>Metadata</th>
+            </tr>
+          </thead>
+          <tbody id="events-table-body">
+            <!-- Loaded dynamically -->
+            <tr>
+              <td colspan="7" class="loading-placeholder">
+                <i class="fa-solid fa-spinner fa-spin"></i> Loading analytics data...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Table Footer / Pagination -->
+      <div class="table-footer">
+        <div class="footer-info">
+          Showing <span id="span-start-row">0</span> to <span id="span-end-row">0</span> of <span id="span-total-rows">0</span> entries
+        </div>
+        <div class="pagination">
+          <button id="btn-prev" class="btn-pagination" disabled><i class="fa-solid fa-chevron-left"></i> Previous</button>
+          <div id="pagination-pages" class="pagination-pages">
+            <!-- Rendered dynamically -->
+          </div>
+          <button id="btn-next" class="btn-pagination" disabled>Next <i class="fa-solid fa-chevron-right"></i></button>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <!-- Metadata Dialog / Modal -->
+  <div id="metadata-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Event Metadata</h3>
+        <span class="close-modal" id="btn-close-modal">&times;</span>
+      </div>
+      <div class="modal-body">
+        <pre><code id="metadata-json-code"></code></pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- Custom Scripts -->
+  <script src="app.js"></script>
+</body>
+</html>

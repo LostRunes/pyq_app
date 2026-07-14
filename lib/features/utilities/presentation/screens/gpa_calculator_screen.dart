@@ -168,7 +168,7 @@ class _GpaCalculatorScreenState extends ConsumerState<GpaCalculatorScreen> {
             _sgpaCourses.add({
               'name': s.name,
               'credits': (s.subjectCredit ?? 3).toDouble(),
-              'gradePoint': 9.0, // Pre-fill grade A
+              'gradePoint': 9.0, // Pre-fill grade E
             });
           }
         } else {
@@ -604,49 +604,29 @@ class _GpaCalculatorScreenState extends ConsumerState<GpaCalculatorScreen> {
                                                     theme.colorScheme.onSurface,
                                                 fontSize: 13,
                                               ),
-                                              items:
-                                                  [
-                                                        {
-                                                          'label': 'O (10)',
-                                                          'val': 10.0,
-                                                        },
-                                                        {
-                                                          'label': 'A (9)',
-                                                          'val': 9.0,
-                                                        },
-                                                        {
-                                                          'label': 'B (8)',
-                                                          'val': 8.0,
-                                                        },
-                                                        {
-                                                          'label': 'C (7)',
-                                                          'val': 7.0,
-                                                        },
-                                                        {
-                                                          'label': 'D (6)',
-                                                          'val': 6.0,
-                                                        },
-                                                        {
-                                                          'label': 'E (5)',
-                                                          'val': 5.0,
-                                                        },
-                                                        {
-                                                          'label': 'F (0)',
-                                                          'val': 0.0,
-                                                        },
-                                                      ]
-                                                      .map(
-                                                        (g) => DropdownMenuItem(
-                                                          value:
-                                                              (g['val'] as num)
-                                                                  .toDouble(),
-                                                          child: Text(
-                                                            g['label']
-                                                                as String,
-                                                          ),
-                                                        ),
-                                                      )
-                                                      .toList(),
+                                              items: [
+                                                {'label': 'O (10)', 'val': 10.0},
+                                                {'label': 'E (9)', 'val': 9.0},
+                                                {'label': 'A (8)', 'val': 8.0},
+                                                {'label': 'B (7)', 'val': 7.0},
+                                                {'label': 'C (6)', 'val': 6.0},
+                                                {'label': 'D (5)', 'val': 5.0},
+                                                {'label': 'F (4)', 'val': 4.0},
+                                                {'label': 'F (3)', 'val': 3.0},
+                                                {'label': 'F (2)', 'val': 2.0},
+                                                {'label': 'F (1)', 'val': 1.0},
+                                                {'label': 'F (0)', 'val': 0.0},
+                                              ]
+                                                  .map(
+                                                    (g) => DropdownMenuItem(
+                                                      value: (g['val'] as num)
+                                                          .toDouble(),
+                                                      child: Text(
+                                                        g['label'] as String,
+                                                      ),
+                                                    ),
+                                                  )
+                                                  .toList(),
                                               onChanged: (val) {
                                                 setState(() {
                                                   course['gradePoint'] = val;
