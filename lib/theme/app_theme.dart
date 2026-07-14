@@ -56,7 +56,9 @@ class AppTheme {
         elevation: 0,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
       ),
-      textTheme: GoogleFonts.outfitTextTheme().copyWith(
+      textTheme: GoogleFonts.outfitTextTheme(
+        isDark ? ThemeData.dark().textTheme : ThemeData.light().textTheme,
+      ).copyWith(
         displayMedium: GoogleFonts.outfit(
           fontWeight: FontWeight.bold,
           color: isDark ? darkText : lightText,
@@ -80,6 +82,24 @@ class AppTheme {
         bodyMedium: GoogleFonts.outfit(
           color: isDark ? darkSubText : lightSubText,
         ),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: isDark ? darkSurface : lightSurface,
+        surfaceTintColor: Colors.transparent,
+        titleTextStyle: GoogleFonts.outfit(
+          fontSize: 20,
+          fontWeight: FontWeight.w900,
+          color: isDark ? darkText : lightText,
+        ),
+        contentTextStyle: GoogleFonts.outfit(
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
+          color: isDark ? darkSubText : lightSubText,
+        ),
+      ),
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: isDark ? darkSurface : lightSurface,
+        surfaceTintColor: Colors.transparent,
       ),
       appBarTheme: AppBarTheme(
         backgroundColor: Colors.transparent,

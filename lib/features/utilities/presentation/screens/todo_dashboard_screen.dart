@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:focus_fox/features/profile/presentation/widgets/heatmap_widget.dart';
 import 'package:focus_fox/features/utilities/presentation/providers/activity_providers.dart';
 import 'package:focus_fox/features/subjects/presentation/providers/subjects_providers.dart';
 import 'package:focus_fox/features/pyqs/presentation/providers/pyq_providers.dart';
@@ -50,8 +49,6 @@ class ToDoDashboardScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                StudyActivityHeatmap(),
-                SizedBox(height: 24),
                 ToDoDashboard(),
               ],
             ),

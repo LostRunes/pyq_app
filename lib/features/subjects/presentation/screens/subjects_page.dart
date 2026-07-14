@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:focus_fox/services/analytics_service.dart';
@@ -595,6 +596,9 @@ class _FlyingBeeOverlayState extends ConsumerState<FlyingBeeOverlay>
     if (!_visible || _dropped || _dropping) return;
     _wanderTimer?.cancel();
 
+    // Trigger haptic feedback
+    HapticFeedback.lightImpact();
+
     // Capture the start position of the bubble animation
     final startOffset = Offset(_x + _beeSize / 2, _dropY + _beeSize / 2);
     _showFloatingPlusOne(startOffset);
@@ -885,15 +889,22 @@ void _showDeleteConfirmationDialog(
   showDialog(
     context: context,
     builder: (context) {
+      final isDark = Theme.of(context).brightness == Brightness.dark;
       return AlertDialog(
+        backgroundColor: isDark ? const Color(0xFF171330) : null,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: Text(
           'Delete Subject?',
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+          style: GoogleFonts.outfit(
+            fontWeight: FontWeight.bold,
+            color: isDark ? Colors.white : Colors.black87,
+          ),
         ),
         content: Text(
           'Are you sure you want to remove "${subject.name}" from this subject list?',
-          style: GoogleFonts.outfit(),
+          style: GoogleFonts.outfit(
+            color: isDark ? Colors.white70 : Colors.black54,
+          ),
         ),
         actions: [
           TextButton(
