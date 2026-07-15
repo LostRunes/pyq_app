@@ -1,3 +1,5 @@
+import 'dart:developer';
+import 'package:hive/hive.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/foundation.dart';
 import '../models/topic.dart';
@@ -7,18 +9,47 @@ import '../models/pyq_source.dart';
 import '../models/image_item.dart';
 import '../models/question_full.dart';
 import '../models/topic_with_questions.dart';
+import '../../../../core/network/supabase_rest_client.dart';
 
 class PyqRepository {
   final SupabaseClient _supabase;
+  final SupabaseRestClient _rest = SupabaseRestClient.instance;
 
   PyqRepository(this._supabase);
 
+  Box<Topic> get _topicBox => Hive.box<Topic>('topics');
+
   Future<List<Topic>> getTopics(String subjectId) async {
-    final res = await _supabase
-        .from('topics')
-        .select()
-        .eq('subject_id', subjectId);
-    return (res as List).map((e) => Topic.fromJson(e)).toList();
+    // Cache-aside: return local first, refresh in background
+    final cached = _topicBox.values
+        .where((t) => t.subjectId == subjectId)
+        .toList();
+
+    if (cached.isNotEmpty) {
+      _refreshTopics(subjectId); // fire-and-forget
+      return cached;
+    }
+    return _refreshTopics(subjectId);
+  }
+
+  Future<List<Topic>> _refreshTopics(String subjectId) async {
+    try {
+      final raw = await _rest.getList(
+        'topics?subject_id=eq.$subjectId&select=id,subject_id,name,summary',
+      );
+      final fresh = raw.map((e) => Topic.fromJson(e as Map<String, dynamic>)).toList();
+      // Delete stale entries for this subject, then write fresh ones
+      for (final k in _topicBox.keys
+          .where((k) => _topicBox.get(k)?.subjectId == subjectId)
+          .toList()) {
+        await _topicBox.delete(k);
+      }
+      await _topicBox.putAll({for (var t in fresh) t.id: t});
+      return fresh;
+    } catch (e) {
+      log('Topics background sync failed for $subjectId: $e');
+      return _topicBox.values.where((t) => t.subjectId == subjectId).toList();
+    }
   }
 
   Future<List<Topic>> getTopicsWithImportance(String subjectId) async {

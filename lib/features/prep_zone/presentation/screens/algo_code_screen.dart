@@ -654,37 +654,33 @@ class _AlgoCodeScreenState extends ConsumerState<AlgoCodeScreen> {
                         );
                       },
                     ),
-                    const SizedBox(height: 12),
-                    _buildOptionCard(
-                      title: solutionExists
-                          ? 'View Solution'
-                          : 'Generate Solution',
-                      description: solutionExists
-                          ? 'Check existing step-by-step optimal answers.'
-                          : 'Create a new AI-guided solution walkthrough.',
-                      icon: solutionExists
-                          ? Icons.code_rounded
-                          : Icons.auto_awesome_rounded,
-                      iconColor: const Color(0xFF8B5CF6),
-                      isDark: isDark,
-                      onTap: () {
-                        Navigator.pop(context);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => SolutionViewerScreen(
-                              questionId: question['id'],
-                              questionName: question['question_name'] ?? '',
-                              difficulty: question['difficulty'] ?? 'Easy',
-                              parentTopic: question['parent_topic'] ?? 'Array',
-                              leetcodeUrl:
-                                  question['question_link'] ??
-                                  'https://leetcode.com/',
+                    if (solutionExists) ...[
+                      const SizedBox(height: 12),
+                      _buildOptionCard(
+                        title: 'View Solution',
+                        description: 'Check existing step-by-step optimal answers.',
+                        icon: Icons.code_rounded,
+                        iconColor: const Color(0xFF8B5CF6),
+                        isDark: isDark,
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => SolutionViewerScreen(
+                                questionId: question['id'],
+                                questionName: question['question_name'] ?? '',
+                                difficulty: question['difficulty'] ?? 'Easy',
+                                parentTopic: question['parent_topic'] ?? 'Array',
+                                leetcodeUrl:
+                                    question['question_link'] ??
+                                    'https://leetcode.com/',
+                              ),
                             ),
-                          ),
-                        );
-                      },
-                    ),
+                          );
+                        },
+                      ),
+                    ],
                   ],
                 ),
               ],

@@ -1,0 +1,9 @@
+2e — Run code generation
+After all four files are annotated, run this command once in your project root:
+
+bash
+
+dart run build_runner build --delete-conflicting-outputs
+This generates branch.g.dart, year.g.dart, subject.g.dart, and topic.g.dart next to each model file.
+
+Important: Every time you add or change a @HiveField, re-run build_runner build
