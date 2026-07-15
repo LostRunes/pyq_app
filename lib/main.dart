@@ -21,6 +21,10 @@ import 'features/pyqs/data/models/topic.dart';
 /// or in the background.
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  // If the message contains a notification payload, the OS (Android/iOS) will
+  // display it in the system tray automatically. Skip manual local notification to avoid duplicates.
+  if (message.notification != null) return;
+
   // Firebase must be re-initialized in the background isolate.
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
