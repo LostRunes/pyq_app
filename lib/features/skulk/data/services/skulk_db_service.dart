@@ -373,9 +373,9 @@ class SkulkDbService {
 
     await _client.from('reports').insert({
       'reporter_id': userId,
-      'post_id': ?postId,
-      'answer_id': ?answerId,
-      'comment_id': ?commentId,
+      'post_id': postId,
+      'answer_id': answerId,
+      'comment_id': commentId,
       'reason': reason,
     });
   }

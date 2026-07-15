@@ -39,7 +39,7 @@ class AnalyticsService {
         name: eventName.replaceAll('-', '_'), // Firebase requires alphanumeric/underscores
         parameters: {
           'event_type': eventType,
-          'screen_name': ?screenName,
+          if (screenName != null) 'screen_name': screenName,
           ...?metadata,
         },
       );

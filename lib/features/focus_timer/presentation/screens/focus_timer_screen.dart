@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:focus_fox/services/push_notification_service.dart';
 
 class FocusTimerScreen extends StatefulWidget {
   const FocusTimerScreen({super.key});
@@ -21,6 +22,7 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
   late TextEditingController _minutesController;
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
+  StreamSubscription<String>? _actionSubscription;
 
   final List<int> _presetMinutes = [15, 25, 45, 60];
   static const _accent = Color(0xFFEC4899);
@@ -36,10 +38,25 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
     _pulseAnimation = Tween<double>(begin: 1.0, end: 1.04).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
+
+    // Listen for background controls from the notification tray
+    _actionSubscription =
+        PushNotificationService.focusTimerActions.stream.listen((action) {
+      if (!mounted) return;
+      if (action == 'pause') {
+        _pauseTimer();
+      } else if (action == 'resume') {
+        _resumeTimer();
+      } else if (action == 'end') {
+        _endSession();
+      }
+    });
   }
 
   @override
   void dispose() {
+    _actionSubscription?.cancel();
+    PushNotificationService.cancelFocusTimerNotification();
     _timer?.cancel();
     _pulseController.dispose();
     _minutesController.dispose();
@@ -47,15 +64,29 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
   }
 
   void _startTimer() {
+    SystemSound.play(SystemSoundType.click); // Click sound on start
     setState(() {
       _hasStarted = true;
       _isRunning = true;
     });
     _pulseController.repeat(reverse: true);
+
+    // Show persistent notification immediately
+    PushNotificationService.showFocusTimerNotification(
+      secondsRemaining: _secondsRemaining,
+      durationSeconds: _durationSeconds,
+      isRunning: _isRunning,
+    );
+
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       setState(() {
         if (_secondsRemaining > 0) {
           _secondsRemaining--;
+          PushNotificationService.showFocusTimerNotification(
+            secondsRemaining: _secondsRemaining,
+            durationSeconds: _durationSeconds,
+            isRunning: _isRunning,
+          );
         } else {
           _onComplete();
         }
@@ -64,9 +95,15 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
   }
 
   void _pauseTimer() {
+    SystemSound.play(SystemSoundType.click); // Click sound on pause
     _timer?.cancel();
     _pulseController.stop();
     setState(() => _isRunning = false);
+    PushNotificationService.showFocusTimerNotification(
+      secondsRemaining: _secondsRemaining,
+      durationSeconds: _durationSeconds,
+      isRunning: _isRunning,
+    );
   }
 
   void _resumeTimer() {
@@ -74,12 +111,18 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
   }
 
   void _resetTimer() {
+    SystemSound.play(SystemSoundType.click); // Click sound on reset
     _timer?.cancel();
     _pulseController.stop();
     setState(() {
       _isRunning = false;
       _secondsRemaining = _durationSeconds;
     });
+    PushNotificationService.showFocusTimerNotification(
+      secondsRemaining: _secondsRemaining,
+      durationSeconds: _durationSeconds,
+      isRunning: _isRunning,
+    );
   }
 
   void _endSessionPrompt() {
@@ -128,6 +171,7 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
   void _endSession() {
     _timer?.cancel();
     _pulseController.stop();
+    PushNotificationService.cancelFocusTimerNotification();
     setState(() {
       _isRunning = false;
       _hasStarted = false;
@@ -138,6 +182,9 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
   void _onComplete() {
     _timer?.cancel();
     _pulseController.stop();
+    PushNotificationService.cancelFocusTimerNotification();
+    // Play completion sound through notification channel
+    PushNotificationService.showFocusTimerCompletionNotification();
     setState(() {
       _isRunning = false;
       _hasStarted = false;
@@ -337,338 +384,361 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
               ]
             : null,
       ),
-      body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-        child: Column(
-          children: [
-            if (!_hasStarted) ...[
-              // SETUP MODE
-              const SizedBox(height: 20),
-              Text(
-                'Get ready to focus',
-                style: GoogleFonts.outfit(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: theme.colorScheme.onSurface,
-                ),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minHeight: constraints.maxHeight,
               ),
-              const SizedBox(height: 8),
-              Text(
-                'We\'ll minimize distractions. Set a duration and start your session.',
-                textAlign: TextAlign.center,
-                style: GoogleFonts.outfit(
-                  fontSize: 14,
-                  color: theme.colorScheme.onSurface.withOpacity(0.6),
-                ),
-              ),
-              const SizedBox(height: 40),
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      if (!_hasStarted) ...[
+                        // SETUP MODE
+                        const SizedBox(height: 20),
+                        Text(
+                          'Get ready to focus',
+                          style: GoogleFonts.outfit(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.onSurface,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'We\'ll minimize distractions. Set a duration and start your session.',
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.outfit(
+                            fontSize: 14,
+                            color: theme.colorScheme.onSurface.withOpacity(0.6),
+                          ),
+                        ),
+                        const SizedBox(height: 40),
 
-              // Custom Input Box (Microsoft style)
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.5),
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(
-                    color: theme.colorScheme.outline.withOpacity(0.2),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Duration',
-                            style: GoogleFonts.outfit(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: theme.colorScheme.onSurface.withOpacity(0.5),
+                        // Custom Input Box (Microsoft style)
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.5),
+                            borderRadius: BorderRadius.circular(24),
+                            border: Border.all(
+                              color: theme.colorScheme.outline.withOpacity(0.2),
                             ),
                           ),
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.baseline,
-                            textBaseline: TextBaseline.alphabetic,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
-                              SizedBox(
-                                width: 90,
-                                child: TextField(
-                                  controller: _minutesController,
-                                  keyboardType: TextInputType.number,
-                                  style: GoogleFonts.outfit(
-                                    fontSize: 48,
-                                    fontWeight: FontWeight.w900,
-                                    color: theme.colorScheme.onSurface,
-                                  ),
-                                  decoration: const InputDecoration(
-                                    border: InputBorder.none,
-                                    isDense: true,
-                                    contentPadding: EdgeInsets.zero,
-                                  ),
-                                  inputFormatters: [
-                                    FilteringTextInputFormatter.digitsOnly,
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      'Duration',
+                                      style: GoogleFonts.outfit(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: theme.colorScheme.onSurface.withOpacity(0.5),
+                                      ),
+                                    ),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      crossAxisAlignment: CrossAxisAlignment.end,
+                                      children: [
+                                        SizedBox(
+                                          width: 100, // Expanded to cleanly host 3 digits
+                                          child: TextField(
+                                            controller: _minutesController,
+                                            keyboardType: TextInputType.number,
+                                            textAlign: TextAlign.right, // Align right to join text beautifully
+                                            style: GoogleFonts.outfit(
+                                              fontSize: 48,
+                                              fontWeight: FontWeight.w900,
+                                              color: theme.colorScheme.onSurface,
+                                            ),
+                                            decoration: const InputDecoration(
+                                              border: InputBorder.none,
+                                              isDense: true,
+                                              contentPadding: EdgeInsets.zero,
+                                            ),
+                                            inputFormatters: [
+                                              FilteringTextInputFormatter.digitsOnly,
+                                            ],
+                                            onChanged: (val) {
+                                              final parsed = int.tryParse(val) ?? 0;
+                                              _updateDuration(parsed);
+                                            },
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Padding(
+                                          padding: const EdgeInsets.only(bottom: 8.0),
+                                          child: Text(
+                                            'mins',
+                                            style: GoogleFonts.outfit(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold,
+                                              color: theme.colorScheme.onSurface.withOpacity(0.6),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ],
-                                  onChanged: (val) {
-                                    final parsed = int.tryParse(val) ?? 0;
-                                    _updateDuration(parsed);
-                                  },
                                 ),
                               ),
+                              Container(
+                                height: 60,
+                                width: 1,
+                                color: theme.colorScheme.outline.withOpacity(0.2),
+                              ),
                               const SizedBox(width: 8),
-                              Text(
-                                'mins',
-                                style: GoogleFonts.outfit(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: theme.colorScheme.onSurface.withOpacity(0.6),
-                                ),
+                              Column(
+                                children: [
+                                  IconButton(
+                                    onPressed: () {
+                                      final m = _durationSeconds ~/ 60;
+                                      _updateDuration(m + 1);
+                                    },
+                                    icon: const Icon(Icons.keyboard_arrow_up_rounded, size: 28),
+                                    color: _accent,
+                                  ),
+                                  IconButton(
+                                    onPressed: () {
+                                      final m = _durationSeconds ~/ 60;
+                                      if (m > 1) {
+                                        _updateDuration(m - 1);
+                                      }
+                                    },
+                                    icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 28),
+                                    color: _accent,
+                                  ),
+                                ],
                               ),
                             ],
                           ),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      height: 60,
-                      width: 1,
-                      color: theme.colorScheme.outline.withOpacity(0.2),
-                    ),
-                    const SizedBox(width: 8),
-                    Column(
-                      children: [
-                        IconButton(
-                          onPressed: () {
-                            final m = _durationSeconds ~/ 60;
-                            _updateDuration(m + 1);
-                          },
-                          icon: const Icon(Icons.keyboard_arrow_up_rounded, size: 28),
-                          color: _accent,
                         ),
-                        IconButton(
-                          onPressed: () {
-                            final m = _durationSeconds ~/ 60;
-                            if (m > 1) {
-                              _updateDuration(m - 1);
-                            }
-                          },
-                          icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 28),
-                          color: _accent,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
 
-              const SizedBox(height: 24),
+                        const SizedBox(height: 24),
 
-              // Scroll Picker Trigger Button
-              TextButton.icon(
-                onPressed: _showScrollPicker,
-                icon: const Icon(Icons.unfold_more_rounded, color: _accent),
-                label: Text(
-                  'Choose via scroll picker',
-                  style: GoogleFonts.outfit(
-                    fontWeight: FontWeight.bold,
-                    color: _accent,
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 32),
-
-              // Preset Quick Options
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: _presetMinutes.map((min) {
-                  final selected = _durationSeconds == min * 60;
-                  return GestureDetector(
-                    onTap: () => _updateDuration(min),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: selected ? _accent : theme.colorScheme.surfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: selected
-                            ? [
-                                BoxShadow(
-                                  color: _accent.withOpacity(0.3),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 3),
-                                )
-                              ]
-                            : [],
-                      ),
-                      child: Text(
-                        '$min Min',
-                        style: GoogleFonts.outfit(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: selected ? Colors.white : theme.colorScheme.onSurface,
-                        ),
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-
-              const SizedBox(height: 48),
-
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: _startTimer,
-                  icon: const Icon(Icons.play_arrow_rounded, color: Colors.white),
-                  label: Text(
-                    'Start focus session',
-                    style: GoogleFonts.outfit(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      color: Colors.white,
-                    ),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _accent,
-                    padding: const EdgeInsets.symmetric(vertical: 18),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    elevation: 0,
-                  ),
-                ),
-              ),
-            ] else ...[
-              // ACTIVE TIMER MODE
-              const SizedBox(height: 40),
-
-              ScaleTransition(
-                scale: _pulseAnimation,
-                child: Container(
-                  width: 260,
-                  height: 260,
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.surface,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: _accent.withOpacity(_isRunning ? 0.18 : 0.07),
-                        blurRadius: 30,
-                        spreadRadius: 4,
-                      ),
-                    ],
-                  ),
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      SizedBox(
-                        width: 230,
-                        height: 230,
-                        child: CircularProgressIndicator(
-                          value: progress,
-                          strokeWidth: 10,
-                          backgroundColor: _accent.withOpacity(0.1),
-                          valueColor: const AlwaysStoppedAnimation<Color>(_accent),
-                        ),
-                      ),
-                      Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            _formatTime(_secondsRemaining),
+                        // Scroll Picker Trigger Button
+                        TextButton.icon(
+                          onPressed: _showScrollPicker,
+                          icon: const Icon(Icons.unfold_more_rounded, color: _accent),
+                          label: Text(
+                            'Choose via scroll picker',
                             style: GoogleFonts.outfit(
-                              fontSize: 44,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 2,
-                              color: theme.colorScheme.onSurface,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            _isRunning ? 'FOCUSING' : 'PAUSED',
-                            style: GoogleFonts.outfit(
-                              fontSize: 11,
                               fontWeight: FontWeight.bold,
-                              letterSpacing: 2,
                               color: _accent,
                             ),
                           ),
-                        ],
-                      ),
+                        ),
+
+                        const SizedBox(height: 32),
+
+                        // Preset Quick Options
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: _presetMinutes.map((min) {
+                            final selected = _durationSeconds == min * 60;
+                            return GestureDetector(
+                              onTap: () => _updateDuration(min),
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                                decoration: BoxDecoration(
+                                  color: selected ? _accent : theme.colorScheme.surfaceContainerHighest,
+                                  borderRadius: BorderRadius.circular(16),
+                                  boxShadow: selected
+                                      ? [
+                                          BoxShadow(
+                                            color: _accent.withOpacity(0.3),
+                                            blurRadius: 8,
+                                            offset: const Offset(0, 3),
+                                          )
+                                        ]
+                                      : [],
+                                ),
+                                child: Text(
+                                  '$min Min',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: selected ? Colors.white : theme.colorScheme.onSurface,
+                                  ),
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+
+                        const SizedBox(height: 48),
+
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: _startTimer,
+                            icon: const Icon(Icons.play_arrow_rounded, color: Colors.white),
+                            label: Text(
+                              'Start focus session',
+                              style: GoogleFonts.outfit(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                color: Colors.white,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: _accent,
+                              padding: const EdgeInsets.symmetric(vertical: 18),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16)),
+                              elevation: 0,
+                            ),
+                          ),
+                        ),
+                      ] else ...[
+                        // ACTIVE TIMER MODE
+                        const SizedBox(height: 40),
+
+                        ScaleTransition(
+                          scale: _pulseAnimation,
+                          child: Container(
+                            width: 260,
+                            height: 260,
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.surface,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: _accent.withOpacity(_isRunning ? 0.18 : 0.07),
+                                  blurRadius: 30,
+                                  spreadRadius: 4,
+                                ),
+                              ],
+                            ),
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                SizedBox(
+                                  width: 230,
+                                  height: 230,
+                                  child: CircularProgressIndicator(
+                                    value: progress,
+                                    strokeWidth: 10,
+                                    backgroundColor: _accent.withOpacity(0.1),
+                                    valueColor: const AlwaysStoppedAnimation<Color>(_accent),
+                                  ),
+                                ),
+                                Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      _formatTime(_secondsRemaining),
+                                      style: GoogleFonts.outfit(
+                                        fontSize: 44,
+                                        fontWeight: FontWeight.w900,
+                                        letterSpacing: 2,
+                                        color: theme.colorScheme.onSurface,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      _isRunning ? 'FOCUSING' : 'PAUSED',
+                                      style: GoogleFonts.outfit(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: 2,
+                                        color: _accent,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 48),
+
+                        // Control Row (Visually Centered)
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            // Left placeholder to keep Play/Pause perfectly centered
+                            const SizedBox(width: 56),
+                            const SizedBox(width: 24),
+                            // Play/Pause Action Button
+                            GestureDetector(
+                              onTap: _isRunning ? _pauseTimer : _resumeTimer,
+                              child: Container(
+                                padding: const EdgeInsets.all(20),
+                                decoration: const BoxDecoration(
+                                  color: _accent,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  _isRunning ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                                  color: Colors.white,
+                                  size: 36,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 24),
+                            // Reset Button
+                            GestureDetector(
+                              onTap: _resetTimer,
+                              child: Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: theme.colorScheme.surfaceContainerHighest,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  Icons.refresh_rounded,
+                                  color: theme.colorScheme.onSurface,
+                                  size: 24,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 40),
+
+                        // End Session
+                        OutlinedButton.icon(
+                          onPressed: _endSessionPrompt,
+                          icon: const Icon(Icons.stop_rounded, color: _accent),
+                          label: Text(
+                            'End Session',
+                            style: GoogleFonts.outfit(
+                              fontWeight: FontWeight.bold,
+                              color: _accent,
+                            ),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: _accent, width: 1.5),
+                            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 24),
                     ],
                   ),
                 ),
               ),
-
-              const SizedBox(height: 48),
-
-              // Control Row
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Play/Pause Action Button
-                  GestureDetector(
-                    onTap: _isRunning ? _pauseTimer : _resumeTimer,
-                    child: Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: const BoxDecoration(
-                        color: _accent,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        _isRunning ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                        color: Colors.white,
-                        size: 36,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 24),
-                  // Reset Button
-                  GestureDetector(
-                    onTap: _resetTimer,
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.surfaceContainerHighest,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.refresh_rounded,
-                        color: theme.colorScheme.onSurface,
-                        size: 24,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 40),
-
-              // End Session
-              OutlinedButton.icon(
-                onPressed: _endSessionPrompt,
-                icon: const Icon(Icons.stop_rounded, color: _accent),
-                label: Text(
-                  'End Session',
-                  style: GoogleFonts.outfit(
-                    fontWeight: FontWeight.bold,
-                    color: _accent,
-                  ),
-                ),
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: _accent, width: 1.5),
-                  padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                ),
-              ),
-            ],
-            const SizedBox(height: 24),
-          ],
-        ),
+            ),
+          );
+        },
       ),
     );
   }

@@ -88,7 +88,7 @@ class _TopicTabState extends ConsumerState<TopicTab> {
           ],
         );
       },
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => const TopicTabSkeleton(),
       error: (e, _) => Center(child: Text('Error: $e')),
     );
   }
@@ -149,6 +149,132 @@ class _TopicTabState extends ConsumerState<TopicTab> {
           padding: const EdgeInsets.symmetric(vertical: 18),
         ),
       ),
+    );
+  }
+}
+
+class TopicTabSkeleton extends StatefulWidget {
+  const TopicTabSkeleton({super.key});
+
+  @override
+  State<TopicTabSkeleton> createState() => _TopicTabSkeletonState();
+}
+
+class _TopicTabSkeletonState extends State<TopicTabSkeleton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat(reverse: true);
+    _animation = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (context, child) {
+        final opacity = 0.4 + (_animation.value * 0.35);
+        return Opacity(
+          opacity: opacity,
+          child: ListView.builder(
+            padding: const EdgeInsets.all(20),
+            itemCount: 4,
+            itemBuilder: (context, idx) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surface,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: theme.colorScheme.primary.withOpacity(0.06),
+                        blurRadius: 15,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Container(
+                              height: 18,
+                              decoration: BoxDecoration(
+                                color: isDark ? Colors.grey[800] : Colors.grey[200],
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 32),
+                          Container(
+                            height: 16,
+                            width: 16,
+                            decoration: BoxDecoration(
+                              color: isDark ? Colors.grey[800] : Colors.grey[200],
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      Row(
+                        children: [
+                          Container(
+                            height: 12,
+                            width: 80,
+                            decoration: BoxDecoration(
+                              color: isDark ? Colors.grey[800] : Colors.grey[200],
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                          const Spacer(),
+                          Container(
+                            height: 12,
+                            width: 30,
+                            decoration: BoxDecoration(
+                              color: isDark ? Colors.grey[800] : Colors.grey[200],
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Container(
+                        height: 5,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: isDark ? Colors.grey[800] : Colors.grey[200],
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        );
+      },
     );
   }
 }

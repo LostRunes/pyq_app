@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io' show Platform;
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
@@ -52,7 +53,12 @@ class PushNotificationService {
     await _localNotifications.initialize(
       settings: initSettings,
       onDidReceiveNotificationResponse: (NotificationResponse response) {
-        _handleNotificationTap(response.payload);
+        if (response.notificationResponseType ==
+            NotificationResponseType.selectedNotificationAction) {
+          focusTimerActions.add(response.actionId!);
+        } else {
+          _handleNotificationTap(response.payload);
+        }
       },
     );
 
@@ -275,5 +281,100 @@ class PushNotificationService {
     } catch (e) {
       if (kDebugMode) print('Failed to unregister FCM token: $e');
     }
+  }
+
+  // ── FOCUS TIMER INTEGRATION ───────────────────────────────────────────────
+
+  /// Global stream controller for forwarding notification action clicks.
+  static final StreamController<String> focusTimerActions =
+      StreamController<String>.broadcast();
+
+  /// Displays or updates a persistent/ongoing notification with action buttons
+  /// to control the active focus timer from the notification drawer.
+  static Future<void> showFocusTimerNotification({
+    required int secondsRemaining,
+    required int durationSeconds,
+    required bool isRunning,
+  }) async {
+    if (kIsWeb) return;
+
+    final elapsed = durationSeconds - secondsRemaining;
+    final int m = secondsRemaining ~/ 60;
+    final int s = secondsRemaining % 60;
+    final timeStr =
+        '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+
+    final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      'focus_timer_channel_id',
+      'Focus Timer Status',
+      channelDescription: 'Ongoing notification for your active focus timer',
+      importance: Importance.low, // Keep low so it updates silently in tray
+      priority: Priority.low,
+      ongoing: true, // User cannot swipe it away
+      onlyAlertOnce: true, // Prevents alert chime on every second tick
+      showWhen: false,
+      showProgress: true,
+      maxProgress: durationSeconds,
+      progress: elapsed,
+      indeterminate: false,
+      actions: <AndroidNotificationAction>[
+        if (isRunning)
+          const AndroidNotificationAction('pause', 'Pause')
+        else
+          const AndroidNotificationAction('resume', 'Resume'),
+        const AndroidNotificationAction('end', 'End Session'),
+      ],
+    );
+
+    final NotificationDetails platformDetails = NotificationDetails(
+      android: androidDetails,
+      iOS: const DarwinNotificationDetails(
+        presentAlert: false,
+        presentSound: false,
+      ),
+    );
+
+    await _localNotifications.show(
+      id: 555, // Specific unique ID for the focus timer notification
+      title: isRunning ? 'Focusing...' : 'Paused',
+      body: '$timeStr remaining',
+      notificationDetails: platformDetails,
+    );
+  }
+
+  /// Cancels the persistent focus timer notification.
+  static Future<void> cancelFocusTimerNotification() async {
+    if (kIsWeb) return;
+    await _localNotifications.cancel(id: 555);
+  }
+
+  /// Displays a completion notification with alarm sound/vibration.
+  static Future<void> showFocusTimerCompletionNotification() async {
+    if (kIsWeb) return;
+
+    final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      'focus_timer_complete_channel_id',
+      'Focus Timer Completion',
+      channelDescription: 'Alerts when your focus timer finishes',
+      importance: Importance.max,
+      priority: Priority.high,
+      playSound: true,
+      enableVibration: true,
+    );
+
+    final NotificationDetails platformDetails = NotificationDetails(
+      android: androidDetails,
+      iOS: const DarwinNotificationDetails(
+        presentAlert: true,
+        presentSound: true,
+      ),
+    );
+
+    await _localNotifications.show(
+      id: 556,
+      title: 'Session Complete! 🎉',
+      body: 'Great work staying focused! Take a break.',
+      notificationDetails: platformDetails,
+    );
   }
 }

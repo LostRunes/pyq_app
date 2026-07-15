@@ -42,9 +42,6 @@ class _SolutionViewerScreenState extends ConsumerState<SolutionViewerScreen> {
   ];
   int _selectedThemeIndex = 0;
 
-  // AI Solution Simulation states
-  bool _isGenerating = false;
-  double _generationProgress = 0.0;
   bool _showComments = true;
 
   @override
@@ -83,57 +80,6 @@ class _SolutionViewerScreenState extends ConsumerState<SolutionViewerScreen> {
           _isLoading = false;
         });
       }
-    }
-  }
-
-  // Generate Simulated AI Solution
-  Future<void> _generateAISolution() async {
-    setState(() {
-      _isGenerating = true;
-      _generationProgress = 0.0;
-    });
-
-    // Simulate progress ticks
-    for (int i = 1; i <= 10; i++) {
-      await Future.delayed(const Duration(milliseconds: 250));
-      if (!mounted) return;
-      setState(() {
-        _generationProgress = i / 10.0;
-      });
-    }
-
-    // High quality mock solutions
-    final mockSolutions = [
-      {
-        'language': 'C++',
-        'heading': 'Optimal Two-Pointer / Hash Solution (AI)',
-        'time_complexity': 'O(N)',
-        'space_complexity': 'O(N)',
-        'solution': '// AI Generated Solution\n#include <vector>\n#include <unordered_map>\n\nclass Solution {\npublic:\n    std::vector<int> solveOptimal(std::vector<int>& nums, int target) {\n        std::unordered_map<int, int> numMap;\n        for (int i = 0; i < nums.size(); i++) {\n            int complement = target - nums[i];\n            if (numMap.find(complement) != numMap.end()) {\n                return {numMap[complement], i};\n            }\n            numMap[nums[i]] = i;\n        }\n        return {};\n    }\n};',
-      },
-      {
-        'language': 'Java',
-        'heading': 'Optimal Two-Pointer / Hash Solution (AI)',
-        'time_complexity': 'O(N)',
-        'space_complexity': 'O(N)',
-        'solution': '// AI Generated Solution\nimport java.util.HashMap;\nimport java.util.Map;\n\nclass Solution {\n    public int[] solveOptimal(int[] nums, int target) {\n        Map<Integer, Integer> map = new HashMap<>();\n        for (int i = 0; i < nums.length; i++) {\n            int complement = target - nums[i];\n            if (map.containsKey(complement)) {\n                return new int[] { map.get(complement), i };\n            }\n            map.put(nums[i], i);\n        }\n        return new int[] {};\n    }\n}',
-      },
-      {
-        'language': 'Python',
-        'heading': 'Optimal Two-Pointer / Hash Solution (AI)',
-        'time_complexity': 'O(N)',
-        'space_complexity': 'O(N)',
-        'solution': '# AI Generated Solution\nclass Solution:\n    def solveOptimal(self, nums: List[int], target: int) -> List[int]:\n        num_map = {}\n        for i, num in enumerate(nums):\n            complement = target - num\n            if complement in num_map:\n                return [num_map[complement], i]\n            num_map[num] = i\n        return []',
-      }
-    ];
-
-    if (mounted) {
-      setState(() {
-        _solutions = mockSolutions;
-        _selectedLanguage = 'C++';
-        _selectedSolutionIndex = 0;
-        _isGenerating = false;
-      });
     }
   }
 
@@ -178,12 +124,12 @@ class _SolutionViewerScreenState extends ConsumerState<SolutionViewerScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _solutions.isEmpty
-              ? _buildGenerateAISolutionPrompt(isDark)
+              ? _buildNoSolutionPrompt(isDark)
               : _buildSolutionsContent(isDark, difficultyColor),
     );
   }
 
-  Widget _buildGenerateAISolutionPrompt(bool isDark) {
+  Widget _buildNoSolutionPrompt(bool isDark) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24.0),
@@ -197,14 +143,14 @@ class _SolutionViewerScreenState extends ConsumerState<SolutionViewerScreen> {
               shape: BoxShape.circle,
             ),
             child: const Icon(
-              Icons.psychology_outlined,
+              Icons.code_off_rounded,
               size: 80,
-              color: Color(0xFF8B5CF6),
+              color: Colors.grey,
             ),
           ),
           const SizedBox(height: 24),
           Text(
-            'No Solution in Database',
+            'No Solution Available',
             style: GoogleFonts.outfit(
               fontSize: 22,
               fontWeight: FontWeight.bold,
@@ -213,51 +159,13 @@ class _SolutionViewerScreenState extends ConsumerState<SolutionViewerScreen> {
           ),
           const SizedBox(height: 12),
           Text(
-            'There is no pre-saved solution for this question yet.\nGenerate a verified step-by-step AI walkthrough.',
+            'There is no pre-saved solution for this question yet.',
             textAlign: TextAlign.center,
             style: GoogleFonts.outfit(
               fontSize: 14,
               color: isDark ? Colors.white70 : Colors.black54,
             ),
           ),
-          const SizedBox(height: 32),
-          if (_isGenerating) ...[
-            SizedBox(
-              width: 200,
-              child: LinearProgressIndicator(
-                value: _generationProgress,
-                backgroundColor: isDark ? Colors.white12 : Colors.black12,
-                valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF8B5CF6)),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Generating optimal algorithms...',
-              style: GoogleFonts.outfit(
-                fontSize: 12,
-                color: isDark ? Colors.white54 : Colors.black45,
-              ),
-            ),
-          ] else
-            ElevatedButton.icon(
-              onPressed: _generateAISolution,
-              icon: const Icon(Icons.bolt, color: Colors.white),
-              label: Text(
-                'Generate Solution',
-                style: GoogleFonts.outfit(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                  color: Colors.white,
-                ),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF8B5CF6),
-                padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-              ),
-            ),
         ],
       ),
     );
