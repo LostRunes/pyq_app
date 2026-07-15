@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io' show Platform;
+import 'dart:ui' show Color;
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -16,6 +17,24 @@ const AndroidNotificationChannel _channel = AndroidNotificationChannel(
   importance: Importance.max,
 );
 
+const AndroidNotificationChannel _timerChannel = AndroidNotificationChannel(
+  'focus_timer_channel_id',
+  'Focus Timer Status',
+  description: 'Ongoing notification for your active focus timer status',
+  importance: Importance.low,
+  playSound: false,
+  enableVibration: false,
+);
+
+const AndroidNotificationChannel _timerCompleteChannel = AndroidNotificationChannel(
+  'focus_timer_complete_channel_id',
+  'Focus Timer Completion',
+  description: 'Alerts when your focus timer finishes',
+  importance: Importance.max,
+  playSound: true,
+  enableVibration: true,
+);
+
 class PushNotificationService {
   static final FirebaseMessaging _fcm = FirebaseMessaging.instance;
   static final FlutterLocalNotificationsPlugin _localNotifications =
@@ -28,7 +47,7 @@ class PushNotificationService {
     if (kIsWeb) return;
     if (_isInitialized) return;
 
-    // 1. Request permissions (essential for iOS and Android 13+)
+    // 1. Request permissions (essential for FCM)
     NotificationSettings settings = await _fcm.requestPermission(
       alert: true,
       badge: true,
@@ -41,7 +60,7 @@ class PushNotificationService {
 
     // 2. Local Notifications Setup
     const AndroidInitializationSettings androidInitSettings =
-        AndroidInitializationSettings('launcher_icon');
+        AndroidInitializationSettings('@mipmap/launcher_icon');
     const DarwinInitializationSettings iosInitSettings =
         DarwinInitializationSettings();
 
@@ -62,12 +81,17 @@ class PushNotificationService {
       },
     );
 
-    // Create the Android notification channel so it exists before any
+    // Create the Android notification channels so they exist before any
     // notification is shown (required on Android 8+).
     final androidPlugin =
         _localNotifications.resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>();
     await androidPlugin?.createNotificationChannel(_channel);
+    await androidPlugin?.createNotificationChannel(_timerChannel);
+    await androidPlugin?.createNotificationChannel(_timerCompleteChannel);
+
+    // Explicitly request notification permissions on Android 13+
+    await androidPlugin?.requestNotificationsPermission();
 
     // 3. Configure FCM Listeners
 
@@ -97,7 +121,7 @@ class PushNotificationService {
   /// system-tray notification so the user sees it while the app is closed.
   static Future<void> showBackgroundNotification(RemoteMessage message) async {
     const AndroidInitializationSettings androidInitSettings =
-        AndroidInitializationSettings('launcher_icon');
+        AndroidInitializationSettings('@mipmap/launcher_icon');
 
     await _localNotifications.initialize(
       settings: const InitializationSettings(
@@ -138,6 +162,7 @@ class PushNotificationService {
       importance: Importance.max,
       priority: Priority.high,
       ticker: 'ticker',
+      icon: '@mipmap/launcher_icon',
     );
 
     final NotificationDetails platformDetails = NotificationDetails(
@@ -317,6 +342,8 @@ class PushNotificationService {
       maxProgress: durationSeconds,
       progress: elapsed,
       indeterminate: false,
+      icon: '@mipmap/launcher_icon',
+      color: const Color(0xFFEC4899), // Pink brand color for progress bar
       actions: <AndroidNotificationAction>[
         if (isRunning)
           const AndroidNotificationAction('pause', 'Pause')
@@ -336,8 +363,8 @@ class PushNotificationService {
 
     await _localNotifications.show(
       id: 555, // Specific unique ID for the focus timer notification
-      title: isRunning ? 'Focusing...' : 'Paused',
-      body: '$timeStr remaining',
+      title: isRunning ? 'Focus Session Active' : 'Focus Session Paused',
+      body: 'Time remaining: $timeStr',
       notificationDetails: platformDetails,
     );
   }
@@ -360,6 +387,8 @@ class PushNotificationService {
       priority: Priority.high,
       playSound: true,
       enableVibration: true,
+      icon: '@mipmap/launcher_icon',
+      color: const Color(0xFFEC4899),
     );
 
     final NotificationDetails platformDetails = NotificationDetails(
@@ -372,8 +401,8 @@ class PushNotificationService {
 
     await _localNotifications.show(
       id: 556,
-      title: 'Session Complete! 🎉',
-      body: 'Great work staying focused! Take a break.',
+      title: 'Session Complete',
+      body: 'Excellent focus! Take a well-deserved break.',
       notificationDetails: platformDetails,
     );
   }

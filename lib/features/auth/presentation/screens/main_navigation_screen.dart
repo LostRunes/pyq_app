@@ -73,10 +73,13 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
   void initState() {
     super.initState();
 
-    // Write providers synchronously — no microtask, so the first build
-    // already has the correct branch/semester and only one fetch is made.
-    ref.read(selectedSemesterProvider.notifier).setSemester(widget.semester);
-    ref.read(selectedBranchIdProvider.notifier).setBranchId(widget.branchId);
+    // Write providers inside post frame callback to prevent building tree modification errors
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ref.read(selectedSemesterProvider.notifier).setSemester(widget.semester);
+        ref.read(selectedBranchIdProvider.notifier).setBranchId(widget.branchId);
+      }
+    });
 
     _wobbleController = AnimationController(
       vsync: this,

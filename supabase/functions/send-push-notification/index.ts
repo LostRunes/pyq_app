@@ -98,7 +98,10 @@ serve(async (req) => {
           body: JSON.stringify({
             message: {
               token: token,
-              // Data-only — all fields must be strings.
+              notification: {
+                title: 'Focus Fox',
+                body: String(record.message ?? ''),
+              },
               data: {
                 title: 'Focus Fox',
                 body: String(record.message ?? ''),
@@ -107,18 +110,15 @@ serve(async (req) => {
                 answer_id: String(record.answer_id ?? ''),
               },
               android: {
-                // HIGH priority wakes the device even in Doze mode.
-                priority: 'high',
+                priority: 'HIGH',
               },
               apns: {
                 headers: {
-                  // Required for iOS data-only messages to be delivered in
-                  // background (content-available = 1).
-                  'apns-priority': '5',
+                  'apns-priority': '10',
                 },
                 payload: {
                   aps: {
-                    'content-available': 1,
+                    sound: 'default',
                   },
                 },
               },

@@ -1,28 +1,21 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:focus_fox/services/push_notification_service.dart';
+import '../providers/focus_timer_provider.dart';
 
-class FocusTimerScreen extends StatefulWidget {
+class FocusTimerScreen extends ConsumerStatefulWidget {
   const FocusTimerScreen({super.key});
 
   @override
-  State<FocusTimerScreen> createState() => _FocusTimerScreenState();
+  ConsumerState<FocusTimerScreen> createState() => _FocusTimerScreenState();
 }
 
-class _FocusTimerScreenState extends State<FocusTimerScreen>
+class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen>
     with SingleTickerProviderStateMixin {
-  Timer? _timer;
-  int _durationSeconds = 25 * 60;
-  int _secondsRemaining = 25 * 60;
-  bool _isRunning = false;
-  bool _hasStarted = false;
-
   late TextEditingController _minutesController;
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
-  StreamSubscription<String>? _actionSubscription;
 
   final List<int> _presetMinutes = [15, 25, 45, 60];
   static const _accent = Color(0xFFEC4899);
@@ -30,7 +23,9 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
   @override
   void initState() {
     super.initState();
-    _minutesController = TextEditingController(text: '25');
+    final initialMins = ref.read(focusTimerProvider).durationSeconds ~/ 60;
+    _minutesController = TextEditingController(text: initialMins.toString());
+
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
@@ -39,90 +34,17 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
 
-    // Listen for background controls from the notification tray
-    _actionSubscription =
-        PushNotificationService.focusTimerActions.stream.listen((action) {
-      if (!mounted) return;
-      if (action == 'pause') {
-        _pauseTimer();
-      } else if (action == 'resume') {
-        _resumeTimer();
-      } else if (action == 'end') {
-        _endSession();
-      }
-    });
+    // Sync pulse animation on startup if already running
+    if (ref.read(focusTimerProvider).isRunning) {
+      _pulseController.repeat(reverse: true);
+    }
   }
 
   @override
   void dispose() {
-    _actionSubscription?.cancel();
-    PushNotificationService.cancelFocusTimerNotification();
-    _timer?.cancel();
     _pulseController.dispose();
     _minutesController.dispose();
     super.dispose();
-  }
-
-  void _startTimer() {
-    SystemSound.play(SystemSoundType.click); // Click sound on start
-    setState(() {
-      _hasStarted = true;
-      _isRunning = true;
-    });
-    _pulseController.repeat(reverse: true);
-
-    // Show persistent notification immediately
-    PushNotificationService.showFocusTimerNotification(
-      secondsRemaining: _secondsRemaining,
-      durationSeconds: _durationSeconds,
-      isRunning: _isRunning,
-    );
-
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      setState(() {
-        if (_secondsRemaining > 0) {
-          _secondsRemaining--;
-          PushNotificationService.showFocusTimerNotification(
-            secondsRemaining: _secondsRemaining,
-            durationSeconds: _durationSeconds,
-            isRunning: _isRunning,
-          );
-        } else {
-          _onComplete();
-        }
-      });
-    });
-  }
-
-  void _pauseTimer() {
-    SystemSound.play(SystemSoundType.click); // Click sound on pause
-    _timer?.cancel();
-    _pulseController.stop();
-    setState(() => _isRunning = false);
-    PushNotificationService.showFocusTimerNotification(
-      secondsRemaining: _secondsRemaining,
-      durationSeconds: _durationSeconds,
-      isRunning: _isRunning,
-    );
-  }
-
-  void _resumeTimer() {
-    _startTimer();
-  }
-
-  void _resetTimer() {
-    SystemSound.play(SystemSoundType.click); // Click sound on reset
-    _timer?.cancel();
-    _pulseController.stop();
-    setState(() {
-      _isRunning = false;
-      _secondsRemaining = _durationSeconds;
-    });
-    PushNotificationService.showFocusTimerNotification(
-      secondsRemaining: _secondsRemaining,
-      durationSeconds: _durationSeconds,
-      isRunning: _isRunning,
-    );
   }
 
   void _endSessionPrompt() {
@@ -149,7 +71,7 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
           ElevatedButton(
             onPressed: () {
               Navigator.of(ctx).pop();
-              _endSession();
+              ref.read(focusTimerProvider.notifier).endSession();
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: _accent,
@@ -166,44 +88,6 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
         ],
       ),
     );
-  }
-
-  void _endSession() {
-    _timer?.cancel();
-    _pulseController.stop();
-    PushNotificationService.cancelFocusTimerNotification();
-    setState(() {
-      _isRunning = false;
-      _hasStarted = false;
-      _secondsRemaining = _durationSeconds;
-    });
-  }
-
-  void _onComplete() {
-    _timer?.cancel();
-    _pulseController.stop();
-    PushNotificationService.cancelFocusTimerNotification();
-    // Play completion sound through notification channel
-    PushNotificationService.showFocusTimerCompletionNotification();
-    setState(() {
-      _isRunning = false;
-      _hasStarted = false;
-      _secondsRemaining = _durationSeconds;
-    });
-    _showCompletionDialog();
-  }
-
-  void _updateDuration(int minutes) {
-    if (minutes < 1) minutes = 1;
-    if (minutes > 360) minutes = 360;
-
-    setState(() {
-      _durationSeconds = minutes * 60;
-      _secondsRemaining = _durationSeconds;
-      if (_minutesController.text != minutes.toString()) {
-        _minutesController.text = minutes.toString();
-      }
-    });
   }
 
   String _formatTime(int totalSeconds) {
@@ -273,8 +157,8 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
     );
   }
 
-  void _showScrollPicker() {
-    int tempMinutes = _durationSeconds ~/ 60;
+  void _showScrollPicker(int currentMinutes) {
+    int tempMinutes = currentMinutes;
     showModalBottomSheet(
       context: context,
       backgroundColor: Theme.of(context).colorScheme.surface,
@@ -332,7 +216,7 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: () {
-                        _updateDuration(tempMinutes);
+                        ref.read(focusTimerProvider.notifier).updateDuration(tempMinutes);
                         Navigator.pop(context);
                       },
                       style: ElevatedButton.styleFrom(
@@ -361,9 +245,31 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final progress = _durationSeconds > 0
-        ? _secondsRemaining / _durationSeconds
+    final timerState = ref.watch(focusTimerProvider);
+    final progress = timerState.durationSeconds > 0
+        ? timerState.secondsRemaining / timerState.durationSeconds
         : 0.0;
+
+    // React to changes in timer state (Sync Animation, Dialogs, Input synchronization)
+    ref.listen<FocusTimerState>(focusTimerProvider, (previous, next) {
+      if (previous?.isRunning != next.isRunning) {
+        if (next.isRunning) {
+          _pulseController.repeat(reverse: true);
+        } else {
+          _pulseController.stop();
+        }
+      }
+
+      final newMinsStr = (next.durationSeconds ~/ 60).toString();
+      if (_minutesController.text != newMinsStr && !next.hasStarted) {
+        _minutesController.text = newMinsStr;
+      }
+
+      if (next.isCompleted && !(previous?.isCompleted ?? false)) {
+        _showCompletionDialog();
+        ref.read(focusTimerProvider.notifier).clearCompletionFlag();
+      }
+    });
 
     return Scaffold(
       backgroundColor: theme.colorScheme.surface,
@@ -374,7 +280,7 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
         ),
         backgroundColor: theme.colorScheme.surface,
         elevation: 0,
-        actions: _hasStarted
+        actions: timerState.hasStarted
             ? [
                 IconButton(
                   icon: const Icon(Icons.close_rounded),
@@ -399,7 +305,7 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      if (!_hasStarted) ...[
+                      if (!timerState.hasStarted) ...[
                         // SETUP MODE
                         const SizedBox(height: 20),
                         Text(
@@ -456,7 +362,7 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
                                           child: TextField(
                                             controller: _minutesController,
                                             keyboardType: TextInputType.number,
-                                            textAlign: TextAlign.right, // Align right to join text beautifully
+                                            textAlign: TextAlign.center, // Center the digits!
                                             style: GoogleFonts.outfit(
                                               fontSize: 48,
                                               fontWeight: FontWeight.w900,
@@ -464,6 +370,9 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
                                             ),
                                             decoration: const InputDecoration(
                                               border: InputBorder.none,
+                                              enabledBorder: InputBorder.none,
+                                              focusedBorder: InputBorder.none,
+                                              filled: false, // Disable default theme text-field background box
                                               isDense: true,
                                               contentPadding: EdgeInsets.zero,
                                             ),
@@ -472,7 +381,7 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
                                             ],
                                             onChanged: (val) {
                                               final parsed = int.tryParse(val) ?? 0;
-                                              _updateDuration(parsed);
+                                              ref.read(focusTimerProvider.notifier).updateDuration(parsed);
                                             },
                                           ),
                                         ),
@@ -503,17 +412,17 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
                                 children: [
                                   IconButton(
                                     onPressed: () {
-                                      final m = _durationSeconds ~/ 60;
-                                      _updateDuration(m + 1);
+                                      final m = timerState.durationSeconds ~/ 60;
+                                      ref.read(focusTimerProvider.notifier).updateDuration(m + 1);
                                     },
                                     icon: const Icon(Icons.keyboard_arrow_up_rounded, size: 28),
                                     color: _accent,
                                   ),
                                   IconButton(
                                     onPressed: () {
-                                      final m = _durationSeconds ~/ 60;
+                                      final m = timerState.durationSeconds ~/ 60;
                                       if (m > 1) {
-                                        _updateDuration(m - 1);
+                                        ref.read(focusTimerProvider.notifier).updateDuration(m - 1);
                                       }
                                     },
                                     icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 28),
@@ -529,7 +438,7 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
 
                         // Scroll Picker Trigger Button
                         TextButton.icon(
-                          onPressed: _showScrollPicker,
+                          onPressed: () => _showScrollPicker(timerState.durationSeconds ~/ 60),
                           icon: const Icon(Icons.unfold_more_rounded, color: _accent),
                           label: Text(
                             'Choose via scroll picker',
@@ -546,9 +455,9 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           children: _presetMinutes.map((min) {
-                            final selected = _durationSeconds == min * 60;
+                            final selected = timerState.durationSeconds == min * 60;
                             return GestureDetector(
-                              onTap: () => _updateDuration(min),
+                              onTap: () => ref.read(focusTimerProvider.notifier).updateDuration(min),
                               child: AnimatedContainer(
                                 duration: const Duration(milliseconds: 200),
                                 padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
@@ -583,7 +492,7 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton.icon(
-                            onPressed: _startTimer,
+                            onPressed: () => ref.read(focusTimerProvider.notifier).start(),
                             icon: const Icon(Icons.play_arrow_rounded, color: Colors.white),
                             label: Text(
                               'Start focus session',
@@ -616,7 +525,7 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
                               shape: BoxShape.circle,
                               boxShadow: [
                                 BoxShadow(
-                                  color: _accent.withOpacity(_isRunning ? 0.18 : 0.07),
+                                  color: _accent.withOpacity(timerState.isRunning ? 0.18 : 0.07),
                                   blurRadius: 30,
                                   spreadRadius: 4,
                                 ),
@@ -639,7 +548,7 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     Text(
-                                      _formatTime(_secondsRemaining),
+                                      _formatTime(timerState.secondsRemaining),
                                       style: GoogleFonts.outfit(
                                         fontSize: 44,
                                         fontWeight: FontWeight.w900,
@@ -649,7 +558,7 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
                                     ),
                                     const SizedBox(height: 6),
                                     Text(
-                                      _isRunning ? 'FOCUSING' : 'PAUSED',
+                                      timerState.isRunning ? 'FOCUSING' : 'PAUSED',
                                       style: GoogleFonts.outfit(
                                         fontSize: 11,
                                         fontWeight: FontWeight.bold,
@@ -675,7 +584,13 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
                             const SizedBox(width: 24),
                             // Play/Pause Action Button
                             GestureDetector(
-                              onTap: _isRunning ? _pauseTimer : _resumeTimer,
+                              onTap: () {
+                                if (timerState.isRunning) {
+                                  ref.read(focusTimerProvider.notifier).pause();
+                                } else {
+                                  ref.read(focusTimerProvider.notifier).resume();
+                                }
+                              },
                               child: Container(
                                 padding: const EdgeInsets.all(20),
                                 decoration: const BoxDecoration(
@@ -683,7 +598,7 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
                                   shape: BoxShape.circle,
                                 ),
                                 child: Icon(
-                                  _isRunning ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                                  timerState.isRunning ? Icons.pause_rounded : Icons.play_arrow_rounded,
                                   color: Colors.white,
                                   size: 36,
                                 ),
@@ -692,7 +607,7 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
                             const SizedBox(width: 24),
                             // Reset Button
                             GestureDetector(
-                              onTap: _resetTimer,
+                              onTap: () => ref.read(focusTimerProvider.notifier).reset(),
                               child: Container(
                                 padding: const EdgeInsets.all(16),
                                 decoration: BoxDecoration(
