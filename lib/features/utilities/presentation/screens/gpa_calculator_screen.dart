@@ -206,9 +206,7 @@ class _GpaCalculatorScreenState extends ConsumerState<GpaCalculatorScreen> {
       cgpaPoints += sgpa;
       cgpaCount++;
     }
-    final double calculatedCGPA = cgpaCount > 0
-        ? cgpaPoints / cgpaCount
-        : 0.0;
+    final double calculatedCGPA = cgpaCount > 0 ? cgpaPoints / cgpaCount : 0.0;
 
     return Scaffold(
       backgroundColor: isDark
@@ -275,7 +273,9 @@ class _GpaCalculatorScreenState extends ConsumerState<GpaCalculatorScreen> {
                           boxShadow: [
                             if (!isDark)
                               BoxShadow(
-                                color: theme.colorScheme.primary.withOpacity(0.1),
+                                color: theme.colorScheme.primary.withOpacity(
+                                  0.1,
+                                ),
                                 blurRadius: 20,
                                 offset: const Offset(0, 8),
                               ),
@@ -288,7 +288,7 @@ class _GpaCalculatorScreenState extends ConsumerState<GpaCalculatorScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'GPA Calculator 📊',
+                                    'GPA Calculator',
                                     style: GoogleFonts.outfit(
                                       fontSize: 22,
                                       fontWeight: FontWeight.w900,
@@ -434,7 +434,9 @@ class _GpaCalculatorScreenState extends ConsumerState<GpaCalculatorScreen> {
                           boxShadow: [
                             if (!isDark)
                               BoxShadow(
-                                color: theme.colorScheme.primary.withOpacity(0.1),
+                                color: theme.colorScheme.primary.withOpacity(
+                                  0.1,
+                                ),
                                 blurRadius: 20,
                                 offset: const Offset(0, 8),
                               ),
@@ -459,7 +461,8 @@ class _GpaCalculatorScreenState extends ConsumerState<GpaCalculatorScreen> {
                                     border: Border.all(
                                       color: isDark
                                           ? Colors.white.withOpacity(0.06)
-                                          : theme.colorScheme.primary.withOpacity(0.12),
+                                          : theme.colorScheme.primary
+                                                .withOpacity(0.12),
                                     ),
                                   ),
                                   child: Column(
@@ -604,29 +607,65 @@ class _GpaCalculatorScreenState extends ConsumerState<GpaCalculatorScreen> {
                                                     theme.colorScheme.onSurface,
                                                 fontSize: 13,
                                               ),
-                                              items: [
-                                                {'label': 'O (10)', 'val': 10.0},
-                                                {'label': 'E (9)', 'val': 9.0},
-                                                {'label': 'A (8)', 'val': 8.0},
-                                                {'label': 'B (7)', 'val': 7.0},
-                                                {'label': 'C (6)', 'val': 6.0},
-                                                {'label': 'D (5)', 'val': 5.0},
-                                                {'label': 'F (4)', 'val': 4.0},
-                                                {'label': 'F (3)', 'val': 3.0},
-                                                {'label': 'F (2)', 'val': 2.0},
-                                                {'label': 'F (1)', 'val': 1.0},
-                                                {'label': 'F (0)', 'val': 0.0},
-                                              ]
-                                                  .map(
-                                                    (g) => DropdownMenuItem(
-                                                      value: (g['val'] as num)
-                                                          .toDouble(),
-                                                      child: Text(
-                                                        g['label'] as String,
-                                                      ),
-                                                    ),
-                                                  )
-                                                  .toList(),
+                                              items:
+                                                  [
+                                                        {
+                                                          'label': 'O (10)',
+                                                          'val': 10.0,
+                                                        },
+                                                        {
+                                                          'label': 'E (9)',
+                                                          'val': 9.0,
+                                                        },
+                                                        {
+                                                          'label': 'A (8)',
+                                                          'val': 8.0,
+                                                        },
+                                                        {
+                                                          'label': 'B (7)',
+                                                          'val': 7.0,
+                                                        },
+                                                        {
+                                                          'label': 'C (6)',
+                                                          'val': 6.0,
+                                                        },
+                                                        {
+                                                          'label': 'D (5)',
+                                                          'val': 5.0,
+                                                        },
+                                                        {
+                                                          'label': 'F (4)',
+                                                          'val': 4.0,
+                                                        },
+                                                        {
+                                                          'label': 'F (3)',
+                                                          'val': 3.0,
+                                                        },
+                                                        {
+                                                          'label': 'F (2)',
+                                                          'val': 2.0,
+                                                        },
+                                                        {
+                                                          'label': 'F (1)',
+                                                          'val': 1.0,
+                                                        },
+                                                        {
+                                                          'label': 'F (0)',
+                                                          'val': 0.0,
+                                                        },
+                                                      ]
+                                                      .map(
+                                                        (g) => DropdownMenuItem(
+                                                          value:
+                                                              (g['val'] as num)
+                                                                  .toDouble(),
+                                                          child: Text(
+                                                            g['label']
+                                                                as String,
+                                                          ),
+                                                        ),
+                                                      )
+                                                      .toList(),
                                               onChanged: (val) {
                                                 setState(() {
                                                   course['gradePoint'] = val;
@@ -680,23 +719,29 @@ class _GpaCalculatorScreenState extends ConsumerState<GpaCalculatorScreen> {
                                     border: Border.all(
                                       color: isDark
                                           ? Colors.white.withOpacity(0.06)
-                                          : theme.colorScheme.primary.withOpacity(0.12),
+                                          : theme.colorScheme.primary
+                                                .withOpacity(0.12),
                                     ),
                                   ),
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
                                     children: [
                                       Row(
                                         children: [
                                           CircleAvatar(
                                             radius: 12,
-                                            backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
+                                            backgroundColor: theme
+                                                .colorScheme
+                                                .primary
+                                                .withOpacity(0.1),
                                             child: Text(
                                               '${index + 1}',
                                               style: GoogleFonts.outfit(
                                                 fontSize: 11,
                                                 fontWeight: FontWeight.bold,
-                                                color: theme.colorScheme.primary,
+                                                color:
+                                                    theme.colorScheme.primary,
                                               ),
                                             ),
                                           ),
@@ -704,29 +749,38 @@ class _GpaCalculatorScreenState extends ConsumerState<GpaCalculatorScreen> {
                                           Expanded(
                                             child: DropdownButtonFormField<int>(
                                               isExpanded: true,
-                                              value: semester['semester'] as int?,
+                                              value:
+                                                  semester['semester'] as int?,
                                               decoration: InputDecoration(
                                                 labelText: 'Semester',
-                                                labelStyle: GoogleFonts.outfit(fontSize: 11),
-                                                contentPadding: const EdgeInsets.symmetric(
-                                                  horizontal: 10,
-                                                  vertical: 8,
+                                                labelStyle: GoogleFonts.outfit(
+                                                  fontSize: 11,
                                                 ),
+                                                contentPadding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 10,
+                                                      vertical: 8,
+                                                    ),
                                                 border: InputBorder.none,
                                               ),
                                               style: GoogleFonts.outfit(
                                                 fontSize: 14,
                                                 fontWeight: FontWeight.bold,
-                                                color: isDark ? Colors.white : Colors.black87,
+                                                color: isDark
+                                                    ? Colors.white
+                                                    : Colors.black87,
                                               ),
-                                              items: List.generate(8, (i) => i + 1)
-                                                  .map(
-                                                    (s) => DropdownMenuItem(
-                                                      value: s,
-                                                      child: Text('Semester $s'),
-                                                    ),
-                                                  )
-                                                  .toList(),
+                                              items:
+                                                  List.generate(8, (i) => i + 1)
+                                                      .map(
+                                                        (s) => DropdownMenuItem(
+                                                          value: s,
+                                                          child: Text(
+                                                            'Semester $s',
+                                                          ),
+                                                        ),
+                                                      )
+                                                      .toList(),
                                               onChanged: (val) {
                                                 setState(() {
                                                   semester['semester'] = val;
@@ -743,7 +797,9 @@ class _GpaCalculatorScreenState extends ConsumerState<GpaCalculatorScreen> {
                                               ),
                                               onPressed: () {
                                                 setState(() {
-                                                  _cgpaSemesters.removeAt(index);
+                                                  _cgpaSemesters.removeAt(
+                                                    index,
+                                                  );
                                                 });
                                               },
                                             ),
@@ -752,18 +808,29 @@ class _GpaCalculatorScreenState extends ConsumerState<GpaCalculatorScreen> {
                                       const Divider(height: 8, thickness: 0.5),
                                       const SizedBox(height: 6),
                                       TextFormField(
-                                        key: ValueKey('cgpa_sem_${semester['semester']}_$index'),
-                                        initialValue: semester['sgpa']?.toString() ?? '',
-                                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                        key: ValueKey(
+                                          'cgpa_sem_${semester['semester']}_$index',
+                                        ),
+                                        initialValue:
+                                            semester['sgpa']?.toString() ?? '',
+                                        keyboardType:
+                                            const TextInputType.numberWithOptions(
+                                              decimal: true,
+                                            ),
                                         decoration: InputDecoration(
                                           labelText: 'Semester SGPA',
-                                          labelStyle: GoogleFonts.outfit(fontSize: 11),
-                                          contentPadding: const EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                            vertical: 8,
+                                          labelStyle: GoogleFonts.outfit(
+                                            fontSize: 11,
                                           ),
+                                          contentPadding:
+                                              const EdgeInsets.symmetric(
+                                                horizontal: 12,
+                                                vertical: 8,
+                                              ),
                                           border: OutlineInputBorder(
-                                            borderRadius: BorderRadius.circular(12),
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
                                           ),
                                           hintText: 'Enter SGPA (e.g. 9.0)',
                                         ),

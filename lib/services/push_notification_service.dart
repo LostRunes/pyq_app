@@ -360,10 +360,22 @@ class PushNotificationService {
       color: const Color(0xFFEC4899), // Pink brand color for progress bar
       actions: <AndroidNotificationAction>[
         if (isRunning)
-          const AndroidNotificationAction('pause', 'Pause')
+          const AndroidNotificationAction(
+            'pause',
+            'Pause',
+            showsUserInterface: true,
+          )
         else
-          const AndroidNotificationAction('resume', 'Resume'),
-        const AndroidNotificationAction('end', 'End Session'),
+          const AndroidNotificationAction(
+            'resume',
+            'Resume',
+            showsUserInterface: true,
+          ),
+        const AndroidNotificationAction(
+          'end',
+          'End Session',
+          showsUserInterface: true,
+        ),
       ],
     );
 

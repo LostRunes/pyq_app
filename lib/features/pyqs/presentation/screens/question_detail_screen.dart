@@ -4,6 +4,10 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter/services.dart';
 import 'package:focus_fox/features/pyqs/presentation/providers/pyq_providers.dart';
 import 'package:focus_fox/services/analytics_service.dart';
+import 'package:focus_fox/features/pyqs/presentation/providers/question_pdf_provider.dart';
+import 'package:focus_fox/features/pyqs/presentation/widgets/drive_file_tile.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 
 class QuestionDetailScreen extends ConsumerWidget {
@@ -255,6 +259,102 @@ class QuestionDetailScreen extends ConsumerWidget {
                         padding: const EdgeInsets.symmetric(vertical: 20),
                       ),
                     ),
+                  ),
+                  const SizedBox(height: 40),
+                  Consumer(
+                    builder: (context, ref, child) {
+                      final matchAsync = ref.watch(questionPdfMatchProvider(questionId));
+                      return matchAsync.when(
+                        data: (result) {
+                          if (result == null || result.allFiles.isEmpty) {
+                            return const SizedBox.shrink();
+                          }
+
+                          void openPdfFile(Map item) {
+                            final webViewLink = item["webViewLink"] as String? ?? '';
+                            if (webViewLink.isNotEmpty) {
+                              final email = Supabase.instance.client.auth.currentUser?.email;
+                              String finalUrl = webViewLink;
+                              if (email != null && email.isNotEmpty) {
+                                try {
+                                  final uri = Uri.parse(webViewLink);
+                                  final queryParams = Map<String, String>.from(uri.queryParameters);
+                                  queryParams['authuser'] = email;
+                                  finalUrl = uri.replace(queryParameters: queryParams).toString();
+                                } catch (_) {}
+                              }
+                              launchUrl(
+                                Uri.parse(finalUrl),
+                                mode: LaunchMode.inAppBrowserView,
+                              );
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('No link available for this file.')),
+                              );
+                            }
+                          }
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Text(
+                                "Question Paper Files",
+                                style: GoogleFonts.outfit(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Theme.of(context).colorScheme.onSurface,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              if (result.matchedFiles.isNotEmpty) ...[
+                                Text(
+                                  "Recommended Matches",
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: Theme.of(context).colorScheme.primary,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                ...result.matchedFiles.map((file) {
+                                  return DriveFileTile(
+                                    item: file,
+                                    onTap: () => openPdfFile(file),
+                                  );
+                                }),
+                                const SizedBox(height: 16),
+                              ],
+                              if (result.allFiles.length > result.matchedFiles.length) ...[
+                                Text(
+                                  "All Available Subject PYQ Papers",
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                ...result.allFiles
+                                    .where((file) => !result.matchedFiles.contains(file))
+                                    .map((file) {
+                                      return DriveFileTile(
+                                        item: file,
+                                        onTap: () => openPdfFile(file),
+                                      );
+                                    }),
+                              ],
+                            ],
+                          );
+                        },
+                        loading: () => const Center(
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(vertical: 20),
+                            child: CircularProgressIndicator(),
+                          ),
+                        ),
+                        error: (_, __) => const SizedBox.shrink(),
+                      );
+                    },
                   ),
                   const SizedBox(height: 40),
                 ],

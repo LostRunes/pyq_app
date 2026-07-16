@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../data/models/solution.dart';
 import '../providers/skulk_providers.dart';
 import 'report_bottom_sheet.dart';
+import 'share_solution_sheet.dart';
 import 'package:focus_fox/shared/widgets/common/cloudinary_image_gallery.dart';
 
 class SolutionTile extends ConsumerWidget {
@@ -168,7 +169,7 @@ class SolutionTile extends ConsumerWidget {
                 ),
               ),
 
-              // Edit/Delete for Owner | Report for others
+              // Edit/Delete for Owner | Share/Report for others
               PopupMenuButton<String>(
                 icon: const Icon(
                   Icons.more_vert_rounded,
@@ -180,6 +181,12 @@ class SolutionTile extends ConsumerWidget {
                     onEdit();
                   } else if (value == 'delete') {
                     onDelete();
+                  } else if (value == 'share') {
+                    ShareSolutionSheet.show(
+                      context,
+                      solution.id,
+                      solution.body,
+                    );
                   } else if (value == 'report') {
                     ReportBottomSheet.show(
                       context,
@@ -228,6 +235,23 @@ class SolutionTile extends ConsumerWidget {
                       ),
                     ),
                   ],
+                  PopupMenuItem(
+                    value: 'share',
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.share_outlined,
+                          size: 16,
+                          color: Colors.grey,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Share Solution',
+                          style: GoogleFonts.outfit(fontSize: 13),
+                        ),
+                      ],
+                    ),
+                  ),
                   PopupMenuItem(
                     value: 'report',
                     child: Row(
