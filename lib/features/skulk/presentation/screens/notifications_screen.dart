@@ -121,7 +121,7 @@ class NotificationsScreen extends ConsumerWidget {
                       n: n,
                       isDark: isDark,
                       onTap: () {
-                        _handleNotificationTap(context, n);
+                        _handleNotificationTap(context, ref, n);
                       },
                     ),
                   ),
@@ -133,7 +133,7 @@ class NotificationsScreen extends ConsumerWidget {
                       n: n,
                       isDark: isDark,
                       onTap: () {
-                        _handleNotificationTap(context, n);
+                        _handleNotificationTap(context, ref, n);
                       },
                     ),
                   ),
@@ -161,7 +161,17 @@ class NotificationsScreen extends ConsumerWidget {
     );
   }
 
-  void _handleNotificationTap(BuildContext context, Map<String, dynamic> n) async {
+  void _handleNotificationTap(BuildContext context, WidgetRef ref, Map<String, dynamic> n) async {
+    final id = n['id']?.toString();
+    if (id != null) {
+      try {
+        final repo = ref.read(skulkRepositoryProvider);
+        await repo.markNotificationRead(id);
+        ref.invalidate(notificationsProvider);
+        ref.invalidate(unreadCountProvider);
+      } catch (_) {}
+    }
+
     final type = n['type']?.toString();
     final postId = n['post_id']?.toString();
     if (postId == null || postId.isEmpty) return;

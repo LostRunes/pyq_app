@@ -108,6 +108,7 @@ serve(async (req) => {
                 post_id: String(record.post_id ?? ''),
                 type: String(record.type ?? ''),
                 answer_id: String(record.answer_id ?? ''),
+                notification_id: String(record.id ?? ''),
               },
               android: {
                 priority: 'HIGH',
