@@ -2,8 +2,11 @@ import 'dart:async';
 import 'dart:math';
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:focus_fox/services/analytics_service.dart';
+import 'package:focus_fox/features/auth/presentation/screens/main_navigation_screen.dart';
 import 'package:focus_fox/core/providers/prefs_provider.dart';
 import 'package:focus_fox/core/providers/bee_provider.dart';
 import 'package:focus_fox/features/subjects/presentation/providers/subjects_providers.dart';
@@ -30,6 +33,14 @@ class SubjectsPage extends ConsumerWidget {
     final searchQuery = ref.watch(subjectsSearchProvider);
 
     final beeEnabled = ref.watch(beeEnabledProvider);
+    final selectedIndex = ref.watch(mainNavigationIndexProvider);
+    final hasShownAnimation = ref.watch(hasShownSubjectTitleAnimationProvider);
+
+    if (!hasShownAnimation) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref.read(hasShownSubjectTitleAnimationProvider.notifier).setShown(true);
+      });
+    }
 
     return FlyingBeeOverlay(
       beeEnabled: beeEnabled,
@@ -59,6 +70,7 @@ class SubjectsPage extends ConsumerWidget {
                 });
 
             return ListView.builder(
+              key: ValueKey(selectedIndex),
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               itemCount: filtered.isEmpty ? 3 : filtered.length + 2,
@@ -133,26 +145,50 @@ class SubjectsPage extends ConsumerWidget {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    GhostText(
-                                      text: 'Choose your path!',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .headlineSmall
-                                          ?.copyWith(
-                                            fontWeight: FontWeight.w900,
-                                            color: isDark
-                                                ? const Color(0xFFFFFFFF)
-                                                : Colors.black,
-                                          ),
-                                    ),
+                                    if (hasShownAnimation)
+                                      Text(
+                                        'Choose your path!',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .headlineSmall
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.w900,
+                                              color: isDark
+                                                  ? const Color(0xFFFFFFFF)
+                                                  : Colors.black,
+                                            ),
+                                      )
+                                    else
+                                      GhostText(
+                                        text: 'Choose your path!',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .headlineSmall
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.w900,
+                                              color: isDark
+                                                  ? const Color(0xFFFFFFFF)
+                                                  : Colors.black,
+                                            ),
+                                      ),
                                     const SizedBox(height: 4),
-                                    GhostText(
-                                      text: 'Select a subject to begin.',
-                                      delay: const Duration(milliseconds: 350),
-                                      style: Theme.of(
-                                        context,
-                                      ).textTheme.bodyMedium,
-                                    ),
+                                    if (hasShownAnimation)
+                                      Text(
+                                        'Select a subject to begin.',
+                                        style: Theme.of(
+                                          context,
+                                        ).textTheme.bodyMedium,
+                                      )
+                                    else
+                                      GhostText(
+                                        text: 'Select a subject to begin.',
+                                        delay: const Duration(
+                                          milliseconds: 350,
+                                        ),
+                                        style: Theme.of(
+                                          context,
+                                        ).textTheme.bodyMedium,
+                                      ),
                                   ],
                                 ),
                               ),
@@ -560,6 +596,22 @@ class _FlyingBeeOverlayState extends ConsumerState<FlyingBeeOverlay>
     if (!_visible || _dropped || _dropping) return;
     _wanderTimer?.cancel();
 
+    // Trigger haptic feedback
+    HapticFeedback.lightImpact();
+
+    // Capture the start position of the bubble animation
+    final startOffset = Offset(_x + _beeSize / 2, _dropY + _beeSize / 2);
+    _showFloatingPlusOne(startOffset);
+
+    // Log the bee tap event
+    AnalyticsService.logFeatureUsed(
+      featureName: 'bee_killed',
+      screenName: '/main_navigation',
+      metadata: {
+        'new_count': ref.read(beeTapCountProvider) + 1,
+      },
+    );
+
     // Increment the quest counter
     ref.read(beeTapCountProvider.notifier).increment();
 
@@ -585,6 +637,39 @@ class _FlyingBeeOverlayState extends ConsumerState<FlyingBeeOverlay>
     _reappearTimer = Timer(const Duration(seconds: 10), () {
       if (mounted && widget.beeEnabled) _spawnBee();
     });
+  }
+
+  void _showFloatingPlusOne(Offset startOffset) {
+    final overlay = Overlay.of(context);
+    late OverlayEntry entry;
+
+    final RenderBox? profileBox =
+        MainNavigationScreen.profileIconKey.currentContext?.findRenderObject()
+            as RenderBox?;
+    final Offset targetOffset;
+    if (profileBox != null) {
+      targetOffset = profileBox.localToGlobal(
+        profileBox.size.center(Offset.zero),
+      );
+    } else {
+      final size = MediaQuery.of(context).size;
+      targetOffset = Offset(
+        size.width - 45,
+        MediaQuery.of(context).padding.top + 28,
+      );
+    }
+
+    entry = OverlayEntry(
+      builder: (context) => _FloatingPlusOneBubble(
+        startOffset: startOffset,
+        targetOffset: targetOffset,
+        onComplete: () {
+          entry.remove();
+        },
+      ),
+    );
+
+    overlay.insert(entry);
   }
 
   @override
@@ -636,6 +721,108 @@ class _FlyingBeeOverlayState extends ConsumerState<FlyingBeeOverlay>
             ),
           ),
       ],
+    );
+  }
+}
+
+class _FloatingPlusOneBubble extends StatefulWidget {
+  final Offset startOffset;
+  final Offset targetOffset;
+  final VoidCallback onComplete;
+
+  const _FloatingPlusOneBubble({
+    required this.startOffset,
+    required this.targetOffset,
+    required this.onComplete,
+  });
+
+  @override
+  State<_FloatingPlusOneBubble> createState() => _FloatingPlusOneBubbleState();
+}
+
+class _FloatingPlusOneBubbleState extends State<_FloatingPlusOneBubble>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _progress;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 3000),
+    );
+    _progress = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOutCubic,
+    );
+
+    _controller.forward().then((_) => widget.onComplete());
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _progress,
+      builder: (context, child) {
+        final t = _progress.value;
+        final currentX =
+            widget.startOffset.dx +
+            (widget.targetOffset.dx - widget.startOffset.dx) * t;
+        final currentY =
+            widget.startOffset.dy +
+            (widget.targetOffset.dy - widget.startOffset.dy) * t;
+
+        final opacity = (1.0 - t).clamp(0.0, 1.0);
+        final scale = t < 0.2 ? (t / 0.2) * 1.2 : 1.2 - ((t - 0.2) / 0.8) * 0.4;
+
+        return Positioned(
+          left: currentX - 25,
+          top: currentY - 15,
+          child: Opacity(
+            opacity: opacity,
+            child: Transform.scale(scale: scale, child: child),
+          ),
+        );
+      },
+      child: Material(
+        color: Colors.transparent,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFF9F0A),
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFFFF9F0A).withOpacity(0.5),
+                blurRadius: 10,
+                spreadRadius: 2,
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '+1',
+                style: GoogleFonts.outfit(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 13,
+                ),
+              ),
+              const SizedBox(width: 2),
+              const Text('🐝', style: TextStyle(fontSize: 12)),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -702,15 +889,22 @@ void _showDeleteConfirmationDialog(
   showDialog(
     context: context,
     builder: (context) {
+      final isDark = Theme.of(context).brightness == Brightness.dark;
       return AlertDialog(
+        backgroundColor: isDark ? const Color(0xFF171330) : null,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: Text(
           'Delete Subject?',
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+          style: GoogleFonts.outfit(
+            fontWeight: FontWeight.bold,
+            color: isDark ? Colors.white : Colors.black87,
+          ),
         ),
         content: Text(
           'Are you sure you want to remove "${subject.name}" from this subject list?',
-          style: GoogleFonts.outfit(),
+          style: GoogleFonts.outfit(
+            color: isDark ? Colors.white70 : Colors.black54,
+          ),
         ),
         actions: [
           TextButton(

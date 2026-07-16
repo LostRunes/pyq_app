@@ -1,8 +1,19 @@
-class Topic {
+import 'package:hive/hive.dart';
+
+part 'topic.g.dart';
+
+@HiveType(typeId: 3)
+class Topic extends HiveObject {
+  @HiveField(0)
   final String id;
+  @HiveField(1)
   final String subjectId;
+  @HiveField(2)
   final String name;
+  @HiveField(3)
   final String? summary;
+  
+  // Recalculated dynamically at runtime, so we do not store it in Hive.
   double importanceScore;
 
   Topic({

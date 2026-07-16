@@ -1,12 +1,26 @@
-class Subject {
+import 'package:hive/hive.dart';
+
+part 'subject.g.dart';
+
+@HiveType(typeId: 2)
+class Subject extends HiveObject {
+  @HiveField(0)
   final String id;
+  @HiveField(1)
   final String name;
+  @HiveField(2)
   final String code;
+  @HiveField(3)
   final String? pyqDriveLink;
+  @HiveField(4)
   final String? notesDriveLink;
+  @HiveField(5)
   final String? courseOutcomeLink;
+  @HiveField(6)
   final int? priority;
+  @HiveField(7)
   final int? subjectCredit;
+  @HiveField(8)
   final String? subjectType;
 
   Subject({

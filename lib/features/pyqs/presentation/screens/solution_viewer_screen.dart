@@ -42,9 +42,6 @@ class _SolutionViewerScreenState extends ConsumerState<SolutionViewerScreen> {
   ];
   int _selectedThemeIndex = 0;
 
-  // AI Solution Simulation states
-  bool _isGenerating = false;
-  double _generationProgress = 0.0;
   bool _showComments = true;
 
   @override
@@ -83,57 +80,6 @@ class _SolutionViewerScreenState extends ConsumerState<SolutionViewerScreen> {
           _isLoading = false;
         });
       }
-    }
-  }
-
-  // Generate Simulated AI Solution
-  Future<void> _generateAISolution() async {
-    setState(() {
-      _isGenerating = true;
-      _generationProgress = 0.0;
-    });
-
-    // Simulate progress ticks
-    for (int i = 1; i <= 10; i++) {
-      await Future.delayed(const Duration(milliseconds: 250));
-      if (!mounted) return;
-      setState(() {
-        _generationProgress = i / 10.0;
-      });
-    }
-
-    // High quality mock solutions
-    final mockSolutions = [
-      {
-        'language': 'C++',
-        'heading': 'Optimal Two-Pointer / Hash Solution (AI)',
-        'time_complexity': 'O(N)',
-        'space_complexity': 'O(N)',
-        'solution': '// AI Generated Solution\n#include <vector>\n#include <unordered_map>\n\nclass Solution {\npublic:\n    std::vector<int> solveOptimal(std::vector<int>& nums, int target) {\n        std::unordered_map<int, int> numMap;\n        for (int i = 0; i < nums.size(); i++) {\n            int complement = target - nums[i];\n            if (numMap.find(complement) != numMap.end()) {\n                return {numMap[complement], i};\n            }\n            numMap[nums[i]] = i;\n        }\n        return {};\n    }\n};',
-      },
-      {
-        'language': 'Java',
-        'heading': 'Optimal Two-Pointer / Hash Solution (AI)',
-        'time_complexity': 'O(N)',
-        'space_complexity': 'O(N)',
-        'solution': '// AI Generated Solution\nimport java.util.HashMap;\nimport java.util.Map;\n\nclass Solution {\n    public int[] solveOptimal(int[] nums, int target) {\n        Map<Integer, Integer> map = new HashMap<>();\n        for (int i = 0; i < nums.length; i++) {\n            int complement = target - nums[i];\n            if (map.containsKey(complement)) {\n                return new int[] { map.get(complement), i };\n            }\n            map.put(nums[i], i);\n        }\n        return new int[] {};\n    }\n}',
-      },
-      {
-        'language': 'Python',
-        'heading': 'Optimal Two-Pointer / Hash Solution (AI)',
-        'time_complexity': 'O(N)',
-        'space_complexity': 'O(N)',
-        'solution': '# AI Generated Solution\nclass Solution:\n    def solveOptimal(self, nums: List[int], target: int) -> List[int]:\n        num_map = {}\n        for i, num in enumerate(nums):\n            complement = target - num\n            if complement in num_map:\n                return [num_map[complement], i]\n            num_map[num] = i\n        return []',
-      }
-    ];
-
-    if (mounted) {
-      setState(() {
-        _solutions = mockSolutions;
-        _selectedLanguage = 'C++';
-        _selectedSolutionIndex = 0;
-        _isGenerating = false;
-      });
     }
   }
 
@@ -178,12 +124,12 @@ class _SolutionViewerScreenState extends ConsumerState<SolutionViewerScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _solutions.isEmpty
-              ? _buildGenerateAISolutionPrompt(isDark)
+              ? _buildNoSolutionPrompt(isDark)
               : _buildSolutionsContent(isDark, difficultyColor),
     );
   }
 
-  Widget _buildGenerateAISolutionPrompt(bool isDark) {
+  Widget _buildNoSolutionPrompt(bool isDark) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24.0),
@@ -197,14 +143,14 @@ class _SolutionViewerScreenState extends ConsumerState<SolutionViewerScreen> {
               shape: BoxShape.circle,
             ),
             child: const Icon(
-              Icons.psychology_outlined,
+              Icons.code_off_rounded,
               size: 80,
-              color: Color(0xFF8B5CF6),
+              color: Colors.grey,
             ),
           ),
           const SizedBox(height: 24),
           Text(
-            'No Solution in Database',
+            'No Solution Available',
             style: GoogleFonts.outfit(
               fontSize: 22,
               fontWeight: FontWeight.bold,
@@ -213,51 +159,13 @@ class _SolutionViewerScreenState extends ConsumerState<SolutionViewerScreen> {
           ),
           const SizedBox(height: 12),
           Text(
-            'There is no pre-saved solution for this question yet.\nGenerate a verified step-by-step AI walkthrough.',
+            'There is no pre-saved solution for this question yet.',
             textAlign: TextAlign.center,
             style: GoogleFonts.outfit(
               fontSize: 14,
               color: isDark ? Colors.white70 : Colors.black54,
             ),
           ),
-          const SizedBox(height: 32),
-          if (_isGenerating) ...[
-            SizedBox(
-              width: 200,
-              child: LinearProgressIndicator(
-                value: _generationProgress,
-                backgroundColor: isDark ? Colors.white12 : Colors.black12,
-                valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF8B5CF6)),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Generating optimal algorithms...',
-              style: GoogleFonts.outfit(
-                fontSize: 12,
-                color: isDark ? Colors.white54 : Colors.black45,
-              ),
-            ),
-          ] else
-            ElevatedButton.icon(
-              onPressed: _generateAISolution,
-              icon: const Icon(Icons.bolt, color: Colors.white),
-              label: Text(
-                'Generate Solution',
-                style: GoogleFonts.outfit(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                  color: Colors.white,
-                ),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF8B5CF6),
-                padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-              ),
-            ),
         ],
       ),
     );
@@ -510,12 +418,14 @@ class _SolutionViewerScreenState extends ConsumerState<SolutionViewerScreen> {
                   )
                 ],
               ),
-              child: SelectableText(
-                _processCode(activeSolution['solution'] ?? ''),
+              child: SelectableText.rich(
+                _buildHighlightedCode(
+                  _processCode(activeSolution['solution'] ?? ''),
+                  isDark,
+                ),
                 style: GoogleFonts.sourceCodePro(
                   fontSize: 13,
                   height: 1.5,
-                  color: const Color(0xFFF8F8F2),
                 ),
               ),
             ),
@@ -534,6 +444,69 @@ class _SolutionViewerScreenState extends ConsumerState<SolutionViewerScreen> {
         .split('\n')
         .where((line) => !line.trim().startsWith('//') && !line.trim().startsWith('#'))
         .join('\n');
+  }
+
+  TextSpan _buildHighlightedCode(String code, bool isDark) {
+    final List<InlineSpan> spans = [];
+    final regex = RegExp(
+      r'(//[^\n]*|/\*[\s\S]*?\*/)' // 1: Comments
+      r'|("[^"\\]*(?:\\.[^"\\]*)*")' // 2: Double-quoted Strings
+      r"|('[^'\\]*(?:\\.[^'\\]*)*')" // 3: Single-quoted Chars
+      r'|(\b(?:int|double|float|char|void|long|boolean|bool|short|byte|class|interface|public|private|protected|static|final|const|volatile|transient|synchronized|native|if|else|for|while|do|switch|case|default|break|continue|return|try|catch|finally|throw|throws|new|this|super|import|package|struct|typedef|template|typename|using|namespace|virtual|override|nullptr|true|false)\b)' // 4: Keywords
+      r'|(\b\d+(?:\.\d+)?\b)' // 5: Numbers
+      r'|(#[a-zA-Z_]+|@[a-zA-Z_]+)' // 6: Preprocessor/Annotations
+    );
+
+    int lastIndex = 0;
+    final defaultTextColor = const Color(0xFFF8F8F2);
+
+    for (final match in regex.allMatches(code)) {
+      // Add text before the match (whitespaces, operators, punctuation, etc.)
+      if (match.start > lastIndex) {
+        spans.add(TextSpan(
+          text: code.substring(lastIndex, match.start),
+          style: GoogleFonts.sourceCodePro(color: defaultTextColor),
+        ));
+      }
+
+      final matchedText = match.group(0)!;
+      Color color = defaultTextColor;
+      FontWeight fontWeight = FontWeight.normal;
+
+      if (match.group(1) != null) {
+        // Comment
+        color = const Color(0xFF6272A4); // Dracula comment color (greyish blue)
+      } else if (match.group(2) != null || match.group(3) != null) {
+        // String or Char
+        color = const Color(0xFFF1FA8C); // Dracula yellow string
+      } else if (match.group(4) != null) {
+        // Keyword
+        color = const Color(0xFFFF79C6); // Dracula pink keyword
+        fontWeight = FontWeight.bold;
+      } else if (match.group(5) != null) {
+        // Number
+        color = const Color(0xFFBD93F9); // Dracula purple number
+      } else if (match.group(6) != null) {
+        // Preprocessor or Annotation
+        color = const Color(0xFFFFB86C); // Dracula orange annotation
+      }
+
+      spans.add(TextSpan(
+        text: matchedText,
+        style: GoogleFonts.sourceCodePro(color: color, fontWeight: fontWeight),
+      ));
+      lastIndex = match.end;
+    }
+
+    // Add remaining text
+    if (lastIndex < code.length) {
+      spans.add(TextSpan(
+        text: code.substring(lastIndex),
+        style: GoogleFonts.sourceCodePro(color: defaultTextColor),
+      ));
+    }
+
+    return TextSpan(children: spans);
   }
 
   Widget _buildComplexityBadge(String text, Color color) {

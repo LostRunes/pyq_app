@@ -7,6 +7,7 @@ import 'package:focus_fox/core/providers/prefs_provider.dart';
 import 'package:focus_fox/core/providers/auth_provider.dart';
 import 'package:focus_fox/services/push_notification_service.dart';
 import 'package:focus_fox/services/update_service.dart';
+import 'package:focus_fox/services/analytics_service.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -26,6 +27,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   @override
   void initState() {
     super.initState();
+
+    AnalyticsService.logEvent(
+      eventType: 'app_lifecycle',
+      eventName: 'app_open',
+    );
 
     _controller = AnimationController(
       vsync: this,

@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Focus Fox – Shared Post</title>
+
+  <!-- Default OG tags for social crawlers (static fallback) -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Focus Fox" />
+  <meta property="og:title" content="Someone shared a post on Focus Fox" />
+  <meta property="og:description" content="Open Focus Fox to see the full post and join the discussion." />
+  <meta property="og:image" content="https://raw.githubusercontent.com/lostrunes/assets/main/focus_fox_icon.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Focus Fox – Shared Post" />
+  <meta name="twitter:description" content="Open Focus Fox to see the full post and join the discussion." />
+  <meta name="twitter:image" content="https://raw.githubusercontent.com/lostrunes/assets/main/focus_fox_icon.png" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --brand: #7D4B26;
+      --brand-light: #a0622e;
+      --bg-start: #0f0720;
+      --bg-mid: #1e0d3a;
+      --bg-end: #0f0720;
+      --card-bg: #1a1028;
+      --card-border: rgba(125, 75, 38, 0.25);
+      --text-primary: #f0eaf8;
+      --text-secondary: #a89bbf;
+      --text-muted: #6b5e80;
+    }
+
+    html, body {
+      height: 100%;
+      font-family: 'Outfit', system-ui, sans-serif;
+      background: linear-gradient(160deg, var(--bg-start) 0%, var(--bg-mid) 50%, var(--bg-end) 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    /* ── Background orbs ─────────────────────────────── */
+    body::before, body::after {
+      content: '';
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(80px);
+      pointer-events: none;
+      z-index: 0;
+    }
+    body::before {
+      width: 400px; height: 400px;
+      top: -100px; left: -100px;
+      background: radial-gradient(circle, rgba(125,75,38,0.18) 0%, transparent 70%);
+    }
+    body::after {
+      width: 300px; height: 300px;
+      bottom: -80px; right: -80px;
+      background: radial-gradient(circle, rgba(90,40,160,0.18) 0%, transparent 70%);
+    }
+
+    /* ── Card ────────────────────────────────────────── */
+    .card {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 480px;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 24px;
+      padding: 32px 28px 28px;
+      box-shadow: 0 32px 64px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04) inset;
+    }
+
+    /* ── App badge ───────────────────────────────────── */
+    .app-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(125,75,38,0.15);
+      border: 1px solid rgba(125,75,38,0.3);
+      border-radius: 100px;
+      padding: 5px 12px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #c4885a;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-bottom: 24px;
+    }
+    .app-badge .dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: #c4885a;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+
+    /* ── Author row ──────────────────────────────────── */
+    .author-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .avatar {
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--brand), var(--brand-light));
+      border: 2px solid var(--brand);
+      object-fit: cover;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-weight: 800;
+      color: white;
+    }
+    .avatar img {
+      width: 100%; height: 100%;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+    .author-info .name {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+    .author-info .label {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 1px;
+    }
+
+    /* ── Divider ─────────────────────────────────────── */
+    .divider {
+      height: 1px;
+      background: linear-gradient(to right, transparent, rgba(125,75,38,0.3), transparent);
+      margin: 0 0 20px;
+    }
+
+    /* ── Post content ────────────────────────────────── */
+    .post-title {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--text-primary);
+      line-height: 1.35;
+      margin-bottom: 10px;
+    }
+    .post-body {
+      font-size: 15px;
+      color: var(--text-secondary);
+      line-height: 1.7;
+      margin-bottom: 20px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 160px;
+      overflow: hidden;
+      mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
+      -webkit-mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
+    }
+    .post-image {
+      width: 100%;
+      max-height: 220px;
+      border-radius: 14px;
+      object-fit: cover;
+      margin-bottom: 20px;
+      border: 1px solid rgba(255,255,255,0.07);
+    }
+
+    /* ── CTA Button ──────────────────────────────────── */
+    .btn-open {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      padding: 16px;
+      background: linear-gradient(135deg, var(--brand), var(--brand-light));
+      color: white;
+      font-family: 'Outfit', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      border: none;
+      border-radius: 16px;
+      cursor: pointer;
+      text-decoration: none;
+      box-shadow: 0 8px 24px rgba(125,75,38,0.35);
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .btn-open:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 32px rgba(125,75,38,0.45);
+    }
+    .btn-open:active { transform: translateY(0); }
+
+    .store-note {
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 12px;
+    }
+    .store-note a { color: #c4885a; text-decoration: none; }
+    .store-note a:hover { text-decoration: underline; }
+
+    /* ── Loading / Error states ──────────────────────── */
+    .state-box {
+      text-align: center;
+      padding: 20px 0;
+    }
+    .spinner {
+      width: 36px; height: 36px;
+      border: 3px solid rgba(125,75,38,0.2);
+      border-top-color: var(--brand);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .state-box p {
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+    .state-box .emoji { font-size: 32px; margin-bottom: 10px; }
+  </style>
+</head>
+<body>
+  <div class="card" id="card">
+    <!-- App badge -->
+    <div class="app-badge">
+      <span class="dot"></span>
+      🦊 Focus Fox
+    </div>
+
+    <!-- Dynamic content injected here -->
+    <div id="content">
+      <div class="state-box">
+        <div class="spinner"></div>
+        <p>Loading post…</p>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+    const SUPABASE_URL = 'https://bjmrsrypznobolwumjhe.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJqbXJzcnlwem5vYm9sd3VtamhlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAyMTk4MDAsImV4cCI6MjA5NTc5NTgwMH0.1IY2A8bTDbexuJYiM14dZyN80OrDUkFbzeupjEJLXqs';
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const params = new URLSearchParams(window.location.search);
+    const postId = params.get('post_id');
+
+    // ── Attempt deep link immediately ──────────────────
+    if (postId) {
+      const appUrl = `focusfox://posts/${postId}`;
+      const iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      iframe.src = appUrl;
+      document.body.appendChild(iframe);
+      // Also try direct navigation after a short delay
+      setTimeout(() => { window.location.href = appUrl; }, 300);
+    }
+
+    // ── Render helpers ─────────────────────────────────
+    function escape(str) {
+      return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function renderPost(post) {
+      const authorName = post.user_profiles?.username || 'Focus Fox User';
+      const avatarUrl  = post.user_profiles?.avatar_url;
+      const title      = post.title || 'Focus Fox Post';
+      const body       = post.body  || '';
+      const firstImage = (post.image_urls && post.image_urls.length > 0) ? post.image_urls[0] : null;
+
+      const avatarHtml = (avatarUrl && !avatarUrl.startsWith('assets/'))
+        ? `<img src="${escape(avatarUrl)}" alt="${escape(authorName)}" onerror="this.parentElement.textContent='${escape(authorName[0].toUpperCase())}'" />`
+        : `${escape(authorName[0].toUpperCase())}`;
+
+      document.getElementById('content').innerHTML = `
+        <div class="author-row">
+          <div class="avatar">${avatarHtml}</div>
+          <div class="author-info">
+            <div class="name">@${escape(authorName)}</div>
+            <div class="label">shared a post</div>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="post-title">${escape(title)}</div>
+
+        ${firstImage ? `<img class="post-image" src="${escape(firstImage)}" alt="Post image" />` : ''}
+
+        ${body ? `<div class="post-body">${escape(body)}</div>` : ''}
+
+        <a class="btn-open" href="focusfox://posts/${escape(postId)}">
+          <span>📱</span> Open in Focus Fox
+        </a>
+        <p class="store-note">
+          Don't have the app?
+          <a href="https://play.google.com/store/apps/details?id=com.reva.focusfox" target="_blank">Download on Play Store</a>
+        </p>
+      `;
+    }
+
+    function renderError() {
+      document.getElementById('content').innerHTML = `
+        <div class="state-box">
+          <div class="emoji">😕</div>
+          <p>This post could not be found.<br/>It may have been deleted.</p>
+        </div>
+        <a class="btn-open" href="https://play.google.com/store/apps/details?id=com.reva.focusfox" target="_blank"
+           style="display:flex;margin-top:20px;">
+          <span>🦊</span> Get Focus Fox
+        </a>
+      `;
+    }
+
+    // ── Main fetch ─────────────────────────────────────
+    if (!postId) {
+      renderError();
+    } else {
+      const { data: post, error } = await supabase
+        .from('doubt_posts')
+        .select(`
+          title,
+          body,
+          image_urls,
+          user_profiles (
+            username,
+            avatar_url
+          )
+        `)
+        .eq('id', postId)
+        .maybeSingle();
+
+      if (error || !post) {
+        renderError();
+      } else {
+        renderPost(post);
+      }
+    }
+  </script>
+</body>
+</html>

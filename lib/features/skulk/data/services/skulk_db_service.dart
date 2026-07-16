@@ -137,6 +137,14 @@ class SkulkDbService {
         .eq('read', false);
   }
 
+  /// Marks a specific notification as read.
+  Future<void> markNotificationRead(String id) async {
+    await _client
+        .from('notifications')
+        .update({'read': true})
+        .eq('id', id);
+  }
+
   /// Fetches a single doubt post by ID
   Future<Map<String, dynamic>?> fetchDoubtDetail(String doubtId) async {
     final res = await _client
@@ -373,9 +381,9 @@ class SkulkDbService {
 
     await _client.from('reports').insert({
       'reporter_id': userId,
-      'post_id': ?postId,
-      'answer_id': ?answerId,
-      'comment_id': ?commentId,
+      'post_id': postId,
+      'answer_id': answerId,
+      'comment_id': commentId,
       'reason': reason,
     });
   }

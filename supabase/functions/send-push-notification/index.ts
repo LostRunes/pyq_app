@@ -53,12 +53,16 @@ serve(async (req) => {
     }
     const serviceAccount = JSON.parse(serviceAccountJson);
 
-    const jwtClient = new JWT(
-      serviceAccount.client_email,
-      null,
-      serviceAccount.private_key,
-      ['https://www.googleapis.com/auth/firebase.messaging']
-    );
+    let jwtClient;
+    try {
+      jwtClient = new JWT({
+        email: serviceAccount.client_email,
+        key: serviceAccount.private_key,
+        scopes: ['https://www.googleapis.com/auth/firebase.messaging'],
+      });
+    } catch (jwtErr) {
+      throw new Error(`JWT construction failed: ${jwtErr.message}. keys in serviceAccount: ${Object.keys(serviceAccount).join(', ')}`);
+    }
 
     const credentials = await jwtClient.authorize();
     const accessToken = credentials.access_token;
@@ -69,63 +73,94 @@ serve(async (req) => {
     const fcmUrl = `https://fcm.googleapis.com/v1/projects/${serviceAccount.project_id}/messages:send`;
 
     // 5. Send FCM pushes
-    const sendPromises = tokenRows.map(async (row) => {
+    // We use a DATA-ONLY message (no top-level "notification" block).
+    //
+    // Why: when a "notification" block is present and the app is in the
+    // background or killed, the Android FCM SDK shows the notification
+    // automatically in the system tray but does NOT call the Dart
+    // onBackgroundMessage handler — so our data (post_id, type) is lost.
+    //
+    // With a data-only message, onBackgroundMessage is always called and we
+    // display the notification ourselves via flutter_local_notifications,
+    // giving us full control in all app states (foreground / background /
+    // terminated).
+    const results: any[] = [];
+    const sendPromises = tokenRows.map(async (row: { token: string }) => {
       const token = row.token;
-      
-      const response = await fetch(fcmUrl, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          message: {
-            token: token,
-            notification: {
-              title: 'Focus Fox',
-              body: record.message,
-            },
-            data: {
-              post_id: record.post_id || '',
-              type: record.type || '',
-              answer_id: record.answer_id || '',
-            },
-            android: {
-              priority: 'high',
+
+      try {
+        const response = await fetch(fcmUrl, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            message: {
+              token: token,
               notification: {
-                click_action: 'FLUTTER_NOTIFICATION_CLICK',
+                title: 'Focus Fox',
+                body: String(record.message ?? ''),
               },
-            },
-            apns: {
-              payload: {
-                aps: {
-                  sound: 'default',
-                  badge: 1,
+              data: {
+                title: 'Focus Fox',
+                body: String(record.message ?? ''),
+                post_id: String(record.post_id ?? ''),
+                type: String(record.type ?? ''),
+                answer_id: String(record.answer_id ?? ''),
+                notification_id: String(record.id ?? ''),
+              },
+              android: {
+                priority: 'HIGH',
+              },
+              apns: {
+                headers: {
+                  'apns-priority': '10',
+                },
+                payload: {
+                  aps: {
+                    sound: 'default',
+                  },
                 },
               },
             },
-          },
-        }),
-      });
+          }),
+        });
 
-      if (!response.ok) {
-        const errText = await response.text();
-        console.error(`FCM error for token ${token}:`, errText);
-        
-        // If token is invalid or unregistered, delete it from the table
-        if (response.status === 404 || errText.includes('UNREGISTERED') || errText.includes('INVALID_ARGUMENT')) {
-          console.log(`Deleting invalid token: ${token}`);
-          await supabase
-            .from('user_fcm_tokens')
-            .delete()
-            .eq('token', token);
+        const respText = await response.text();
+        results.push({
+          token: token.substring(0, 15) + '...',
+          status: response.status,
+          response: respText
+        });
+
+        if (!response.ok) {
+          console.error(`FCM error for token ${token}:`, respText);
+
+          // If token is invalid or unregistered, delete it from the table.
+          if (
+            response.status === 404 ||
+            respText.includes('UNREGISTERED') ||
+            respText.includes('INVALID_ARGUMENT')
+          ) {
+            console.log(`Deleting invalid token: ${token}`);
+            await supabase
+              .from('user_fcm_tokens')
+              .delete()
+              .eq('token', token);
+          }
         }
+      } catch (err) {
+        results.push({
+          token: token.substring(0, 15) + '...',
+          error: err.message
+        });
       }
     });
 
     await Promise.all(sendPromises);
 
-    return new Response(JSON.stringify({ success: true, count: tokenRows.length }), {
+    return new Response(JSON.stringify({ success: true, count: tokenRows.length, results }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
