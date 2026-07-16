@@ -215,6 +215,20 @@ class PushNotificationService {
   static void _navigateBasedOnData(Map<String, String> data) async {
     final type = data['type'];
     final postId = data['post_id'];
+    final notificationId = data['notification_id'];
+
+    // Mark the notification as read in the database
+    if (notificationId != null && notificationId.isNotEmpty) {
+      try {
+        final client = Supabase.instance.client;
+        await client
+            .from('notifications')
+            .update({'read': true})
+            .eq('id', notificationId);
+      } catch (e) {
+        if (kDebugMode) print('Error marking notification as read: $e');
+      }
+    }
 
     if (postId == null || postId.isEmpty) return;
 

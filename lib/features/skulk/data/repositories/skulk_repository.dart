@@ -303,6 +303,9 @@ class SkulkRepository {
   Future<void> markAllNotificationsRead() =>
       _dbService.markAllNotificationsRead();
 
+  Future<void> markNotificationRead(String id) =>
+      _dbService.markNotificationRead(id);
+
   // ---------------------------------------------------------------------------
   // SKULK PROFILE STATS
   // ---------------------------------------------------------------------------
