@@ -57,3 +57,12 @@ app.*.map.json
 **/generated_plugin_registrant.h
 **/generated_plugins.cmake
 **/GeneratedPluginRegistrant.swift
+
+
+# Secrets
+.env
+.env.*
+service_account.json
+client_secret*.json
+android/key.properties
+android/app/*.jks
