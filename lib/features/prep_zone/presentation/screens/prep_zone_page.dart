@@ -54,9 +54,9 @@ class PrepZonePage extends ConsumerWidget {
         'title': 'GATE',
         'desc': 'Graduate Aptitude Test in Engineering prep',
         'icon': Icons.school_rounded,
-        'route': '',
+        'route': '/gate_prep',
         'color': const Color(0xFF10B981), // Emerald
-        'isComingSoon': true,
+        'isComingSoon': false,
         'lottie': 'json/gate_fox.json',
       },
     ];

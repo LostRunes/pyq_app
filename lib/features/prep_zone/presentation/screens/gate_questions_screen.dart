@@ -2,21 +2,25 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:focus_fox/shared/presentation/widgets/entrance_animations.dart';
-import '../providers/aptitude_providers.dart';
+import '../providers/gate_providers.dart';
+import '../../data/models/gate_question.dart';
 
-class AptitudeQuestionsScreen extends ConsumerWidget {
-  const AptitudeQuestionsScreen({super.key});
+class GateQuestionsScreen extends ConsumerWidget {
+  const GateQuestionsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
-    final String title = args['title'] ?? 'Aptitude';
-    final String endpoint = args['endpoint'] ?? '';
+    final String title = args['title'] ?? 'GATE Practice';
+    final String type = args['type'] ?? 'topic'; // 'topic' or 'paper'
+    final String id = (type == 'topic') ? (args['topicId'] ?? '') : (args['paperId'] ?? '');
 
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    final questionsAsync = ref.watch(aptitudeQuestionsProvider(endpoint));
+    final questionsAsync = type == 'topic'
+        ? ref.watch(gateQuestionsByTopicProvider(id))
+        : ref.watch(gateQuestionsByPaperProvider(id));
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF0F0C20) : theme.scaffoldBackgroundColor,
@@ -39,6 +43,16 @@ class AptitudeQuestionsScreen extends ConsumerWidget {
         ),
       ),
       body: questionsAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (err, stack) => Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Text(
+              'Error loading questions: $err',
+              style: GoogleFonts.outfit(color: Colors.redAccent),
+            ),
+          ),
+        ),
         data: (questions) {
           if (questions.isEmpty) {
             return Center(
@@ -64,20 +78,24 @@ class AptitudeQuestionsScreen extends ConsumerWidget {
             );
           }
 
-          final stats = ref.watch(aptitudeStatsProvider);
-          
-          // Calculate solved count and score for this specific batch of fetched questions
+          final stats = ref.watch(gateStatsProvider);
+
           int solvedCount = 0;
-          int topicScore = 0;
+          double topicScore = 0;
           for (final q in questions) {
-            final ans = stats.answers[q.question];
+            final ans = stats.answers[q.id];
             if (ans != null) {
               solvedCount++;
               final rawIsCorrect = ans['isCorrect'];
               final bool isCorrect = rawIsCorrect is bool
                   ? rawIsCorrect
                   : (rawIsCorrect is num ? rawIsCorrect > 0 : false);
-              topicScore += isCorrect ? 4 : -1;
+              final marks = (ans['marks'] as num?)?.toDouble() ?? 1.0;
+              if (isCorrect) {
+                topicScore += marks;
+              } else {
+                topicScore -= (marks / 3.0);
+              }
             }
           }
 
@@ -102,7 +120,7 @@ class AptitudeQuestionsScreen extends ConsumerWidget {
                   delay: const Duration(milliseconds: 50),
                   duration: const Duration(milliseconds: 400),
                   child: Text(
-                    'Choose a question number below to practice. You can navigate through them sequentially inside.',
+                    'Tap a question number below to practice. Navigate through them sequentially inside the viewer.',
                     style: GoogleFonts.outfit(
                       fontSize: 13,
                       color: theme.colorScheme.onSurface.withOpacity(0.6),
@@ -156,7 +174,7 @@ class AptitudeQuestionsScreen extends ConsumerWidget {
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
                                 Text(
-                                  'Topic Score',
+                                  'Calculated Score',
                                   style: GoogleFonts.outfit(
                                     fontSize: 12,
                                     color: theme.colorScheme.onSurface.withOpacity(0.6),
@@ -165,7 +183,7 @@ class AptitudeQuestionsScreen extends ConsumerWidget {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  '${topicScore >= 0 ? "+" : ""}$topicScore pts',
+                                  '${topicScore >= 0 ? "+" : ""}${topicScore.toStringAsFixed(2)} pts',
                                   style: GoogleFonts.outfit(
                                     fontSize: 20,
                                     fontWeight: FontWeight.bold,
@@ -187,12 +205,14 @@ class AptitudeQuestionsScreen extends ConsumerWidget {
                               color: theme.colorScheme.onSurface.withOpacity(0.5),
                             ),
                             const SizedBox(width: 6),
-                            Text(
-                              'Scoring Rules: +4 for correct, -1 for incorrect',
-                              style: GoogleFonts.outfit(
-                                fontSize: 11,
-                                color: theme.colorScheme.onSurface.withOpacity(0.5),
-                                fontWeight: FontWeight.w500,
+                            Expanded(
+                              child: Text(
+                                'GATE Scoring Rules: +Marks for correct, -1/3 of marks for incorrect MCQ. No penalty for NAT.',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 11,
+                                  color: theme.colorScheme.onSurface.withOpacity(0.5),
+                                  fontWeight: FontWeight.w500,
+                                ),
                               ),
                             ),
                           ],
@@ -214,7 +234,7 @@ class AptitudeQuestionsScreen extends ConsumerWidget {
                   itemCount: questions.length,
                   itemBuilder: (context, index) {
                     final question = questions[index];
-                    final ans = stats.answers[question.question];
+                    final ans = stats.answers[question.id];
                     final rawIsCorrect = ans != null ? ans['isCorrect'] : null;
                     final bool? isCorrect = rawIsCorrect == null
                         ? null
@@ -243,12 +263,12 @@ class AptitudeQuestionsScreen extends ConsumerWidget {
                         onTap: () {
                           Navigator.pushNamed(
                             context,
-                            '/aptitude_question_detail',
+                            '/gate_question_detail',
                             arguments: {
                               'questions': questions,
                               'initialIndex': index,
                               'title': title,
-                              'endpoint': endpoint,
+                              'id': id,
                             },
                           );
                         },
@@ -259,15 +279,15 @@ class AptitudeQuestionsScreen extends ConsumerWidget {
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
                               color: borderColor,
-                              width: isCorrect != null ? 2.0 : 1.5,
+                              width: 1.5,
                             ),
                           ),
                           alignment: Alignment.center,
                           child: Text(
-                            '${index + 1}',
+                            'Q${index + 1}',
                             style: GoogleFonts.outfit(
                               fontWeight: FontWeight.bold,
-                              fontSize: 17,
+                              fontSize: 16,
                               color: textColor,
                             ),
                           ),
@@ -280,53 +300,6 @@ class AptitudeQuestionsScreen extends ConsumerWidget {
             ),
           );
         },
-        loading: () => const Center(
-          child: CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF8B5CF6)),
-          ),
-        ),
-        error: (err, stack) => Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.wifi_off_rounded, size: 72, color: Colors.red.withOpacity(0.6)),
-                const SizedBox(height: 16),
-                Text(
-                  'Failed to load questions.',
-                  style: GoogleFonts.outfit(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: theme.colorScheme.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  err.toString(),
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.outfit(
-                    fontSize: 12,
-                    color: theme.colorScheme.onSurface.withOpacity(0.5),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                ElevatedButton.icon(
-                  onPressed: () => ref.invalidate(aptitudeQuestionsProvider(endpoint)),
-                  icon: const Icon(Icons.refresh_rounded),
-                  label: const Text('Retry'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF8B5CF6),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
       ),
     );
   }
