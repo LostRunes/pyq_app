@@ -18,6 +18,10 @@ import 'package:focus_fox/features/utilities/presentation/screens/gpa_calculator
 import 'package:focus_fox/features/prep_zone/presentation/screens/syllabus_screen.dart';
 import 'package:focus_fox/features/prep_zone/presentation/screens/algo_code_screen.dart';
 import 'package:focus_fox/features/prep_zone/presentation/screens/gate_prep_screen.dart';
+import 'package:focus_fox/features/prep_zone/presentation/screens/gate_topics_screen.dart';
+import 'package:focus_fox/features/prep_zone/presentation/screens/gate_year_analysis_screen.dart';
+import 'package:focus_fox/features/prep_zone/presentation/screens/gate_questions_screen.dart';
+import 'package:focus_fox/features/prep_zone/presentation/screens/gate_question_detail_screen.dart';
 import 'package:focus_fox/features/prep_zone/presentation/screens/aptitude_topics_screen.dart';
 import 'package:focus_fox/features/prep_zone/presentation/screens/aptitude_questions_screen.dart';
 import 'package:focus_fox/features/prep_zone/presentation/screens/aptitude_question_detail_screen.dart';
@@ -202,6 +206,26 @@ class AppRouter {
       case '/gate_prep':
         return ParallaxPageRoute(
           child: const GatePrepScreen(),
+          settings: settings,
+        );
+      case '/gate_topics':
+        return ParallaxPageRoute(
+          child: const GateTopicsScreen(),
+          settings: settings,
+        );
+      case '/gate_year_analysis':
+        return ParallaxPageRoute(
+          child: const GateYearAnalysisScreen(),
+          settings: settings,
+        );
+      case '/gate_questions':
+        return ParallaxPageRoute(
+          child: const GateQuestionsScreen(),
+          settings: settings,
+        );
+      case '/gate_question_detail':
+        return ParallaxPageRoute(
+          child: const GateQuestionDetailScreen(),
           settings: settings,
         );
       case '/aptitude_topics':

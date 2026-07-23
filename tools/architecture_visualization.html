@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PyqApp Architecture Explorer</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Tailwind Config for Dark Aesthetics -->
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f5f3ff',
+              100: '#ede9fe',
+              500: '#8b5cf6',
+              600: '#7c3aed',
+              700: '#6d28d9',
+              900: '#4c1d95',
+            },
+            darkbg: '#0b0f19',
+            darkcard: '#161b26',
+          }
+        }
+      }
+    }
+  </script>
+  <!-- Vis.js for Network Graph -->
+  <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+    body {
+      font-family: 'Outfit', sans-serif;
+    }
+    h1, h2, h3, .heading-font {
+      font-family: 'Space Grotesk', sans-serif;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #161b26;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #374151;
+      border-radius: 3px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: #8b5cf6;
+    }
+  </style>
+</head>
+<body class="bg-darkbg text-slate-100 min-h-screen flex flex-col antialiased selection:bg-brand-500 selection:text-white">
+
+  <!-- Header -->
+  <header class="border-b border-slate-800 bg-darkcard/80 backdrop-blur-md sticky top-0 z-50 px-6 py-4">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+      <div class="flex items-center gap-3">
+        <div class="h-10 w-10 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-500 flex items-center justify-center shadow-lg shadow-brand-500/20">
+          <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-2xl font-bold tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">PyqApp Architecture Explorer</h1>
+          <p class="text-xs text-slate-400">Interactive architecture visualizer & codebase blueprint</p>
+        </div>
+      </div>
+      <div class="flex bg-slate-900/80 p-1 rounded-lg border border-slate-800">
+        <button onclick="switchTab('graph')" id="tab-graph" class="px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 bg-brand-600 text-white shadow-sm">
+          Interactive Graph
+        </button>
+        <button onclick="switchTab('blueprint')" id="tab-blueprint" class="px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 text-slate-400 hover:text-white">
+          Layers & Flow Map
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="flex-grow max-w-7xl w-full mx-auto p-4 md:p-6 flex flex-col gap-6">
+    
+    <!-- Tab 1: Interactive Graph -->
+    <div id="content-graph" class="flex-grow flex flex-col lg:flex-row gap-6 h-[75vh]">
+      <!-- Canvas Container -->
+      <div class="flex-grow bg-darkcard rounded-2xl border border-slate-800 relative flex flex-col overflow-hidden shadow-inner">
+        <div class="absolute top-4 left-4 z-10 bg-slate-950/80 backdrop-blur border border-slate-800 px-3 py-1.5 rounded-lg text-xs text-slate-300 pointer-events-none">
+          💡 Drag to pan | Scroll to zoom | Click nodes to inspect
+        </div>
+        <div id="network-container" class="w-full flex-grow h-full bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:16px_16px]"></div>
+      </div>
+      
+      <!-- Inspector Panel -->
+      <div class="w-full lg:w-96 bg-darkcard rounded-2xl border border-slate-800 p-5 flex flex-col justify-between shrink-0 shadow-lg">
+        <div>
+          <h2 class="text-lg font-bold text-slate-100 mb-3 pb-2 border-b border-slate-800 flex items-center gap-2">
+            <span class="h-2.5 w-2.5 rounded-full bg-brand-500 animate-pulse"></span>
+            Component Inspector
+          </h2>
+          <div id="inspector-default" class="text-slate-400 text-sm space-y-4">
+            <p>Click any node on the graph to inspect its details, responsibilities, and key files.</p>
+            <div class="p-3 bg-slate-900/50 rounded-xl border border-slate-850 space-y-2">
+              <span class="text-xs font-semibold text-brand-400 uppercase tracking-wider">Architecture Overview</span>
+              <p class="text-xs text-slate-300">
+                PyqApp utilizes a <strong>Feature-First</strong> approach with <strong>Riverpod</strong> for state management and <strong>Supabase</strong> (dual-instance primary/secondary) and <strong>Hive</strong> (local caching) for databases.
+              </p>
+            </div>
+          </div>
+          <div id="inspector-detail" class="hidden space-y-4">
+            <div>
+              <span id="node-badge" class="px-2.5 py-1 rounded-full text-xs font-semibold uppercase tracking-wider">Layer</span>
+              <h3 id="node-title" class="text-xl font-bold text-white mt-2">Node Name</h3>
+            </div>
+            <p id="node-desc" class="text-sm text-slate-300">Description of the selected component.</p>
+            
+            <div id="node-files-container" class="space-y-2">
+              <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider block">Key Files & Directories</span>
+              <ul id="node-files" class="text-xs font-mono space-y-1.5 max-h-48 overflow-y-auto custom-scrollbar bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+                <!-- Dynamically populated -->
+              </ul>
+            </div>
+          </div>
+        </div>
+        
+        <div class="mt-6 pt-4 border-t border-slate-800 text-xs text-slate-400 flex justify-between items-center">
+          <span>Target Architecture: Clean + Riverpod</span>
+          <span class="font-mono text-brand-400">pyq_mvp v1.0.0</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 2: Layers & Flow Map -->
+    <div id="content-blueprint" class="hidden grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- Feature First Architecture Explanation -->
+      <div class="bg-darkcard border border-slate-800 p-6 rounded-2xl space-y-4">
+        <h2 class="text-xl font-bold text-white flex items-center gap-2">
+          <svg class="w-5 h-5 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+          </svg>
+          Feature-First Structure
+        </h2>
+        <p class="text-sm text-slate-300 leading-relaxed">
+          The code is structured around <strong>features</strong> (e.g., <code>pyqs</code>, <code>subjects</code>, <code>auth</code>) rather than technical layers. Each feature is self-contained, encapsulating its own UI, business logic, and data handling.
+        </p>
+        <div class="bg-slate-900/50 p-4 rounded-xl border border-slate-800 space-y-3">
+          <h3 class="text-xs font-semibold text-brand-400 uppercase tracking-wider">Inside a Feature Folder:</h3>
+          <ul class="text-xs space-y-2">
+            <li>
+              <strong class="text-slate-200">📁 presentation/screens/</strong>
+              <div class="text-slate-400 pl-4 mt-0.5">Flutter screens representing pages/views.</div>
+            </li>
+            <li>
+              <strong class="text-slate-200">📁 presentation/providers/</strong>
+              <div class="text-slate-400 pl-4 mt-0.5">Riverpod StateNotifiers or Future/StreamProviders.</div>
+            </li>
+            <li>
+              <strong class="text-slate-200">📁 presentation/widgets/</strong>
+              <div class="text-slate-400 pl-4 mt-0.5">Highly reusable widgets specific to this feature.</div>
+            </li>
+            <li>
+              <strong class="text-slate-200">📁 data/repositories/</strong>
+              <div class="text-slate-400 pl-4 mt-0.5">Data fetching, caching, and mapping classes.</div>
+            </li>
+            <li>
+              <strong class="text-slate-200">📁 data/models/</strong>
+              <div class="text-slate-400 pl-4 mt-0.5">Data structure models (annotated with Hive annotations).</div>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Core / Support layers -->
+      <div class="bg-darkcard border border-slate-800 p-6 rounded-2xl space-y-4">
+        <h2 class="text-xl font-bold text-white flex items-center gap-2">
+          <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+          Cross-Cutting Support
+        </h2>
+        <p class="text-sm text-slate-300 leading-relaxed">
+          Infrastructure components that provide unified services and utilities to all features across the application:
+        </p>
+        <div class="bg-slate-900/50 p-4 rounded-xl border border-slate-800 space-y-4">
+          <div>
+            <h3 class="text-xs font-semibold text-indigo-400 uppercase tracking-wider mb-1">📁 services/</h3>
+            <p class="text-xs text-slate-300">
+              Integrations with external tools. E.g., <code>push_notification_service.dart</code> (Firebase), <code>pdf_service.dart</code>, and <code>ai_service.dart</code>.
+            </p>
+          </div>
+          <div>
+            <h3 class="text-xs font-semibold text-emerald-400 uppercase tracking-wider mb-1">📁 core/</h3>
+            <p class="text-xs text-slate-300">
+              Shared providers, local storage wrappers (like SharedPreferences initialization), and common network utilities.
+            </p>
+          </div>
+          <div>
+            <h3 class="text-xs font-semibold text-pink-400 uppercase tracking-wider mb-1">📁 app/</h3>
+            <p class="text-xs text-slate-300">
+              App configuration, application shell initialization (<code>app_initializer.dart</code>), and routing definitions using GoRouter (<code>router.dart</code>).
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Data flow and lifecycle -->
+      <div class="bg-darkcard border border-slate-800 p-6 rounded-2xl space-y-4">
+        <h2 class="text-xl font-bold text-white flex items-center gap-2">
+          <svg class="w-5 h-5 text-amber-405" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color:#fbbf24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 8H17m0 0V5" />
+          </svg>
+          Data & State Flow
+        </h2>
+        <p class="text-sm text-slate-300 leading-relaxed">
+          How data flows from remote endpoints through Riverpod and renders in Flutter UI:
+        </p>
+        <div class="relative pl-6 border-l-2 border-slate-800 space-y-5 text-xs text-slate-300">
+          <div class="relative">
+            <div class="absolute -left-[31px] top-1.5 bg-slate-900 border border-slate-800 w-4 h-4 rounded-full flex items-center justify-center">
+              <span class="w-1.5 h-1.5 bg-amber-500 rounded-full"></span>
+            </div>
+            <strong class="text-slate-100 block">1. Remote Storage & API</strong>
+            Supabase Primary (Syllabus/PYQs) & Secondary (Skulk/Login) act as sources of truth.
+          </div>
+          <div class="relative">
+            <div class="absolute -left-[31px] top-1.5 bg-slate-900 border border-slate-800 w-4 h-4 rounded-full flex items-center justify-center">
+              <span class="w-1.5 h-1.5 bg-indigo-500 rounded-full"></span>
+            </div>
+            <strong class="text-slate-100 block">2. Cache & Repositories</strong>
+            Repositories fetch remote data, save models into local Hive boxes, and serve offline-first data.
+          </div>
+          <div class="relative">
+            <div class="absolute -left-[31px] top-1.5 bg-slate-900 border border-slate-800 w-4 h-4 rounded-full flex items-center justify-center">
+              <span class="w-1.5 h-1.5 bg-brand-500 rounded-full"></span>
+            </div>
+            <strong class="text-slate-100 block">3. State Management (Riverpod)</strong>
+            Providers watch repositories and expose states to UI elements automatically.
+          </div>
+          <div class="relative">
+            <div class="absolute -left-[31px] top-1.5 bg-slate-900 border border-slate-800 w-4 h-4 rounded-full flex items-center justify-center">
+              <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
+            </div>
+            <strong class="text-slate-100 block">4. UI Rendering</strong>
+            Flutter Screen Widgets (ConsumerWidgets) watch Riverpod providers to build the visual interfaces.
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- JavaScript logic -->
+  <script>
+    // Tab switching logic
+    function switchTab(tabId) {
+      const gTab = document.getElementById('tab-graph');
+      const bTab = document.getElementById('tab-blueprint');
+      const gContent = document.getElementById('content-graph');
+      const bContent = document.getElementById('content-blueprint');
+      
+      if (tabId === 'graph') {
+        gTab.className = "px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 bg-brand-600 text-white shadow-sm";
+        bTab.className = "px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 text-slate-400 hover:text-white";
+        gContent.classList.remove('hidden');
+        bContent.classList.add('hidden');
+      } else {
+        bTab.className = "px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 bg-brand-600 text-white shadow-sm";
+        gTab.className = "px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 text-slate-400 hover:text-white";
+        bContent.classList.remove('hidden');
+        gContent.classList.add('hidden');
+      }
+    }
+
+    // Graph Construction (Vis.js)
+    document.addEventListener("DOMContentLoaded", function() {
+      // Define Graph Nodes
+      const nodesArray = [
+        // Entry Points
+        { id: 'main', label: 'main.dart', group: 'entry', title: 'Main Entry Point' },
+        { id: 'app', label: 'app/app.dart', group: 'entry', title: 'App Shell Container' },
+        { id: 'router', label: 'app/router.dart', group: 'entry', title: 'GoRouter Definitions' },
+        
+        // Databases
+        { id: 'supabase_p', label: 'Supabase Primary', group: 'db', title: 'PYQ, Questions, Study Material DB' },
+        { id: 'supabase_s', label: 'Supabase Secondary', group: 'db', title: 'Skulk Social Network / Auth DB' },
+        { id: 'hive_db', label: 'Hive Local DB', group: 'db', title: 'Offline caching adapters' },
+
+        // Core / Common
+        { id: 'core_providers', label: 'core/providers.dart', group: 'core', title: 'Shared Riverpod Providers' },
+
+        // Services
+        { id: 'service_push', label: 'push_notification_service.dart', group: 'service' },
+        { id: 'service_pdf', label: 'pdf_service.dart', group: 'service' },
+        { id: 'service_ai', label: 'ai_service.dart', group: 'service' },
+        { id: 'service_drive', label: 'drive_service.dart', group: 'service' },
+        { id: 'service_analytics', label: 'analytics_service.dart', group: 'service' },
+
+        // Features (Feature-First)
+        { id: 'feat_pyqs', label: 'features/pyqs', group: 'feature', title: 'Past Year Questions' },
+        { id: 'feat_subjects', label: 'features/subjects', group: 'feature', title: 'Syllabus & Subjects' },
+        { id: 'feat_auth', label: 'features/auth', group: 'feature', title: 'Authentication' },
+        { id: 'feat_skulk', label: 'features/skulk', group: 'feature', title: 'Social Platform' },
+        { id: 'feat_timer', label: 'features/focus_timer', group: 'feature', title: 'Focus Timer' },
+        { id: 'feat_prep', label: 'features/prep_zone', group: 'feature', title: 'Prep Zone Section' },
+        { id: 'feat_uploads', label: 'features/uploads', group: 'feature', title: 'Upload & Attachments' },
+      ];
+
+      // Define Connections (Edges)
+      const edgesArray = [
+        { from: 'main', to: 'app', arrows: 'to' },
+        { from: 'main', to: 'hive_db', arrows: 'to', label: 'Registers adapters' },
+        { from: 'main', to: 'service_push', arrows: 'to' },
+        
+        { from: 'app', to: 'router', arrows: 'to' },
+        { from: 'app', to: 'core_providers', arrows: 'to' },
+
+        // Features using router
+        { from: 'router', to: 'feat_pyqs', arrows: 'to' },
+        { from: 'router', to: 'feat_subjects', arrows: 'to' },
+        { from: 'router', to: 'feat_auth', arrows: 'to' },
+        { from: 'router', to: 'feat_skulk', arrows: 'to' },
+        { from: 'router', to: 'feat_timer', arrows: 'to' },
+
+        // DB Data fetching
+        { from: 'feat_pyqs', to: 'supabase_p', arrows: 'to', label: 'Fetches PYQs' },
+        { from: 'feat_pyqs', to: 'hive_db', arrows: 'to', label: 'Caches topics' },
+        
+        { from: 'feat_subjects', to: 'supabase_p', arrows: 'to' },
+        { from: 'feat_subjects', to: 'hive_db', arrows: 'to' },
+
+        { from: 'feat_skulk', to: 'supabase_s', arrows: 'to', label: 'Social feeds' },
+        { from: 'feat_auth', to: 'supabase_s', arrows: 'to' },
+
+        // Services relationships
+        { from: 'feat_pyqs', to: 'service_pdf', arrows: 'to' },
+        { from: 'feat_prep', to: 'service_ai', arrows: 'to' },
+        { from: 'feat_uploads', to: 'service_drive', arrows: 'to' },
+        { from: 'app', to: 'service_analytics', arrows: 'to' }
+      ];
+
+      const container = document.getElementById('network-container');
+      const data = {
+        nodes: new vis.DataSet(nodesArray),
+        edges: new vis.DataSet(edgesArray)
+      };
+
+      // Styling details per node group
+      const options = {
+        nodes: {
+          shape: 'box',
+          margin: 12,
+          borderWidth: 1.5,
+          font: {
+            face: 'Outfit',
+            size: 13,
+            color: '#ffffff'
+          },
+          shadow: {
+            enabled: true,
+            color: 'rgba(0,0,0,0.3)',
+            size: 5,
+            x: 2,
+            y: 2
+          }
+        },
+        edges: {
+          width: 1.5,
+          color: { color: '#475569', highlight: '#8b5cf6', hover: '#a78bfa' },
+          font: {
+            face: 'Outfit',
+            size: 10,
+            color: '#94a3b8',
+            background: '#0b0f19',
+            strokeWidth: 0
+          },
+          smooth: {
+            type: 'cubicBezier',
+            forceDirection: 'none',
+            roundness: 0.4
+          }
+        },
+        groups: {
+          entry: {
+            color: { background: '#1e1b4b', border: '#4f46e5' },
+            shape: 'hexagon'
+          },
+          db: {
+            color: { background: '#022c22', border: '#059669' }
+          },
+          core: {
+            color: { background: '#311042', border: '#c084fc' }
+          },
+          service: {
+            color: { background: '#1c1917', border: '#78716c' }
+          },
+          feature: {
+            color: { background: '#1e293b', border: '#475569' }
+          }
+        },
+        interaction: {
+          hover: true,
+          tooltipDelay: 200
+        },
+        physics: {
+          barnesHut: {
+            gravitationalConstant: -1800,
+            centralGravity: 0.15,
+            springLength: 130,
+            springConstant: 0.04
+          }
+        }
+      };
+
+      // Create graph network
+      const network = new vis.Network(container, data, options);
+
+      // Node details mappings
+      const nodeMeta = {
+        'main': {
+          badge: 'Entry Point',
+          color: 'bg-indigo-900/60 text-indigo-300 border-indigo-500',
+          desc: 'The main root file. Registers Firebase background handlers, initializes Hive boxes (branches, years, subjects, topics), sets up URL strategy, and starts the Riverpod ProviderScope.',
+          files: ['lib/main.dart']
+        },
+        'app': {
+          badge: 'App Container',
+          color: 'bg-indigo-900/60 text-indigo-300 border-indigo-500',
+          desc: 'Main Material/Cupertino App container. Configures theme, localizations, watches router and displays the root structure.',
+          files: ['lib/app/app.dart', 'lib/app/app_initializer.dart']
+        },
+        'router': {
+          badge: 'Routing Layer',
+          color: 'bg-indigo-900/60 text-indigo-300 border-indigo-500',
+          desc: 'Handles screen navigation across the app using the GoRouter package, linking deep links and auth state changes directly to the active screen.',
+          files: ['lib/app/router.dart']
+        },
+        'supabase_p': {
+          badge: 'Primary Database',
+          color: 'bg-emerald-950/70 text-emerald-300 border-emerald-600',
+          desc: 'Supabase Instance used for hosting and serving all GATE syllabus-related material, questions, and solutions.',
+          files: ['Supabase Schema: primary_db']
+        },
+        'supabase_s': {
+          badge: 'Secondary Database',
+          color: 'bg-emerald-950/70 text-emerald-300 border-emerald-600',
+          desc: 'Supabase Instance used specifically for user authentication, student rosters, profiles, and Skulk feed content.',
+          files: ['Supabase Schema: secondary_db']
+        },
+        'hive_db': {
+          badge: 'Caching Layer',
+          color: 'bg-emerald-950/70 text-emerald-300 border-emerald-600',
+          desc: 'Used for storing local Hive boxes of Branch, Year, Subject, and Topic models to ensure instant offline access and reduce DB fetches.',
+          files: ['lib/main.dart (Register adapters)', 'Local cached boxes: branches, years, subjects, topics']
+        },
+        'core_providers': {
+          badge: 'Shared State',
+          color: 'bg-purple-950/70 text-purple-300 border-purple-500',
+          desc: 'Exposes shared cross-cutting providers like SharedPreferences instances, local device details, and configuration flags.',
+          files: ['lib/core/providers/prefs_provider.dart', 'lib/core/providers.dart']
+        },
+        'service_push': {
+          badge: 'Infrastructure Service',
+          color: 'bg-stone-900 text-stone-300 border-stone-500',
+          desc: 'Manages Firebase Cloud Messaging. Handles registration tokens, foreground notification listeners, and background messages.',
+          files: ['lib/services/push_notification_service.dart']
+        },
+        'service_pdf': {
+          badge: 'Infrastructure Service',
+          color: 'bg-stone-900 text-stone-300 border-stone-500',
+          desc: 'Parses, renders, and enables high-performance interactions with GATE PYQ question papers inside custom widgets.',
+          files: ['lib/services/pdf_service.dart']
+        },
+        'service_ai': {
+          badge: 'Infrastructure Service',
+          color: 'bg-stone-900 text-stone-300 border-stone-500',
+          desc: 'Interfaces with AI endpoints to assist students in resolving problem queries or summarizing exam topics.',
+          files: ['lib/services/ai_service.dart']
+        },
+        'service_drive': {
+          badge: 'Infrastructure Service',
+          color: 'bg-stone-900 text-stone-300 border-stone-500',
+          desc: 'Handles uploads and connections to Google Drive / file systems for attachment files.',
+          files: ['lib/services/drive_service.dart']
+        },
+        'service_analytics': {
+          badge: 'Infrastructure Service',
+          color: 'bg-stone-900 text-stone-300 border-stone-500',
+          desc: 'Aggregates screen views, click flows, and user statistics for optimizing user paths.',
+          files: ['lib/services/analytics_service.dart']
+        },
+        'feat_pyqs': {
+          badge: 'Feature Component',
+          color: 'bg-slate-800 text-slate-300 border-slate-600',
+          desc: 'Enables users to search, browse, view, and mark question papers from past years.',
+          files: [
+            'lib/features/pyqs/data/models/',
+            'lib/features/pyqs/data/repositories/',
+            'lib/features/pyqs/presentation/screens/',
+            'lib/features/pyqs/presentation/providers/',
+            'lib/features/pyqs/presentation/widgets/'
+          ]
+        },
+        'feat_subjects': {
+          badge: 'Feature Component',
+          color: 'bg-slate-800 text-slate-300 border-slate-600',
+          desc: 'Exposes branch syllabi, subjects, and categorizations.',
+          files: [
+            'lib/features/subjects/data/models/',
+            'lib/features/subjects/presentation/screens/'
+          ]
+        },
+        'feat_auth': {
+          badge: 'Feature Component',
+          color: 'bg-slate-800 text-slate-300 border-slate-600',
+          desc: 'Controls sign-in, signup, student verification rosters, and session lifecycle.',
+          files: ['lib/features/auth/']
+        },
+        'feat_skulk': {
+          badge: 'Feature Component',
+          color: 'bg-slate-800 text-slate-300 border-slate-600',
+          desc: 'User forums, discussions, posts, and study-group feeds.',
+          files: ['lib/features/skulk/']
+        },
+        'feat_timer': {
+          badge: 'Feature Component',
+          color: 'bg-slate-800 text-slate-300 border-slate-600',
+          desc: 'Pomodoro / focus session tracker widget and reporting interface.',
+          files: ['lib/features/focus_timer/']
+        },
+        'feat_prep': {
+          badge: 'Feature Component',
+          color: 'bg-slate-800 text-slate-300 border-slate-600',
+          desc: 'Mock tests, practice modes, and custom testing modules.',
+          files: ['lib/features/prep_zone/']
+        },
+        'feat_uploads': {
+          badge: 'Feature Component',
+          color: 'bg-slate-800 text-slate-300 border-slate-600',
+          desc: 'Administrative uploader interfaces to add images, schemas, or new questions.',
+          files: ['lib/features/uploads/']
+        }
+      };
+
+      // Click Event Handler
+      network.on("click", function(params) {
+        if (params.nodes.length > 0) {
+          const selectedNodeId = params.nodes[0];
+          const meta = nodeMeta[selectedNodeId];
+          const nodeData = nodesArray.find(n => n.id === selectedNodeId);
+          
+          if (meta && nodeData) {
+            document.getElementById('inspector-default').classList.add('hidden');
+            document.getElementById('inspector-detail').classList.remove('hidden');
+            
+            // Set Badge
+            const badge = document.getElementById('node-badge');
+            badge.innerText = meta.badge;
+            badge.className = `px-2.5 py-1 rounded-full text-xs font-semibold uppercase tracking-wider ${meta.color}`;
+            
+            // Title & Desc
+            document.getElementById('node-title').innerText = nodeData.label;
+            document.getElementById('node-desc').innerText = meta.desc;
+            
+            // Populate Files List
+            const filesList = document.getElementById('node-files');
+            filesList.innerHTML = '';
+            meta.files.forEach(f => {
+              const li = document.createElement('li');
+              li.className = 'text-slate-300 hover:text-brand-300 transition-colors py-0.5 truncate';
+              li.innerText = f;
+              filesList.appendChild(li);
+            });
+          }
+        } else {
+          document.getElementById('inspector-detail').classList.add('hidden');
+          document.getElementById('inspector-default').classList.remove('hidden');
+        }
+      });
+    });
+  </script>
+</body>
+</html>

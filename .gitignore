@@ -51,6 +51,9 @@ app.*.map.json
 
 # Environment secrets
 .env
+.env.*
+service_account.json
+client_secret*.json
 
 # Platform-specific generated plugin registrants
 **/generated_plugin_registrant.cc
