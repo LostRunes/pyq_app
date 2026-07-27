@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:focus_fox/core/providers/prefs_provider.dart';
 import 'package:focus_fox/core/providers/user_profile_provider.dart';
@@ -54,7 +55,7 @@ class BeeTapCountNotifier extends Notifier<int> {
           'updated_at': DateTime.now().toUtc().toIso8601String(),
         });
       } catch (e) {
-        print('Failed to upsert bee kills on increment: $e');
+        if (kDebugMode) print('Failed to upsert bee kills on increment: $e');
       }
     }
   }
@@ -86,7 +87,7 @@ class BeeTapCountNotifier extends Notifier<int> {
         await prefs.setInt(_key, remoteCount);
       }
     } catch (e) {
-      print('Failed to sync bee kills with Supabase: $e');
+      if (kDebugMode) print('Failed to sync bee kills with Supabase: $e');
     }
   }
 }

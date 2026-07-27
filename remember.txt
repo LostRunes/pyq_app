@@ -7,3 +7,17 @@ dart run build_runner build --delete-conflicting-outputs
 This generates branch.g.dart, year.g.dart, subject.g.dart, and topic.g.dart next to each model file.
 
 Important: Every time you add or change a @HiveField, re-run build_runner build
+
+flutter run --dart-define-from-file=.env
+flutter build apk --dart-define-from-file=.env
+flutter build appbundle --dart-define-from-file=.env
+
+gret
+
+# Set the Supabase project and secrets (one time)
+npx supabase logout
+npx supabase login
+npx supabase secrets set LIVEKIT_API_KEY="APIn9rrvNM7fbPo" LIVEKIT_API_SECRET="5feR4g6vuMIhAC6x87jp7E8QKYJhugqorSSKKfgdXWVA" LIVEKIT_URL="wss://focusfox-mvkuysl0.livekit.cloud"
+
+# To use local Supabase stack:
+npx supabase start

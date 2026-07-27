@@ -12,7 +12,6 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_core_platform_interface/test.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:focus_fox/app/app.dart';
 
 void main() {
@@ -22,12 +21,6 @@ void main() {
   setUpAll(() async {
     await Firebase.initializeApp();
     SharedPreferences.setMockInitialValues({});
-    
-    // Load mock environment variables
-    dotenv.loadFromString(envString: '''
-SUPABASE_2_URL=https://placeholder.supabase.co
-SUPABASE_2_KEY=placeholder-anon-key
-''');
 
     await Supabase.initialize(
       url: 'https://placeholder.supabase.co',

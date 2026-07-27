@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:focus_fox/features/subjects/data/repositories/subjects_repository.dart';
 import 'package:focus_fox/features/pyqs/data/repositories/pyq_repository.dart';
 import '../services/ai_service.dart';
@@ -10,19 +9,33 @@ import '../services/push_notification_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'providers/prefs_provider.dart';
 
-/// Primary DB client using the service role key.
-/// This bypasses RLS — necessary because the user's auth session lives on
-/// the secondary DB (Supabase.instance.client), so auth.uid() is always
-/// null on this client and RLS policies would silently block all writes.
+/// Primary DB client using the anon key.
+/// Content tables (branches, subjects, topics, questions, gate_*, aptitude_*,
+/// etc.) now have RLS enabled with public-read policies — the anon key is
+/// sufficient for all read operations.
+///
+/// The service_role key is NO LONGER used in the Flutter app. Sensitive
+/// operations (e.g. student lookup by roll number) go through the
+/// `resolve-student` Supabase Edge Function instead.
 final supabase1ClientProvider = Provider<SupabaseClient>((ref) {
   return SupabaseClient(
-    dotenv.env['SUPABASE_URL']!,
-    dotenv.env['SUPABASE_SERVICE']!,
+    const String.fromEnvironment('SUPABASE_URL'),
+    const String.fromEnvironment('SUPABASE_KEY'),  // anon key — RLS enforced
   );
 });
 
 final supabase2ClientProvider = Provider<SupabaseClient>((ref) {
   return Supabase.instance.client;
+});
+
+final googleSignInProvider = Provider<GoogleSignIn>((ref) {
+  return GoogleSignIn(
+    serverClientId: const String.fromEnvironment('GOOGLE_WEB_CLIENT_ID'),
+    scopes: [
+      'email',
+      'profile',
+    ],
+  );
 });
 
 final subjectsRepositoryProvider = Provider<SubjectsRepository>((ref) {
@@ -34,7 +47,7 @@ final pyqRepositoryProvider = Provider<PyqRepository>((ref) {
 });
 
 final aiServiceProvider = Provider((ref) => AiService());
-final driveServiceProvider = Provider((ref) => DriveService());
+final driveServiceProvider = Provider((ref) => DriveService(ref.watch(googleSignInProvider)));
 
 /// Fully signs the user out of both Google and Supabase.
 /// Pass [ref] so that Riverpod provider state is invalidated immediately,
@@ -45,11 +58,16 @@ Future<void> signOutCompletely({WidgetRef? ref}) async {
   } catch (_) {}
   try {
     // 1. Clear Google's local cached session so the account picker always shows next time.
-    // We use signOut() (not disconnect()) — disconnect() revokes the OAuth token server-side
-    // and causes PlatformException on the next signIn() call. signOut() is enough because
-    // we already removed signInSilently() from the sign-in flow, which was the root cause
-    // of the auto-login skipping the account picker.
-    final googleSignIn = GoogleSignIn();
+    // We read the shared instance so its local Dart state is cleared.
+    // We do NOT use disconnect() by default here — disconnect() revokes the OAuth token server-side
+    // and causes PlatformException on the next signIn() call. signOut() is enough.
+    final googleSignIn = ref?.read(googleSignInProvider) ?? GoogleSignIn(
+      serverClientId: const String.fromEnvironment('GOOGLE_WEB_CLIENT_ID'),
+      scopes: [
+        'email',
+        'profile',
+      ],
+    );
     await googleSignIn.signOut();
   } catch (_) {
     // Ignore Google sign-out errors (user may not have used Google sign-in)
