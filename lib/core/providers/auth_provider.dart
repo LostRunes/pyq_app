@@ -3,5 +3,8 @@ import '../../features/auth/data/repositories/auth_repository.dart';
 import '../providers.dart';
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
-  return AuthRepository(ref.watch(supabase1ClientProvider));
+  return AuthRepository(
+    ref.watch(supabase1ClientProvider),
+    ref.watch(googleSignInProvider),
+  );
 });

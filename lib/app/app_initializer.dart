@@ -1,6 +1,5 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../firebase_options.dart';
@@ -19,21 +18,15 @@ class AppInitializer {
     }
 
     try {
-      await dotenv.load(fileName: ".env");
-    } catch (e) {
-      debugPrint('dotenv load failed: $e');
-    }
-
-    try {
-      final url = dotenv.env['SUPABASE_2_URL'] ?? '';
-      final anonKey = dotenv.env['SUPABASE_2_KEY'] ?? '';
+      const url = String.fromEnvironment('SUPABASE_2_URL');
+      const anonKey = String.fromEnvironment('SUPABASE_2_KEY');
       if (url.isNotEmpty && anonKey.isNotEmpty) {
         await Supabase.initialize(
           url: url,
           anonKey: anonKey,
         );
       } else {
-        debugPrint('Supabase credentials missing in .env');
+        debugPrint('Supabase credentials missing in environment variables');
       }
     } catch (e) {
       debugPrint('Supabase initialization failed: $e');

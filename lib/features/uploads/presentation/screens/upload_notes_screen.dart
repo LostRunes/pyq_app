@@ -7,7 +7,7 @@ import 'package:mime/mime.dart';
 import 'package:focus_fox/core/providers/prefs_provider.dart';
 import 'package:focus_fox/features/subjects/presentation/providers/subjects_providers.dart';
 import 'package:focus_fox/features/pyqs/data/models/subject.dart';
-import 'package:focus_fox/services/drive_service.dart';
+import 'package:focus_fox/core/providers.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'upload_history_screen.dart';
 
@@ -461,7 +461,7 @@ class _UploadNotesScreenState extends ConsumerState<UploadNotesScreen> {
                                   lookupMimeType(filePath) ??
                                   'application/octet-stream';
 
-                              final fileId = await DriveService().uploadFile(
+                              final fileId = await ref.read(driveServiceProvider).uploadFile(
                                 filename: file.name,
                                 mimeType: mimeType,
                                 fileBytes: fileBytes,
