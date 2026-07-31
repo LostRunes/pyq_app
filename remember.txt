@@ -17,7 +17,7 @@ gret
 # Set the Supabase project and secrets (one time)
 npx supabase logout
 npx supabase login
-npx supabase secrets set LIVEKIT_API_KEY="" LIVEKIT_API_SECRET="" LIVEKIT_URL=""
+npx supabase secrets set LIVEKIT_API_KEY="APIn9rrvNM7fbPo" LIVEKIT_API_SECRET="5feR4g6vuMIhAC6x87jp7E8QKYJhugqorSSKKfgdXWVA" LIVEKIT_URL="wss://focusfox-mvkuysl0.livekit.cloud"
 
 # To use local Supabase stack:
 npx supabase start
