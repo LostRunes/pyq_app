@@ -257,16 +257,12 @@ class SubjectsRepository {
 
   Future<Map<String, dynamic>?> getStudentByRollNo(String rollNo) async {
     try {
-      final res = await _supabase.functions.invoke(
-        'resolve-student',
-        body: {'roll_no': rollNo},
-      );
-      if (res.status != 200) return null;
-      final data = res.data as Map<String, dynamic>?;
-      if (data == null || data['found'] != true) return null;
-      return data;
+      final res = await _rest.getList('students?roll_no=eq.$rollNo&select=*');
+      if (res.isNotEmpty) {
+        return res.first as Map<String, dynamic>;
+      }
+      return null;
     } catch (e) {
-      log('[SubjectsRepository] resolve-student edge fn failed: $e');
       return null;
     }
   }
