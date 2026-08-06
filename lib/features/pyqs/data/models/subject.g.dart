@@ -26,13 +26,14 @@ class SubjectAdapter extends TypeAdapter<Subject> {
       priority: fields[6] as int?,
       subjectCredit: fields[7] as int?,
       subjectType: fields[8] as String?,
+      ytLinks: (fields[9] as List?)?.cast<String>(),
     );
   }
 
   @override
   void write(BinaryWriter writer, Subject obj) {
     writer
-      ..writeByte(9)
+      ..writeByte(10)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -50,7 +51,9 @@ class SubjectAdapter extends TypeAdapter<Subject> {
       ..writeByte(7)
       ..write(obj.subjectCredit)
       ..writeByte(8)
-      ..write(obj.subjectType);
+      ..write(obj.subjectType)
+      ..writeByte(9)
+      ..write(obj.ytLinks);
   }
 
   @override

@@ -40,11 +40,23 @@ class AuthRepository {
         );
       }
 
+      // 1. Sign in to Supabase 2 (Main auth instance)
       await Supabase.instance.client.auth.signInWithIdToken(
         provider: OAuthProvider.google,
         idToken: googleAuth.idToken!,
         accessToken: googleAuth.accessToken,
       );
+
+      // 2. Sign in to Supabase 1 (Content & customizations instance)
+      try {
+        await _supabase1.auth.signInWithIdToken(
+          provider: OAuthProvider.google,
+          idToken: googleAuth.idToken!,
+          accessToken: googleAuth.accessToken,
+        );
+      } catch (e) {
+        debugPrint('[AuthRepository] Supabase 1 client sign-in failed: $e');
+      }
     } catch (e) {
       final errStr = e.toString();
       if (errStr.contains('deadlock') || errStr.contains('main thread')) {
@@ -55,6 +67,27 @@ class AuthRepository {
       } else {
         rethrow;
       }
+    }
+  }
+
+  Future<void> recoverSupabase1Session() async {
+    try {
+      if (_supabase1.auth.currentSession != null) return;
+
+      final googleUser = await _googleSignIn.signInSilently();
+      if (googleUser != null) {
+        final googleAuth = await googleUser.authentication;
+        if (googleAuth.idToken != null) {
+          await _supabase1.auth.signInWithIdToken(
+            provider: OAuthProvider.google,
+            idToken: googleAuth.idToken!,
+            accessToken: googleAuth.accessToken,
+          );
+          debugPrint('[AuthRepository] Supabase 1 client authenticated via silent Google Sign-In.');
+        }
+      }
+    } catch (e) {
+      debugPrint('[AuthRepository] Failed to recover Supabase 1 session silently: $e');
     }
   }
 

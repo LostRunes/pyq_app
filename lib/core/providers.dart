@@ -79,6 +79,13 @@ Future<void> signOutCompletely({WidgetRef? ref}) async {
     // Ignore Supabase sign-out errors
   }
   try {
+    // 3. Sign out from Supabase 1
+    final supabase1 = ref?.read(supabase1ClientProvider);
+    if (supabase1 != null) {
+      await supabase1.auth.signOut();
+    }
+  } catch (_) {}
+  try {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('selected_branch_id');
     await prefs.remove('selected_semester');

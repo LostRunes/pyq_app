@@ -69,6 +69,13 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       return (routeName: '/login', arguments: null);
     }
 
+    // Recover Supabase 1 session silently
+    try {
+      await ref.read(authRepositoryProvider).recoverSupabase1Session();
+    } catch (e) {
+      debugPrint('Failed to recover Supabase 1 session on startup: $e');
+    }
+
     // Register push notification token
     unawaited(PushNotificationService.registerDeviceToken());
 

@@ -932,7 +932,10 @@ void _showDeleteConfirmationDialog(
                       semester: semester,
                       subjectId: subject.id,
                     );
-                ref.invalidate(subjectsProvider);
+                ref.invalidate(subjectsProvider((
+                  branchId: branchId,
+                  semester: semester,
+                )));
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
@@ -1233,13 +1236,11 @@ class _AddSubjectDialogContentState
                           subjectId: _selectedSubjectId!,
                         );
 
-                    // Force refresh target page subjects Provider
-                    await ref.refresh(
-                      subjectsProvider((
-                        branchId: widget.initialBranchId,
-                        semester: widget.initialSemester,
-                      )).future,
-                    );
+                    // Force invalidate target page subjects Provider so it pulls the non-cached fresh list
+                    ref.invalidate(subjectsProvider((
+                      branchId: widget.initialBranchId,
+                      semester: widget.initialSemester,
+                    )));
 
                     if (context.mounted) {
                       Navigator.pop(context);
