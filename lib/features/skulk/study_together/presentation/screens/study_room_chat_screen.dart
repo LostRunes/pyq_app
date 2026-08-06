@@ -532,10 +532,18 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen>
         }
       }
 
+      String replyTextPrefix = '';
+      if (repliedMsg != null && repliedMsg.senderUsername != null) {
+        final mentionStr = '@${repliedMsg.senderUsername}';
+        if (!text.toLowerCase().startsWith(mentionStr.toLowerCase())) {
+          replyTextPrefix = '$mentionStr ';
+        }
+      }
+
       final replyPrefix = repliedMsg != null
           ? '[reply:${repliedMsg.id}:${repliedMsg.senderDisplayName ?? repliedMsg.senderUsername ?? "User"}:$cleanedReplyText]'
           : '';
-      final fullText = '$replyPrefix$imagePrefix$text';
+      final fullText = '$replyPrefix$imagePrefix$replyTextPrefix$text';
 
       await ref
           .read(roomChatProvider(widget.room.id).notifier)

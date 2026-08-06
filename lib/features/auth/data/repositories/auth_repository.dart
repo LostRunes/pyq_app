@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:focus_fox/features/subjects/data/models/branch.dart';
@@ -16,13 +15,9 @@ class RedirectResult {
 
 class AuthRepository {
   final SupabaseClient _supabase1;
+  final GoogleSignIn _googleSignIn;
 
-  late final GoogleSignIn _googleSignIn = GoogleSignIn(
-    serverClientId: dotenv.env['GOOGLE_WEB_CLIENT_ID'],
-    scopes: ['email', 'profile'],
-  );
-
-  AuthRepository(this._supabase1);
+  AuthRepository(this._supabase1, this._googleSignIn);
 
   Future<void> signInWithGoogle() async {
     try {
@@ -96,13 +91,16 @@ class AuthRepository {
 
   Future<Map<String, dynamic>?> _getStudentByRollNo(String rollNo) async {
     try {
-      final res = await _supabase1
-          .from('students')
-          .select()
-          .eq('roll_no', rollNo)
-          .maybeSingle();
-      return res;
+      final res = await _supabase1.functions.invoke(
+        'resolve-student',
+        body: {'roll_no': rollNo},
+      );
+      if (res.status != 200) return null;
+      final data = res.data as Map<String, dynamic>?;
+      if (data == null || data['found'] != true) return null;
+      return data;
     } catch (e) {
+      debugPrint('[AuthRepository] resolve-student edge fn failed: $e');
       return null;
     }
   }
@@ -137,25 +135,35 @@ class AuthRepository {
   }
 
   Future<RedirectResult> getRedirectResult(String email) async {
-    final kiitRegex = RegExp(r'^(\d+)@kiit\.ac\.in$', caseSensitive: false);
-    final match = kiitRegex.firstMatch(email);
+    final isKiit = email.toLowerCase().endsWith('@kiit.ac.in');
 
-    if (match != null) {
-      final rollNo = match.group(1)!;
-      final student = await _getStudentByRollNo(rollNo);
+    if (isKiit) {
+      final rollMatch = RegExp(r'\d{7,10}').firstMatch(email);
+      if (rollMatch != null) {
+        final rollNo = rollMatch.group(0)!;
+        debugPrint('[AuthRepository] Extracted KIIT roll number: $rollNo from email: $email');
+        final student = await _getStudentByRollNo(rollNo);
 
-      if (student != null) {
-        final batch = student['batch']?.toString() ?? '';
-        final section = student['section']?.toString() ?? '';
+        if (student != null) {
+          final batch = student['batch']?.toString() ?? '';
+          final section = student['section']?.toString() ?? '';
 
-        final branchId = await _getBranchIdFromSection(section);
-        final semester = _getSemesterFromBatch(batch);
+          final branchId = await _getBranchIdFromSection(section);
+          final semester = _getSemesterFromBatch(batch);
 
-        return RedirectResult('/main_navigation', {
-          'branchId': branchId,
-          'semester': semester,
-        });
+          debugPrint('[AuthRepository] Student resolved. Branch: $branchId, Semester: $semester');
+          return RedirectResult('/main_navigation', {
+            'branchId': branchId,
+            'semester': semester,
+          });
+        } else {
+          debugPrint('[AuthRepository] No student record found in students table for roll number: $rollNo');
+        }
+      } else {
+        debugPrint('[AuthRepository] Could not extract 7-10 digit roll number from KIIT email: $email');
       }
+    } else {
+      debugPrint('[AuthRepository] Email is not a KIIT email: $email');
     }
 
     return RedirectResult('/selection');

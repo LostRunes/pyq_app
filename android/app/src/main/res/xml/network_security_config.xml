@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Pinning for the primary Supabase instance -->
+    <domain-config>
+        <domain includeSubdomains="true">hoihnpzdlivaoywrshmk.supabase.co</domain>
+        <pin-set expiration="2027-12-31">
+            <!-- SHA-256 pin of the Subject Public Key Info (SPKI) for *.supabase.co -->
+            <pin digest="SHA-256">ZcJbApTb7wyllleAjHw2vYAskqdT+DhMY9aPDFwAtf4=</pin>
+        </pin-set>
+    </domain-config>
+
+    <!-- Pinning for the secondary Supabase instance -->
+    <domain-config>
+        <domain includeSubdomains="true">bjmrsrypznobolwumjhe.supabase.co</domain>
+        <pin-set expiration="2027-12-31">
+            <!-- SHA-256 pin of the Subject Public Key Info (SPKI) for *.supabase.co -->
+            <pin digest="SHA-256">ZcJbApTb7wyllleAjHw2vYAskqdT+DhMY9aPDFwAtf4=</pin>
+        </pin-set>
+    </domain-config>
+</network-security-config>
