@@ -19,10 +19,7 @@ class AuthRepository {
 
   late final GoogleSignIn _googleSignIn = GoogleSignIn(
     serverClientId: dotenv.env['GOOGLE_WEB_CLIENT_ID'],
-    scopes: [
-      'email',
-      'profile',
-    ],
+    scopes: ['email', 'profile'],
   );
 
   AuthRepository(this._supabase1);
@@ -39,7 +36,8 @@ class AuthRepository {
         return;
       }
 
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
 
       if (googleAuth.idToken == null) {
         throw Exception(
@@ -59,7 +57,9 @@ class AuthRepository {
         try {
           await _googleSignIn.disconnect();
         } catch (_) {}
-        throw Exception('Sign-in initializing, please tap "Continue with Google" again.');
+        throw Exception(
+          'Sign-in initializing, please tap "Continue with Google" again.',
+        );
       } else {
         rethrow;
       }
@@ -82,7 +82,8 @@ class AuthRepository {
     if (profile == null) return null;
     final username = profile['username'] as String?;
     final avatarUrl = profile['avatar_url'] as String?;
-    final isNewProfile = username == null ||
+    final isNewProfile =
+        username == null ||
         username.trim().isEmpty ||
         avatarUrl == null ||
         avatarUrl.trim().isEmpty ||
@@ -163,12 +164,14 @@ class AuthRepository {
   int _getSemesterFromBatch(String batch) {
     final match = RegExp(r'\d+').firstMatch(batch);
     if (match == null) {
-      debugPrint('Warning: Could not parse batch number from "$batch". Defaulting to semester 1.');
+      debugPrint(
+        'Warning: Could not parse batch number from "$batch". Defaulting to semester 1.',
+      );
       return 1;
     }
-    
+
     int batchNum = int.parse(match.group(0)!);
-    
+
     // If the batch number is a calendar year (e.g. 2023), convert it to a relative year of study (1-4).
     // Assuming the year represents the admission year.
     if (batchNum > 2000) {
@@ -176,7 +179,9 @@ class AuthRepository {
       final admissionYear = batchNum;
       final diff = currentYear - admissionYear;
       batchNum = (diff + 1).clamp(1, 4);
-      debugPrint('Resolved calendar year batch "$batch" (admission year: $admissionYear) to year of study: $batchNum.');
+      debugPrint(
+        'Resolved calendar year batch "$batch" (admission year: $admissionYear) to year of study: $batchNum.',
+      );
     }
 
     final month = DateTime.now().month;
@@ -214,13 +219,48 @@ class AuthRepository {
 
   String generateCoolUsername() {
     final adjectives = [
-      'smart', 'study', 'focus', 'epic', 'cyber', 'nerdy', 'sleepy', 'shadow',
-      'swift', 'clever', 'cosmic', 'pixel', 'bright', 'super', 'quick', 'bold',
-      'alpha', 'omega', 'zen', 'active', 'prime', 'stellar', 'happy', 'coding',
+      'smart',
+      'study',
+      'focus',
+      'epic',
+      'cyber',
+      'nerdy',
+      'sleepy',
+      'shadow',
+      'swift',
+      'clever',
+      'cosmic',
+      'pixel',
+      'bright',
+      'super',
+      'quick',
+      'bold',
+      'alpha',
+      'omega',
+      'zen',
+      'active',
+      'prime',
+      'stellar',
+      'happy',
+      'coding',
     ];
     final nouns = [
-      'fox', 'panda', 'pikachu', 'cat', 'octopus', 'owl', 'bear', 'raccoon',
-      'shark', 'dragon', 'scholar', 'coder', 'genius', 'learner', 'champion', 'wizard',
+      'fox',
+      'panda',
+      'pikachu',
+      'cat',
+      'octopus',
+      'owl',
+      'bear',
+      'raccoon',
+      'shark',
+      'dragon',
+      'scholar',
+      'coder',
+      'genius',
+      'learner',
+      'champion',
+      'wizard',
     ];
     final rand = Random();
     final adj = adjectives[rand.nextInt(adjectives.length)];
