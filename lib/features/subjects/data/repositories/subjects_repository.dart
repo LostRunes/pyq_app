@@ -104,7 +104,7 @@ class SubjectsRepository {
         '?branch_id=eq.$effectiveBranchId'
         '&semester=eq.$semester'
         '&select=subjects(id,name,code,pyq_drive_link,notes_drive_link,'
-        'course_outcome_link,priority,subject_credit,subject_type)',
+        'course_outcome_link,priority,subject_credit,subject_type,yt_links)',
       );
 
       final subjects = (raw)
@@ -118,7 +118,7 @@ class SubjectsRepository {
         final customRes = await _supabase
             .from('user_subject_customizations')
             .select('action, subjects(id, name, code, pyq_drive_link, '
-                'notes_drive_link, course_outcome_link, priority, subject_credit, subject_type)')
+                'notes_drive_link, course_outcome_link, priority, subject_credit, subject_type, yt_links)')
             .eq('user_id', userId)
             .eq('branch_id', effectiveBranchId)
             .eq('semester', semester);
@@ -196,7 +196,7 @@ class SubjectsRepository {
         '?branch_id=eq.$effectiveBranchId'
         '&semester=eq.$semester'
         '&select=subjects(id,name,code,pyq_drive_link,notes_drive_link,'
-        'course_outcome_link,priority,subject_credit,subject_type)',
+        'course_outcome_link,priority,subject_credit,subject_type,yt_links)',
       );
 
       final subjects = (raw)
@@ -237,7 +237,7 @@ class SubjectsRepository {
     try {
       final raw = await _rest.getList(
         'subjects?select=id,name,code,pyq_drive_link,notes_drive_link,'
-        'course_outcome_link,priority,subject_credit,subject_type',
+        'course_outcome_link,priority,subject_credit,subject_type,yt_links',
       );
       final subjects = raw.map((e) => Subject.fromJson(e as Map<String, dynamic>)).toList();
       for (final oldKey in _subjectBox.keys.where((k) => k.toString().startsWith('all')).toList()) {
