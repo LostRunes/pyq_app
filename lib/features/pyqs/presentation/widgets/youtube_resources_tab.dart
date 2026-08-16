@@ -20,25 +20,24 @@ class YoutubeResourcesTab extends StatelessWidget {
     return null;
   }
 
-  void _launchVideo(BuildContext context, String url) async {
-    final uri = Uri.parse(url);
-    try {
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      } else {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Could not launch YouTube link.')),
-          );
-        }
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error launching video: $e')),
-        );
-      }
+  String? _extractPlaylistId(String url) {
+    final regExp = RegExp(r'[&?]list=([^#\&\?]+)');
+    final match = regExp.firstMatch(url);
+    if (match != null && match.group(1) != null) {
+      return match.group(1);
     }
+    return null;
+  }
+
+  void _launchVideo(BuildContext context, String url, bool isPlaylist, int index) {
+    Navigator.pushNamed(
+      context,
+      '/youtube_resource',
+      arguments: {
+        'url': url,
+        'title': isPlaylist ? 'Lecture Playlist #${index + 1}' : 'Lecture Video #${index + 1}',
+      },
+    );
   }
 
   @override
@@ -56,6 +55,8 @@ class YoutubeResourcesTab extends StatelessWidget {
         itemBuilder: (context, index) {
           final url = ytLinks[index];
           final videoId = _extractVideoId(url);
+          final playlistId = _extractPlaylistId(url);
+          final isPlaylist = playlistId != null;
           final thumbnailUrl = videoId != null
               ? 'https://img.youtube.com/vi/$videoId/mqdefault.jpg'
               : null;
@@ -73,7 +74,7 @@ class YoutubeResourcesTab extends StatelessWidget {
             color: isDark ? const Color(0xFF1F1B3E) : Colors.white,
             child: InkWell(
               borderRadius: BorderRadius.circular(16),
-              onTap: () => _launchVideo(context, url),
+              onTap: () => _launchVideo(context, url, isPlaylist, index),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -128,10 +129,29 @@ class YoutubeResourcesTab extends StatelessWidget {
                           topRight: Radius.circular(16),
                         ),
                       ),
-                      child: const Icon(
-                        Icons.video_library_outlined,
-                        size: 48,
-                        color: Colors.red,
+                      child: Center(
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              isPlaylist ? Icons.featured_play_list_outlined : Icons.video_library_outlined,
+                              size: 44,
+                              color: Colors.redAccent,
+                            ),
+                            if (isPlaylist) ...[
+                              const SizedBox(width: 10),
+                              Text(
+                                "PLAYLIST",
+                                style: GoogleFonts.outfit(
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 14,
+                                  letterSpacing: 1.5,
+                                  color: Colors.redAccent,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
                       ),
                     ),
                   Padding(
@@ -140,7 +160,7 @@ class YoutubeResourcesTab extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Lecture Video #${index + 1}',
+                          isPlaylist ? 'Lecture Playlist #${index + 1}' : 'Lecture Video #${index + 1}',
                           style: GoogleFonts.outfit(
                             color: isDark ? Colors.white : Colors.black87,
                             fontWeight: FontWeight.bold,
