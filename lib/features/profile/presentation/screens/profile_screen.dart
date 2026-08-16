@@ -254,7 +254,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     if (confirmed == true && mounted) {
       // Capture navigator BEFORE await — context is not safe across async gaps
       final navigator = Navigator.of(context);
-      await signOutCompletely(ref: ref);
+      await signOutCompletely();
       navigator.pushNamedAndRemoveUntil('/login', (route) => false);
     }
   }

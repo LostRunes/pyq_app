@@ -1,13 +1,10 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 class DriveService {
-  final GoogleSignIn _googleSignIn;
-
-  DriveService(this._googleSignIn);
-
-  String get apiKey => const String.fromEnvironment('DRIVE_API_KEY');
+  String get apiKey => dotenv.env['DRIVE_API_KEY'] ?? '';
 
   // The central upload folder ID specified by the user
   static const String centralUploadFolderId =
@@ -88,9 +85,18 @@ class DriveService {
     required List<int> fileBytes,
     required String subjectName,
   }) async {
-    GoogleSignInAccount? currentUser = _googleSignIn.currentUser;
-    currentUser ??= await _googleSignIn.signInSilently();
-    currentUser ??= await _googleSignIn.signIn();
+    final googleSignIn = GoogleSignIn(
+      serverClientId: dotenv.env['GOOGLE_WEB_CLIENT_ID'],
+      scopes: [
+        'email',
+        'profile',
+        'https://www.googleapis.com/auth/drive.file',
+      ],
+    );
+
+    GoogleSignInAccount? currentUser = googleSignIn.currentUser;
+    currentUser ??= await googleSignIn.signInSilently();
+    currentUser ??= await googleSignIn.signIn();
     if (currentUser == null) {
       throw Exception("User is not signed in to Google.");
     }
@@ -98,7 +104,7 @@ class DriveService {
     // Request the Drive scope.
     // On Android/iOS, if the scope is already granted, requestScopes resolves silently and returns true immediately.
     // canAccessScopes() is not implemented on mobile platforms and throws UnimplementedError.
-    final granted = await _googleSignIn.requestScopes(['https://www.googleapis.com/auth/drive.file']);
+    final granted = await googleSignIn.requestScopes(['https://www.googleapis.com/auth/drive.file']);
     if (!granted) {
       throw Exception("Google Drive permission was denied.");
     }
