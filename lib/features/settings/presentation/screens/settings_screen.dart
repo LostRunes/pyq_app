@@ -638,7 +638,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (confirmed == true && mounted) {
       // Capture navigator BEFORE await — context is not safe across async gaps
       final navigator = Navigator.of(context);
-      await signOutCompletely(ref: ref);
+      await signOutCompletely();
       // Navigate to login, clearing the entire stack so user can't press Back
       navigator.pushNamedAndRemoveUntil('/login', (route) => false);
     }

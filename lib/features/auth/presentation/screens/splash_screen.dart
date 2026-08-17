@@ -79,21 +79,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     // Register push notification token
     unawaited(PushNotificationService.registerDeviceToken());
 
-    // Profile exists: Check SharedPreferences for previously saved branch & semester first.
-    // If onboarding was already completed, enter the app immediately (essential for offline start).
-    final prefs = ref.read(sharedPrefsProvider);
-    final savedBranchId = prefs.getString('selected_branch_id');
-    final savedSemester = prefs.getInt('selected_semester');
-
-    if (savedBranchId != null &&
-        savedBranchId.isNotEmpty &&
-        savedSemester != null) {
-      return (routeName: '/main_navigation', arguments: {
-        'branchId': savedBranchId,
-        'semester': savedSemester,
-      });
-    }
-
     final userId = session.user.id;
     final profile = await Supabase.instance.client
         .from('user_profiles')
@@ -117,9 +102,24 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       return (routeName: '/login', arguments: {'showUsernameDialog': true});
     }
 
+    // Profile exists: Check SharedPreferences for previously saved branch & semester first
+    final prefs = ref.read(sharedPrefsProvider);
+    final savedBranchId = prefs.getString('selected_branch_id');
+    final savedSemester = prefs.getInt('selected_semester');
+
+    if (savedBranchId != null &&
+        savedBranchId.isNotEmpty &&
+        savedSemester != null) {
+      return (routeName: '/main_navigation', arguments: {
+        'branchId': savedBranchId,
+        'semester': savedSemester,
+      });
+    }
+
     // Otherwise, perform email mapping to determine default redirect
     final email = session.user.email ?? '';
-    final isKiit = email.toLowerCase().endsWith('@kiit.ac.in');
+    final kiitRegex = RegExp(r'^(\d+)@kiit\.ac\.in$', caseSensitive: false);
+    final isKiit = kiitRegex.hasMatch(email);
 
     if (isKiit) {
       final redirect = await ref.read(authRepositoryProvider).getRedirectResult(email);
@@ -199,122 +199,91 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
               ),
             );
           },
-          child: _errorMessage != null
-              ? Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    SizedBox(
-                      height: 180,
-                      width: 180,
-                      child: Image.asset(
-                        'assets/images/frustrated_racoon.png',
-                        fit: BoxFit.contain,
-                      ),
-                    ),
-                    const SizedBox(height: 28),
-                    Text(
-                      'Oops, no internet!',
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.outfit(
-                        fontSize: 24,
-                        fontWeight: FontWeight.w900,
-                        color: isDark
-                            ? const Color(0xFFFBF8F5)
-                            : const Color(0xFF3D2F27),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 40),
-                      child: Text(
-                        'We couldn\'t connect to our servers. Please check your network connection and try again.',
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.outfit(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w500,
-                          color: isDark
-                              ? const Color(0xFFBCA99C)
-                              : const Color(0xFF7A6456),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-                    ElevatedButton.icon(
-                      onPressed: _checkAuth,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFFF9F0A),
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
-                        elevation: 0,
-                      ),
-                      icon: const Icon(Icons.refresh_rounded, size: 20),
-                      label: Text(
-                        'Try Again',
-                        style: GoogleFonts.outfit(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ),
-                  ],
-                )
-              : Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // Logo
-                    Container(
-                      width: 200,
-                      height: 200,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(40),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
-                            blurRadius: 30,
-                            offset: const Offset(0, 15),
-                          ),
-                        ],
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(40),
-                        child: Image.asset(
-                          'assets/images/FocusFox_icon.png',
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-                    // App Name
-                    Text(
-                      'Focus Fox',
-                      style: GoogleFonts.outfit(
-                        fontSize: 36,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 2.0,
-                        color: isDark
-                            ? const Color(0xFFFBF8F5)
-                            : const Color(0xFF3D2F27),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    // Subtitle
-                    Text(
-                      'STUDY • FOCUS • GROW',
-                      style: GoogleFonts.outfit(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 3.0,
-                        color: isDark
-                            ? const Color(0xFFBCA99C)
-                            : const Color(0xFF7A6456),
-                      ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Logo
+              Container(
+                width: 200,
+                height: 200,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(40),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
+                      blurRadius: 30,
+                      offset: const Offset(0, 15),
                     ),
                   ],
                 ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(40),
+                  child: Image.asset(
+                    'assets/images/FocusFox_icon.png',
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 32),
+              // App Name
+              Text(
+                'Focus Fox',
+                style: GoogleFonts.outfit(
+                  fontSize: 36,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 2.0,
+                  color: isDark
+                      ? const Color(0xFFFBF8F5)
+                      : const Color(0xFF3D2F27),
+                ),
+              ),
+              const SizedBox(height: 8),
+              // Subtitle
+              Text(
+                'STUDY • FOCUS • GROW',
+                style: GoogleFonts.outfit(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 3.0,
+                  color: isDark
+                      ? const Color(0xFFBCA99C)
+                      : const Color(0xFF7A6456),
+                ),
+              ),
+              if (_errorMessage != null) ...[
+                const SizedBox(height: 24),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                  child: Text(
+                    _errorMessage!,
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.outfit(
+                      fontSize: 14,
+                      color: Colors.red[400],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  onPressed: _checkAuth,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFFF9F0A),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  ),
+                  icon: const Icon(Icons.refresh_rounded, size: 18),
+                  label: Text(
+                    'Retry',
+                    style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ],
+          ),
         ),
       ),
     );

@@ -1,5 +1,6 @@
 import 'dart:developer';
 import 'package:dio/dio.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class _SupabaseAuthInterceptor extends Interceptor {
   final String apiKey;
@@ -14,33 +15,27 @@ class _SupabaseAuthInterceptor extends Interceptor {
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) {
-    // Only log in debug — avoids leaking internal paths/errors in release logcat
-    assert(() {
-      log(
-        '[SupabaseRestClient] ${err.requestOptions.method} '
-        '${err.requestOptions.path} → ${err.response?.statusCode}',
-      );
-      return true;
-    }());
+    log(
+      '[SupabaseRestClient] ${err.requestOptions.method} '
+      '${err.requestOptions.path} → ${err.response?.statusCode} '
+      '${err.response?.data}',
+    );
     handler.next(err);
   }
 }
 
 class SupabaseRestClient {
   SupabaseRestClient._() {
-    // Uses the anon key — content tables (branches, subjects, topics, questions,
-    // etc.) now have RLS enabled with public-read policies so the anon key is
-    // sufficient. The service_role key must NEVER be used in client-side code.
     _dio = Dio(
       BaseOptions(
-        baseUrl: '${const String.fromEnvironment('SUPABASE_URL')}/rest/v1/',
+        baseUrl: '${dotenv.env['SUPABASE_URL']!}/rest/v1/',
         contentType: 'application/json',
         connectTimeout: const Duration(seconds: 10),
         receiveTimeout: const Duration(seconds: 8),
         sendTimeout: const Duration(seconds: 8),
       ),
     )..interceptors.add(
-        _SupabaseAuthInterceptor(const String.fromEnvironment('SUPABASE_KEY')),
+        _SupabaseAuthInterceptor(dotenv.env['SUPABASE_SERVICE']!),
       );
   }
 

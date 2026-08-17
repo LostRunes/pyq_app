@@ -55,6 +55,7 @@ dependencies:
   flutter_math_fork: ^0.7.1
   url_launcher: ^6.3.2
   shared_preferences: ^2.5.5
+  flutter_dotenv: ^6.0.1
   image_picker: 1.1.2
   flutter_image_compress: ^2.3.0
   mime: ^1.0.4
@@ -111,6 +112,7 @@ flutter:
     - assets/images/utilities/
     - assets/fonts/NotoSans-Regular.ttf
     - assets/fonts/NotoSansMath-Regular.ttf
+    - .env
     - json/hybrid_logo.json
     - json/coding.json
     - json/Honey_bee.json
