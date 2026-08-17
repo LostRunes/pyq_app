@@ -1,3 +1,6 @@
 {
-    "deno.enable": true
+    "deno.enable": true,
+    "csharp-dev-tools.solutionViewer.selectedWorkspaceSolutions": [
+        "build/windows/x64/pyq_mvp.sln"
+    ]
 }

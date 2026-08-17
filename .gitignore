@@ -61,6 +61,9 @@ client_secret*.json
 **/generated_plugins.cmake
 **/GeneratedPluginRegistrant.swift
 
+# Node dependencies
+node_modules/
+
 
 # Secrets
 .env

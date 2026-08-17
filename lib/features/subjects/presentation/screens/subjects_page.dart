@@ -32,6 +32,10 @@ class SubjectsPage extends ConsumerWidget {
 
     final searchQuery = ref.watch(subjectsSearchProvider);
 
+    final customOrder = ref.watch(
+      subjectOrderProvider((branchId: currentBranchId, semester: currentSemester)),
+    );
+
     final beeEnabled = ref.watch(beeEnabledProvider);
     final selectedIndex = ref.watch(mainNavigationIndexProvider);
     final hasShownAnimation = ref.watch(hasShownSubjectTitleAnimationProvider);
@@ -55,28 +59,85 @@ class SubjectsPage extends ConsumerWidget {
         },
         child: subjectsAsync.when(
           data: (subjects) {
-            // Sort: core first, then highest credits descending
             final filtered =
                 subjects.where((subject) {
                   return FuzzySearch.matches(subject.name, searchQuery) ||
                       FuzzySearch.matches(subject.code, searchQuery);
-                }).toList()..sort((a, b) {
+                }).toList();
+
+            if (customOrder.isNotEmpty) {
+              filtered.sort((a, b) {
+                final indexA = customOrder.indexOf(a.id);
+                final indexB = customOrder.indexOf(b.id);
+                if (indexA != -1 && indexB != -1) {
+                  return indexA.compareTo(indexB);
+                } else if (indexA != -1) {
+                  return -1;
+                } else if (indexB != -1) {
+                  return 1;
+                } else {
                   final aIsCore = a.subjectType?.toLowerCase() == 'core';
                   final bIsCore = b.subjectType?.toLowerCase() == 'core';
                   if (aIsCore != bIsCore) return aIsCore ? -1 : 1;
                   final aCredits = a.subjectCredit ?? 0;
                   final bCredits = b.subjectCredit ?? 0;
                   return bCredits.compareTo(aCredits);
-                });
+                }
+              });
+            } else {
+              filtered.sort((a, b) {
+                final aIsCore = a.subjectType?.toLowerCase() == 'core';
+                final bIsCore = b.subjectType?.toLowerCase() == 'core';
+                if (aIsCore != bIsCore) return aIsCore ? -1 : 1;
+                final aCredits = a.subjectCredit ?? 0;
+                final bCredits = b.subjectCredit ?? 0;
+                return bCredits.compareTo(aCredits);
+              });
+            }
 
-            return ListView.builder(
+            return ReorderableListView.builder(
               key: ValueKey(selectedIndex),
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               itemCount: filtered.isEmpty ? 3 : filtered.length + 2,
+              buildDefaultDragHandles: false,
+              onReorder: (oldIndex, newIndex) {
+                if (filtered.isEmpty) return;
+                // Header (0) and Footer (filtered.length + 1) cannot be dragged,
+                // and nothing can be dragged into their positions.
+                if (oldIndex < 1 || oldIndex > filtered.length) return;
+
+                var targetNew = newIndex;
+                if (targetNew < 1) targetNew = 1;
+                if (targetNew > filtered.length + 1) {
+                  targetNew = filtered.length + 1;
+                }
+
+                if (oldIndex == targetNew || oldIndex == targetNew - 1) return;
+
+                final int actualOld = oldIndex - 1;
+                int actualNew = targetNew - 1;
+                if (actualNew > actualOld) {
+                  actualNew -= 1;
+                }
+
+                final item = filtered.removeAt(actualOld);
+                filtered.insert(actualNew, item);
+
+                final orderedIds = filtered.map((s) => s.id).toList();
+                ref
+                    .read(
+                      subjectOrderProvider((
+                        branchId: currentBranchId,
+                        semester: currentSemester,
+                      )).notifier,
+                    )
+                    .updateOrder(orderedIds);
+              },
               itemBuilder: (context, i) {
                 if (i == 0) {
                   return Container(
+                    key: const ValueKey('header'),
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -207,6 +268,7 @@ class SubjectsPage extends ConsumerWidget {
 
                 if (filtered.isEmpty && i == 1) {
                   return Center(
+                    key: const ValueKey('empty_state'),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 40),
                       child: Text(
@@ -222,11 +284,14 @@ class SubjectsPage extends ConsumerWidget {
                 }
 
                 if (i == (filtered.isEmpty ? 2 : filtered.length + 1)) {
-                  return _buildAddSubjectCard(
-                    context,
-                    ref,
-                    currentBranchId,
-                    currentSemester,
+                  return Container(
+                    key: const ValueKey('add_subject_card'),
+                    child: _buildAddSubjectCard(
+                      context,
+                      ref,
+                      currentBranchId,
+                      currentSemester,
+                    ),
                   );
                 }
 
@@ -234,19 +299,25 @@ class SubjectsPage extends ConsumerWidget {
                 final isIconLeft = (i - 1) % 2 == 0;
                 final iconColor = Theme.of(context).colorScheme.primary;
 
-                final iconWidget = Container(
-                  width: 64,
-                  height: 64,
-                  decoration: BoxDecoration(
-                    color: iconColor.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  padding: const EdgeInsets.all(2),
-                  child: Image.asset(
-                    isDark
-                        ? 'assets/images/honey_dark.png'
-                        : 'assets/images/honey_light.png',
-                    fit: BoxFit.contain,
+                final iconWidget = ReorderableDragStartListener(
+                  index: i,
+                  child: MouseRegion(
+                    cursor: SystemMouseCursors.grab,
+                    child: Container(
+                      width: 64,
+                      height: 64,
+                      decoration: BoxDecoration(
+                        color: iconColor.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      padding: const EdgeInsets.all(2),
+                      child: Image.asset(
+                        isDark
+                            ? 'assets/images/honey_dark.png'
+                            : 'assets/images/honey_light.png',
+                        fit: BoxFit.contain,
+                      ),
+                    ),
                   ),
                 );
 
@@ -417,6 +488,7 @@ class SubjectsPage extends ConsumerWidget {
                 }
 
                 return SubjectCardFade(
+                  key: ValueKey(subject.id),
                   delay: Duration(milliseconds: (i - 1).clamp(0, 5) * 60),
                   child: cardAnimWidget,
                 );
@@ -932,7 +1004,10 @@ void _showDeleteConfirmationDialog(
                       semester: semester,
                       subjectId: subject.id,
                     );
-                ref.invalidate(subjectsProvider);
+                ref.invalidate(subjectsProvider((
+                  branchId: branchId,
+                  semester: semester,
+                )));
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
@@ -1233,13 +1308,11 @@ class _AddSubjectDialogContentState
                           subjectId: _selectedSubjectId!,
                         );
 
-                    // Force refresh target page subjects Provider
-                    await ref.refresh(
-                      subjectsProvider((
-                        branchId: widget.initialBranchId,
-                        semester: widget.initialSemester,
-                      )).future,
-                    );
+                    // Force invalidate target page subjects Provider so it pulls the non-cached fresh list
+                    ref.invalidate(subjectsProvider((
+                      branchId: widget.initialBranchId,
+                      semester: widget.initialSemester,
+                    )));
 
                     if (context.mounted) {
                       Navigator.pop(context);

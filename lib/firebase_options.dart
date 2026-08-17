@@ -24,8 +24,6 @@ class DefaultFirebaseOptions {
         return android;
       case TargetPlatform.iOS:
         return ios;
-      case TargetPlatform.macOS:
-        return macos;
       case TargetPlatform.windows:
         return windows;
       case TargetPlatform.linux:
@@ -64,7 +62,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '359937070047',
     projectId: 'focusfox-cc167',
     storageBucket: 'focusfox-cc167.firebasestorage.app',
-    iosBundleId: 'com.example.pyqMvp',
+    iosBundleId: 'com.focusfox.app',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
@@ -73,7 +71,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '359937070047',
     projectId: 'focusfox-cc167',
     storageBucket: 'focusfox-cc167.firebasestorage.app',
-    iosBundleId: 'com.example.pyqMvp',
+    iosBundleId: 'com.focusfox.app',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(

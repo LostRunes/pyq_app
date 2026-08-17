@@ -9,6 +9,7 @@ import '../widgets/topic_tab.dart';
 import '../widgets/drive_explorer_tab.dart';
 import '../widgets/link_tab.dart';
 import '../widgets/progress_tab.dart';
+import '../widgets/youtube_resources_tab.dart';
 
 class SubjectDashboardScreen extends ConsumerStatefulWidget {
   final Subject subject;
@@ -50,11 +51,16 @@ class _SubjectDashboardScreenState
         widget.subject.courseOutcomeLink != null &&
         widget.subject.courseOutcomeLink!.isNotEmpty;
 
+    final hasVideos =
+        widget.subject.ytLinks != null &&
+        widget.subject.ytLinks!.isNotEmpty;
+
     final tabs = [
       if (hasTopics) const Tab(text: "Topics"),
       if (hasPyqs) const Tab(text: "PYQs"),
       if (hasNotes) const Tab(text: "Notes"),
       if (hasHandout) const Tab(text: "Course Handout"),
+      if (hasVideos) const Tab(text: "Videos"),
       const Tab(text: "Progress"),
     ];
 
@@ -81,6 +87,7 @@ class _SubjectDashboardScreenState
           imagePath: 'assets/images/polar_bearr.png',
           subjectName: widget.subject.name,
         ),
+      if (hasVideos) YoutubeResourcesTab(ytLinks: widget.subject.ytLinks!),
       ProgressTab(subjectId: widget.subject.id),
     ];
 
