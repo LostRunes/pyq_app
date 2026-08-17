@@ -8,7 +8,7 @@
 PRODUCT_NAME = pyq_mvp
 
 // The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = com.focusfox.app
+PRODUCT_BUNDLE_IDENTIFIER = com.focusfox.study
 
 // The copyright displayed in application information
 PRODUCT_COPYRIGHT = Copyright © 2026 com.example. All rights reserved.
