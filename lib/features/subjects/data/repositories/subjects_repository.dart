@@ -104,7 +104,7 @@ class SubjectsRepository {
         '?branch_id=eq.$effectiveBranchId'
         '&semester=eq.$semester'
         '&select=subjects(id,name,code,pyq_drive_link,notes_drive_link,'
-        'course_outcome_link,priority,subject_credit,subject_type)',
+        'course_outcome_link,priority,subject_credit,subject_type,yt_links)',
       );
 
       final subjects = (raw)
@@ -112,13 +112,13 @@ class SubjectsRepository {
           .map((e) => Subject.fromJson(e['subjects'] as Map<String, dynamic>))
           .toList();
 
-      // Apply user customizations (still uses SDK because it needs auth.uid())
-      final userId = _supabase.auth.currentUser?.id;
+      // Apply user customizations (retrieve user ID from primary auth instance)
+      final userId = Supabase.instance.client.auth.currentUser?.id;
       if (userId != null) {
         final customRes = await _supabase
             .from('user_subject_customizations')
             .select('action, subjects(id, name, code, pyq_drive_link, '
-                'notes_drive_link, course_outcome_link, priority, subject_credit, subject_type)')
+                'notes_drive_link, course_outcome_link, priority, subject_credit, subject_type, yt_links)')
             .eq('user_id', userId)
             .eq('branch_id', effectiveBranchId)
             .eq('semester', semester);
@@ -196,7 +196,7 @@ class SubjectsRepository {
         '?branch_id=eq.$effectiveBranchId'
         '&semester=eq.$semester'
         '&select=subjects(id,name,code,pyq_drive_link,notes_drive_link,'
-        'course_outcome_link,priority,subject_credit,subject_type)',
+        'course_outcome_link,priority,subject_credit,subject_type,yt_links)',
       );
 
       final subjects = (raw)
@@ -237,7 +237,7 @@ class SubjectsRepository {
     try {
       final raw = await _rest.getList(
         'subjects?select=id,name,code,pyq_drive_link,notes_drive_link,'
-        'course_outcome_link,priority,subject_credit,subject_type',
+        'course_outcome_link,priority,subject_credit,subject_type,yt_links',
       );
       final subjects = raw.map((e) => Subject.fromJson(e as Map<String, dynamic>)).toList();
       for (final oldKey in _subjectBox.keys.where((k) => k.toString().startsWith('all')).toList()) {
@@ -306,51 +306,35 @@ class SubjectsRepository {
       semester: semester,
     );
 
-    final userId = _supabase.auth.currentUser?.id;
-    if (userId == null) {
-      throw Exception('User is not logged in');
-    }
-
-    // Check if there is an existing customization for this subject
-    final existingCustom = await _supabase
-        .from('user_subject_customizations')
-        .select()
-        .eq('user_id', userId)
-        .eq('branch_id', effectiveBranchId)
-        .eq('semester', semester)
-        .eq('subject_id', subjectId)
-        .maybeSingle();
-
-    if (existingCustom != null) {
-      final action = existingCustom['action'] as String;
-      if (action == 'add') {
-        // If it was added, deleting the customization row reverts it to the default (not present)
-        await _supabase
-            .from('user_subject_customizations')
-            .delete()
-            .eq('id', existingCustom['id']);
-        return;
-      }
-    }
-
-    // Check if the subject is in the global branch_subjects (default)
-    final existingGlobal = await _supabase
-        .from('branch_subjects')
-        .select()
-        .eq('branch_id', effectiveBranchId)
-        .eq('semester', semester)
-        .eq('subject_id', subjectId)
-        .maybeSingle();
-
-    if (existingGlobal != null) {
-      // If it exists in the global syllabus, we insert a 'remove' customization to hide it for this user
-      await _supabase.from('user_subject_customizations').insert({
-        'user_id': userId,
-        'branch_id': effectiveBranchId,
-        'semester': semester,
-        'subject_id': subjectId,
+    // Delegate to edge function on supabase_secondary.
+    // The edge function verifies the caller's JWT and uses the primary service
+    // role key (stored as a secret) to write to supabase_primary — no cross-project
+    // session issues.
+    final res = await Supabase.instance.client.functions.invoke(
+      'manage-subject-customization',
+      body: {
         'action': 'remove',
-      });
+        'branchId': effectiveBranchId,
+        'semester': semester,
+        'subjectId': subjectId,
+      },
+    );
+    if (res.status != 200) {
+      final data = res.data;
+      final msg = (data is Map && data['error'] != null)
+          ? data['error'].toString()
+          : 'Edge function error (status ${res.status})';
+      throw Exception(msg);
+    }
+
+    // Bust the Hive cache so the next provider refresh fetches fresh from the network
+    // (using the original branchId, which is what getSubjectsBySemester uses as the key).
+    final cacheKey = '${branchId}_$semester';
+    final staleKeys = _subjectBox.keys
+        .where((k) => k.toString().startsWith(cacheKey))
+        .toList();
+    for (final k in staleKeys) {
+      await _subjectBox.delete(k);
     }
   }
 
@@ -365,54 +349,35 @@ class SubjectsRepository {
       semester: semester,
     );
 
-    final userId = _supabase.auth.currentUser?.id;
-    if (userId == null) {
-      throw Exception('User is not logged in');
+    // Delegate to edge function on supabase_secondary.
+    // The edge function verifies the caller's JWT and uses the primary service
+    // role key (stored as a secret) to write to supabase_primary — no cross-project
+    // session issues.
+    final res = await Supabase.instance.client.functions.invoke(
+      'manage-subject-customization',
+      body: {
+        'action': 'add',
+        'branchId': effectiveBranchId,
+        'semester': semester,
+        'subjectId': subjectId,
+      },
+    );
+    if (res.status != 200) {
+      final data = res.data;
+      final msg = (data is Map && data['error'] != null)
+          ? data['error'].toString()
+          : 'Edge function error (status ${res.status})';
+      throw Exception(msg);
     }
 
-    // Check if there is an existing customization for this subject
-    final existingCustom = await _supabase
-        .from('user_subject_customizations')
-        .select()
-        .eq('user_id', userId)
-        .eq('branch_id', effectiveBranchId)
-        .eq('semester', semester)
-        .eq('subject_id', subjectId)
-        .maybeSingle();
-
-    if (existingCustom != null) {
-      final action = existingCustom['action'] as String;
-      if (action == 'remove') {
-        // If it was removed, deleting the customization row reverts it to the default (added)
-        await _supabase
-            .from('user_subject_customizations')
-            .delete()
-            .eq('id', existingCustom['id']);
-        return;
-      }
+    // Bust the Hive cache so the next provider refresh fetches fresh from the network
+    // (using the original branchId, which is what getSubjectsBySemester uses as the key).
+    final cacheKey = '${branchId}_$semester';
+    final staleKeys = _subjectBox.keys
+        .where((k) => k.toString().startsWith(cacheKey))
+        .toList();
+    for (final k in staleKeys) {
+      await _subjectBox.delete(k);
     }
-
-    // Check if the subject is already in the global branch_subjects (default)
-    final existingGlobal = await _supabase
-        .from('branch_subjects')
-        .select()
-        .eq('branch_id', effectiveBranchId)
-        .eq('semester', semester)
-        .eq('subject_id', subjectId)
-        .maybeSingle();
-
-    if (existingGlobal != null) {
-      // It's already there globally, so nothing to add
-      return;
-    }
-
-    // Otherwise, insert an 'add' customization
-    await _supabase.from('user_subject_customizations').insert({
-      'user_id': userId,
-      'branch_id': effectiveBranchId,
-      'semester': semester,
-      'subject_id': subjectId,
-      'action': 'add',
-    });
   }
 }

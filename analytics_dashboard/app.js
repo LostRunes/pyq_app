@@ -1,9 +1,7 @@
-// Supabase Connection Credentials (from production configuration)
-const SUPABASE_URL = 'https://bjmrsrypznobolwumjhe.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJqbXJzcnlwem5vYm9sd3VtamhlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAyMTk4MDAsImV4cCI6MjA5NTc5NTgwMH0.1IY2A8bTDbexuJYiM14dZyN80OrDUkFbzeupjEJLXqs';
-
 // Global App State
 let supabaseClient = null;
+let SUPABASE_URL = '';
+let SUPABASE_ANON_KEY = '';
 let allEvents = [];
 let filteredEvents = [];
 let currentPage = 1;
@@ -38,15 +36,53 @@ const elModalClose = document.getElementById('btn-close-modal');
 const elModalCode = document.getElementById('metadata-json-code');
 
 // Initialize the dashboard
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  await loadEnv();
   initSupabase();
   setupEventListeners();
   fetchData();
 });
 
+// Load variables from .env file
+async function loadEnv() {
+  try {
+    const response = await fetch('../.env');
+    if (!response.ok) {
+      throw new Error(`Failed to fetch .env file: ${response.statusText}`);
+    }
+    const text = await response.text();
+    const env = {};
+    const lines = text.split('\n');
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
+      
+      const firstEqual = trimmed.indexOf('=');
+      if (firstEqual === -1) continue;
+      
+      const key = trimmed.slice(0, firstEqual).trim();
+      let value = trimmed.slice(firstEqual + 1).trim();
+      
+      // Remove surrounding quotes if present
+      if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+        value = value.slice(1, -1);
+      }
+      env[key] = value;
+    }
+    SUPABASE_URL = env.SUPABASE_2_URL || env.SUPABASE_URL || '';
+    SUPABASE_ANON_KEY = env.SUPABASE_2_KEY || env.SUPABASE_KEY || '';
+  } catch (error) {
+    console.error('Error loading .env file:', error);
+    updateStatus('disconnected', '<i class="fa-solid fa-circle-xmark"></i> Env Load Error');
+  }
+}
+
 // Configure client connection
 function initSupabase() {
   try {
+    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+      throw new Error('Supabase URL or Key is missing from .env');
+    }
     supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     updateStatus('connected', '<i class="fa-solid fa-circle-check"></i> Connected');
   } catch (error) {

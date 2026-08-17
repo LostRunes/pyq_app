@@ -22,6 +22,8 @@ class Subject extends HiveObject {
   final int? subjectCredit;
   @HiveField(8)
   final String? subjectType;
+  @HiveField(9)
+  final List<String>? ytLinks;
 
   Subject({
     required this.id,
@@ -33,6 +35,7 @@ class Subject extends HiveObject {
     this.priority,
     this.subjectCredit,
     this.subjectType,
+    this.ytLinks,
   });
 
   factory Subject.fromJson(Map<String, dynamic> json) => Subject(
@@ -45,6 +48,7 @@ class Subject extends HiveObject {
     priority: json['priority'] as int?,
     subjectCredit: json['subject_credit'] as int?,
     subjectType: json['subject_type'] as String?,
+    ytLinks: (json['yt_links'] as List<dynamic>?)?.map((e) => e as String).toList(),
   );
 
   @override

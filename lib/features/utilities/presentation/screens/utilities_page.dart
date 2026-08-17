@@ -18,42 +18,48 @@ class UtilitiesPage extends ConsumerWidget {
       {
         'title': 'To Do Dashboard',
         'desc': 'Track study activity & custom tasks',
-        'icon': Icons.playlist_add_check_rounded,
+        'iconLight': 'assets/images/utilities/to_do_dashboard_light.png',
+        'iconDark': 'assets/images/utilities/to_do_dashboard_dark.png',
         'route': '/todo_dashboard',
         'color': const Color(0xFF6366F1), // Indigo
       },
       {
         'title': 'Global Resource',
         'desc': 'Drive contains all the resources you are looking for. If you can\'t find a subject in the app, look for it in the drive.',
-        'icon': Icons.folder_shared_rounded,
+        'iconLight': 'assets/images/utilities/global_resource_light.png',
+        'iconDark': 'assets/images/utilities/global_resource_dark.png',
         'route': '/global_resources',
         'color': const Color(0xFF0EA5E9), // Sky blue
       },
       {
         'title': 'Scientific Calculator',
         'desc': 'Casio-style advanced math tool',
-        'icon': Icons.calculate_rounded,
+        'iconLight': 'assets/images/utilities/scientific_calc_light.png',
+        'iconDark': 'assets/images/utilities/scientific_calc_dark.png',
         'route': '/scientific_calculator',
         'color': const Color(0xFF8B5CF6), // Purple
       },
       {
         'title': 'GPA Calculator',
         'desc': 'Track grades & semester GPA',
-        'icon': Icons.calculate_rounded,
+        'iconLight': 'assets/images/utilities/gpa_calc_light.png',
+        'iconDark': 'assets/images/utilities/gpa_calc_dark.png',
         'route': '/gpa_calculator',
         'color': const Color(0xFF10B981), // Emerald
       },
       {
         'title': 'Upload Notes',
         'desc': 'Share study notes & materials',
-        'icon': Icons.cloud_upload_rounded,
+        'iconLight': 'assets/images/utilities/share_notes_light.png',
+        'iconDark': 'assets/images/utilities/share_notes_dark.png',
         'route': '/upload_notes',
         'color': const Color(0xFF6366F1), // Indigo
       },
       {
         'title': 'Focus Timer',
         'desc': 'Set a timer to stay focused',
-        'icon': Icons.timer_rounded,
+        'iconLight': 'assets/images/utilities/focus_mode_light.png',
+        'iconDark': 'assets/images/utilities/focus_mode_dark.png',
         'route': '/focus_timer',
         'color': const Color(0xFFEC4899), // Pink
       },
@@ -160,16 +166,12 @@ class UtilitiesPage extends ConsumerWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: utilColor.withOpacity(0.1),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Icon(
-                                  util['icon'] as IconData,
-                                  color: utilColor,
-                                  size: 26,
+                              SizedBox(
+                                width: 46,
+                                height: 46,
+                                child: Image.asset(
+                                  isDark ? util['iconDark'] as String : util['iconLight'] as String,
+                                  fit: BoxFit.contain,
                                 ),
                               ),
                               Column(

@@ -42,3 +42,30 @@ final selectedSemesterProvider =
     NotifierProvider<SelectedSemesterNotifier, int>(
       SelectedSemesterNotifier.new,
     );
+
+class SubjectOrderNotifier extends Notifier<List<String>> {
+  SubjectOrderNotifier(this.arg);
+  final ({String branchId, int semester}) arg;
+
+  @override
+  List<String> build() {
+    final prefs = ref.watch(sharedPrefsProvider);
+    return prefs.getStringList('subject_order_${arg.branchId}_${arg.semester}') ??
+        [];
+  }
+
+  Future<void> updateOrder(List<String> orderedIds) async {
+    state = orderedIds;
+    final prefs = ref.read(sharedPrefsProvider);
+    await prefs.setStringList(
+      'subject_order_${arg.branchId}_${arg.semester}',
+      orderedIds,
+    );
+  }
+}
+
+final subjectOrderProvider = NotifierProvider.family<
+  SubjectOrderNotifier,
+  List<String>,
+  ({String branchId, int semester})
+>(SubjectOrderNotifier.new);
