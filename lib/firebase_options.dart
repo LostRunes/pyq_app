@@ -62,7 +62,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '359937070047',
     projectId: 'focusfox-cc167',
     storageBucket: 'focusfox-cc167.firebasestorage.app',
-    iosBundleId: 'com.focusfox.app',
+    iosBundleId: 'com.focusfox.study',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
@@ -71,7 +71,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '359937070047',
     projectId: 'focusfox-cc167',
     storageBucket: 'focusfox-cc167.firebasestorage.app',
-    iosBundleId: 'com.focusfox.app',
+    iosBundleId: 'com.focusfox.study',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
