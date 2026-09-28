@@ -207,7 +207,7 @@ async function fetchData() {
       <tr>
         <td colspan="7" class="loading-placeholder" style="color: #F44336;">
           <i class="fa-solid fa-circle-xmark"></i> Failed to retrieve analytics.<br>
-          <span style="font-size: 12px; font-family: monospace; opacity: 0.8;">Details: ${errorMsg}</span>
+          <span style="font-size: 12px; font-family: monospace; opacity: 0.8;">Details: ${escapeHtml(errorMsg)}</span>
         </td>
       </tr>
     `;
@@ -484,26 +484,27 @@ function renderTable() {
   }
 
   let html = '';
-  pageItems.forEach(e => {
+  pageItems.forEach((e, i) => {
     // 1. Date conversion
     const localDate = e.created_at 
       ? new Date(e.created_at).toLocaleString() 
       : '-';
 
     // 2. User display details
-    const uName = e.username || 'anonymous';
-    const dName = e.display_name || 'Guest User';
-    const email = e.email || 'no-email@session';
-    const avatarLetter = (e.display_name || 'U').charAt(0).toUpperCase();
+    // DB-sourced strings are user-controlled: escape before innerHTML
+    const uName = escapeHtml(e.username || 'anonymous');
+    const dName = escapeHtml(e.display_name || 'Guest User');
+    const email = escapeHtml(e.email || 'no-email@session');
+    const avatarLetter = escapeHtml((e.display_name || 'U').charAt(0).toUpperCase());
 
     // 3. Badges mapping
-    const typeClass = `badge-type-${(e.event_type || 'other').replace('_', '').replace('view', 'page').replace('entry', 'page')}`;
-    const cleanType = (e.event_type || 'other').replaceAll('_', ' ');
+    const typeClass = `badge-type-${escapeHtml(e.event_type || 'other').replace('_', '').replace('view', 'page').replace('entry', 'page')}`;
+    const cleanType = escapeHtml((e.event_type || 'other').replaceAll('_', ' '));
 
-    const sourceClass = `badge-source-${e.source}`;
+    const sourceClass = `badge-source-${escapeHtml(e.source)}`;
     const cleanSource = e.source === 'supabase' ? 'Supabase' : 'Neon DB';
 
-    const platformClass = `badge-platform-${e.platform || 'app'}`;
+    const platformClass = `badge-platform-${escapeHtml(e.platform || 'app')}`;
     const cleanPlatform = e.platform === 'desktop' ? 'Desktop' : 'Mobile';
     const platformIcon = e.platform === 'desktop' ? '<i class="fa-solid fa-desktop"></i>' : '<i class="fa-solid fa-mobile-screen-button"></i>';
 
@@ -521,8 +522,8 @@ function renderTable() {
           </div>
         </td>
         <td><span class="badge ${typeClass}">${cleanType}</span></td>
-        <td style="font-family: monospace; font-weight: 600; color: #E91E63;">${e.event_name || '-'}</td>
-        <td style="color: var(--text-muted); font-family: monospace;">${e.screen_name || '-'}</td>
+        <td style="font-family: monospace; font-weight: 600; color: #E91E63;">${escapeHtml(e.event_name || '-')}</td>
+        <td style="color: var(--text-muted); font-family: monospace;">${escapeHtml(e.screen_name || '-')}</td>
         <td>
           <div style="display: flex; flex-direction: column; gap: 4px; align-items: flex-start;">
             <span class="badge ${platformClass}">${platformIcon} ${cleanPlatform}</span>
@@ -530,7 +531,7 @@ function renderTable() {
           </div>
         </td>
         <td>
-          <button class="btn-action" onclick="showMetadataModal('${escapeHtml(JSON.stringify(e.metadata || {}))}')">
+          <button class="btn-action" onclick="showEventMetadata(${startIdx + i})">
             <i class="fa-solid fa-code"></i> View JSON
           </button>
         </td>
@@ -587,6 +588,14 @@ window.showMetadataModal = function(metadataJsonStr) {
   }
 };
 
+// Look up by row index instead of inlining JSON into an onclick string
+// (entity-decoded quotes in metadata could break out of the JS literal).
+window.showEventMetadata = function(idx) {
+  const ev = filteredEvents[idx];
+  elModalCode.innerText = JSON.stringify((ev && ev.metadata) || {}, null, 2);
+  elModal.style.display = 'block';
+};
+
 // Export records as CSV download
 function exportToCSV() {
   if (filteredEvents.length === 0) return;
@@ -608,8 +617,9 @@ function exportToCSV() {
     })
   ];
 
-  const csvContent = 'data:text/csv;charset=utf-8,' + csvRows.join('\n');
-  const encodedUri = encodeURI(csvContent);
+  // encodeURIComponent: encodeURI leaves '#' unescaped, which truncates the
+  // data URI at the first '#' in any field
+  const encodedUri = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csvRows.join('\n'));
   const link = document.createElement('a');
   link.setAttribute('href', encodedUri);
   link.setAttribute('download', `focus_fox_analytics_${new Date().toISOString().split('T')[0]}.csv`);
@@ -620,7 +630,7 @@ function exportToCSV() {
 
 // Helper to escape HTML characters
 function escapeHtml(text) {
-  return text
+  return String(text ?? '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')

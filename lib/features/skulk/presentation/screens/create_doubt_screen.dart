@@ -502,7 +502,14 @@ class _CreateDoubtScreenState extends ConsumerState<CreateDoubtScreen> {
                     child: DropdownButtonHideUnderline(
                       child: DropdownButtonFormField<String>(
                         key: ValueKey(_selectedSubjectId),
-                        initialValue: _selectedSubjectId,
+                        // Editing a doubt whose subject isn't in this list
+                        // (custom "Other" text / different semester) must not
+                        // pass a value missing from items — that asserts.
+                        initialValue:
+                            (_selectedSubjectId == 'other' ||
+                                subjects.any((s) => s.id == _selectedSubjectId))
+                            ? _selectedSubjectId
+                            : null,
                         isExpanded: true,
                         dropdownColor: isDark
                             ? const Color(0xFF1E1E1E)

@@ -239,8 +239,11 @@ class GateStats {
           ? rawIsCorrect
           : (rawIsCorrect is num ? rawIsCorrect > 0 : false);
       final marks = (val['marks'] as num?)?.toDouble() ?? 1.0;
+      final type = (val['questionType'] as String?)?.toUpperCase();
       if (isCorrect) {
         score += marks;
+      } else if (type == 'NAT' || type == 'MSQ') {
+        // No negative marking for NAT/MSQ in GATE
       } else {
         // GATE has negative marking: -1/3 of marks for 1 mark, -2/3 for 2 marks
         // To be safe and align with exam standard:
@@ -275,12 +278,14 @@ class GateStatsNotifier extends Notifier<GateStats> {
     required String selectedAnswer,
     required bool isCorrect,
     required double marks,
+    String? questionType,
   }) {
     final newAnswers = Map<String, Map<String, dynamic>>.from(state.answers);
     newAnswers[questionId] = {
       'selectedAnswer': selectedAnswer,
       'isCorrect': isCorrect,
       'marks': marks,
+      'questionType': ?questionType,
     };
 
     state = GateStats(answers: newAnswers);

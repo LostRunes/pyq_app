@@ -229,7 +229,12 @@ class CalculatorNotifier extends Notifier<CalculatorState> {
     }.contains(eff)) {
       // no-op
     } else {
-      _append(eff);
+      // Map display-style keys to parseable tokens
+      _append(switch (eff) {
+        'x^-1' => '^(-1)',
+        'x!' => '!',
+        _ => eff,
+      });
     }
   }
 
@@ -253,6 +258,7 @@ class CalculatorNotifier extends Notifier<CalculatorState> {
     );
     // Clear the modeMessage after 1.5 s so the LCD returns to normal
     Future.delayed(const Duration(milliseconds: 1500), () {
+      if (!ref.mounted) return;
       if (state.modeMessage == chosen.displayName) {
         state = state.copyWith(modeMessage: '');
       }
@@ -314,7 +320,8 @@ class CalculatorNotifier extends Notifier<CalculatorState> {
     state = state.copyWith(expression: expr + token, justEvaluated: false);
   }
 
-  bool _isOperator(String t) => '+-×÷^%'.contains(t) || t == '×10^(';
+  bool _isOperator(String t) =>
+      '+-×÷^%!'.contains(t) || t.startsWith('^') || t == '×10^(';
 
   // ── Backspace ────────────────────────────────────────────────────────────────
   void _backspace() {
@@ -378,7 +385,9 @@ class CalculatorNotifier extends Notifier<CalculatorState> {
       ].take(10).toList();
       state = state.copyWith(
         result: fmt,
-        lastAnswer: fmt,
+        // Full-precision, parseable value (display string may be rounded
+        // or contain ×10ⁿ superscripts, which breaks `Ans`)
+        lastAnswer: _num(result),
         history: hist,
         justEvaluated: true,
       );
@@ -404,8 +413,11 @@ class CalculatorNotifier extends Notifier<CalculatorState> {
       RegExp(r'(?<![a-zA-Z])e(?![a-zA-Z(])'),
       (_) => '(${math.e})',
     );
+    // Implicit multiplication (e.g. `2Ans`, `2e`) before function passes
+    e = e.replaceAllMapped(RegExp(r'(\d|\))\('), (m) => '${m.group(1)}*(');
 
-    e = e.replaceAllMapped(RegExp(r'(\d+)!'), (m) {
+    // Non-integer operands (e.g. 2.5!) fail int.tryParse → Math ERROR
+    e = e.replaceAllMapped(RegExp(r'(?<![\d.])(\d+(?:\.\d+)?)!'), (m) {
       final n = int.tryParse(m.group(1)!) ?? -1;
       if (n < 0 || n > 20) return '(0/0)';
       int f = 1;
@@ -416,7 +428,7 @@ class CalculatorNotifier extends Notifier<CalculatorState> {
     for (int pass = 0; pass < 8; pass++) {
       final prev = e;
 
-      e = e.replaceAllMapped(RegExp(r'³√\(([^()]+)\)'), (m) {
+      e = e.replaceAllMapped(RegExp(r'³√\(' + _arg + r'\)'), (m) {
         try {
           final x = _ev(m.group(1)!);
           return _w(
@@ -429,7 +441,7 @@ class CalculatorNotifier extends Notifier<CalculatorState> {
         }
       });
 
-      e = e.replaceAllMapped(RegExp(r'(?<![a-z])log\(([^()]+)\)'), (m) {
+      e = e.replaceAllMapped(RegExp(r'(?<![a-z])log\(' + _arg + r'\)'), (m) {
         try {
           return _w(math.log(_ev(m.group(1)!)) / math.ln10);
         } catch (_) {
@@ -437,7 +449,7 @@ class CalculatorNotifier extends Notifier<CalculatorState> {
         }
       });
 
-      e = e.replaceAllMapped(RegExp(r'ln\(([^()]+)\)'), (m) {
+      e = e.replaceAllMapped(RegExp(r'ln\(' + _arg + r'\)'), (m) {
         try {
           return _w(math.log(_ev(m.group(1)!)));
         } catch (_) {
@@ -445,7 +457,7 @@ class CalculatorNotifier extends Notifier<CalculatorState> {
         }
       });
 
-      e = e.replaceAllMapped(RegExp(r'(sinh|cosh|tanh)\(([^()]+)\)'), (m) {
+      e = e.replaceAllMapped(RegExp(r'(sinh|cosh|tanh)\(' + _arg + r'\)'), (m) {
         try {
           final fn = m.group(1)!;
           final x = _ev(m.group(2)!);
@@ -460,7 +472,7 @@ class CalculatorNotifier extends Notifier<CalculatorState> {
         }
       });
 
-      e = e.replaceAllMapped(RegExp(r'(a?sin|a?cos|a?tan)\(([^()]+)\)'), (m) {
+      e = e.replaceAllMapped(RegExp(r'(a?sin|a?cos|a?tan)\(' + _arg + r'\)'), (m) {
         try {
           return _w(_trig(m.group(1)!, _ev(m.group(2)!), state.angleMode));
         } catch (_) {
@@ -468,19 +480,54 @@ class CalculatorNotifier extends Notifier<CalculatorState> {
         }
       });
 
+      e = e.replaceAllMapped(RegExp(r'(?<![a-z])sqrt\(' + _arg + r'\)'), (m) {
+        try {
+          return _w(math.sqrt(_ev(m.group(1)!)));
+        } catch (_) {
+          return m.group(0)!;
+        }
+      });
+
       if (e == prev) break;
+    }
+    // Unresolved trig would fall back to math_expressions' radian-only
+    // functions and silently give a wrong answer in DEG/GRAD mode.
+    if (state.angleMode != AngleMode.rad &&
+        RegExp(r'(sin|cos|tan)\(').hasMatch(e)) {
+      throw const FormatException('Unresolved trig');
     }
     return e;
   }
 
+  // Function argument: plain text, optionally containing one level of
+  // non-function parentheses, e.g. `2*(3+4)` or `(-0.5)`.
+  static const _arg = r'((?:[^()]|(?<![a-zA-Z√])\([^()]*\))+)';
+
   static double _ev(String s) {
+    s = s.replaceAllMapped(RegExp(r'(\d|\))\('), (m) => '${m.group(1)}*(');
     final raw = mx.GrammarParser()
         .parse(s)
         .evaluate(mx.EvaluationType.REAL, mx.ContextModel());
     return (raw as num).toDouble();
   }
 
-  static String _w(double v) => v < 0 ? '($v)' : '$v';
+  // Number literal the parser accepts: Dart's `1e-7` exponent form is
+  // rewritten, since a bare `e` is not a valid exponent marker here.
+  static String _num(double v) {
+    final s = v.toString();
+    final m = RegExp(r'^(-?[\d.]+)e([+-])(\d+)$').firstMatch(s);
+    if (m == null) return s;
+    return m.group(2) == '-'
+        ? '${m.group(1)}/10^${m.group(3)}'
+        : '${m.group(1)}*10^${m.group(3)}';
+  }
+
+  static String _w(double v) {
+    if (v.isNaN) return '(0/0)';
+    if (v.isInfinite) return v > 0 ? '(1/0)' : '(-1/0)';
+    final s = _num(v);
+    return (v < 0 || s.contains('^')) ? '($s)' : s;
+  }
 
   static double _trig(String fn, double x, AngleMode m) {
     final k = m == AngleMode.deg
@@ -488,10 +535,12 @@ class CalculatorNotifier extends Notifier<CalculatorState> {
         : m == AngleMode.grad
         ? math.pi / 200
         : 1.0;
+    // Snap float noise so e.g. sin(180°) / cos(90°) give exactly 0
+    double z(double r) => r.abs() < 1e-15 ? 0.0 : r;
     return switch (fn) {
-      'sin' => math.sin(x * k),
-      'cos' => math.cos(x * k),
-      'tan' => math.tan(x * k),
+      'sin' => z(math.sin(x * k)),
+      'cos' => z(math.cos(x * k)),
+      'tan' => z(math.tan(x * k)),
       'asin' => math.asin(x) / k,
       'acos' => math.acos(x) / k,
       'atan' => math.atan(x) / k,

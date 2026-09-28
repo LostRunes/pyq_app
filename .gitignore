@@ -72,3 +72,6 @@ service_account.json
 client_secret*.json
 android/key.properties
 android/app/*.jks
+
+# Analytics dashboard runtime config (contains API keys)
+analytics_dashboard/env.js
