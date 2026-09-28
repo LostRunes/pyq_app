@@ -75,3 +75,6 @@ android/app/*.jks
 
 # Analytics dashboard runtime config (contains API keys)
 analytics_dashboard/env.js
+
+# Supabase CLI local cache
+supabase/.temp/
