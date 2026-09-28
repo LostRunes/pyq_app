@@ -20,6 +20,7 @@ const elDbSplit = document.getElementById('stat-db-split');
 const elSearchInput = document.getElementById('search-input');
 const elFilterType = document.getElementById('filter-event-type');
 const elFilterSource = document.getElementById('filter-source');
+const elFilterPlatform = document.getElementById('filter-platform');
 const elBtnRefresh = document.getElementById('btn-refresh');
 const elBtnExport = document.getElementById('btn-export');
 const elBtnPrev = document.getElementById('btn-prev');
@@ -43,12 +44,27 @@ document.addEventListener('DOMContentLoaded', async () => {
   fetchData();
 });
 
-// Load variables from .env file
+// Load variables from env.js or .env file
 async function loadEnv() {
+  // First check if window.ENV exists (loaded via env.js script)
+  if (typeof window.ENV !== 'undefined' && window.ENV) {
+    SUPABASE_URL = window.ENV.SUPABASE_2_URL || window.ENV.SUPABASE_URL || '';
+    SUPABASE_ANON_KEY = window.ENV.SUPABASE_2_KEY || window.ENV.SUPABASE_KEY || '';
+    if (SUPABASE_URL && SUPABASE_ANON_KEY) {
+      return;
+    }
+  }
+
   try {
-    const response = await fetch('../.env');
-    if (!response.ok) {
-      throw new Error(`Failed to fetch .env file: ${response.statusText}`);
+    let response;
+    try {
+      response = await fetch('./.env');
+      if (!response.ok) throw new Error();
+    } catch (e) {
+      response = await fetch('../.env');
+    }
+    if (!response || !response.ok) {
+      throw new Error(`Failed to fetch .env file: ${response ? response.statusText : '404 Not Found'}`);
     }
     const text = await response.text();
     const env = {};
@@ -73,7 +89,9 @@ async function loadEnv() {
     SUPABASE_ANON_KEY = env.SUPABASE_2_KEY || env.SUPABASE_KEY || '';
   } catch (error) {
     console.error('Error loading .env file:', error);
-    updateStatus('disconnected', '<i class="fa-solid fa-circle-xmark"></i> Env Load Error');
+    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+      updateStatus('disconnected', '<i class="fa-solid fa-circle-xmark"></i> Env Load Error');
+    }
   }
 }
 
@@ -113,6 +131,11 @@ function setupEventListeners() {
   });
   
   elFilterSource.addEventListener('change', () => {
+    currentPage = 1;
+    filterAndRender();
+  });
+
+  elFilterPlatform.addEventListener('change', () => {
     currentPage = 1;
     filterAndRender();
   });
@@ -229,6 +252,7 @@ function filterAndRender() {
   const searchQuery = elSearchInput.value.toLowerCase().trim();
   const selectedType = elFilterType.value;
   const selectedSource = elFilterSource.value;
+  const selectedPlatform = elFilterPlatform.value;
 
   filteredEvents = allEvents.filter(event => {
     // 1. Search Query mapping
@@ -246,7 +270,10 @@ function filterAndRender() {
     // 3. Source Filter
     const matchSource = selectedSource === 'all' || event.source === selectedSource;
 
-    return matchSearch && matchType && matchSource;
+    // 4. Platform Filter
+    const matchPlatform = selectedPlatform === 'all' || (event.platform || 'app') === selectedPlatform;
+
+    return matchSearch && matchType && matchSource && matchPlatform;
   });
 
   updateStats();
@@ -261,10 +288,19 @@ function updateStats() {
 
   // 2. Active users
   const uniqueUsers = new Set();
+  const uniqueDesktopUsers = new Set();
+  const uniqueAppUsers = new Set();
   filteredEvents.forEach(e => {
-    if (e.user_id) uniqueUsers.add(e.user_id);
+    if (e.user_id) {
+      uniqueUsers.add(e.user_id);
+      if (e.platform === 'desktop') {
+        uniqueDesktopUsers.add(e.user_id);
+      } else {
+        uniqueAppUsers.add(e.user_id);
+      }
+    }
   });
-  elActiveUsers.innerText = uniqueUsers.size.toLocaleString();
+  elActiveUsers.innerHTML = `${uniqueUsers.size.toLocaleString()} <span style="font-size: 11px; font-weight: 500; opacity: 0.8; display: block; margin-top: 4px;">(${uniqueDesktopUsers.size} Desktop / ${uniqueAppUsers.size} Mobile)</span>`;
 
   // 3. Most used feature
   const featureCounts = {};
@@ -467,6 +503,10 @@ function renderTable() {
     const sourceClass = `badge-source-${e.source}`;
     const cleanSource = e.source === 'supabase' ? 'Supabase' : 'Neon DB';
 
+    const platformClass = `badge-platform-${e.platform || 'app'}`;
+    const cleanPlatform = e.platform === 'desktop' ? 'Desktop' : 'Mobile';
+    const platformIcon = e.platform === 'desktop' ? '<i class="fa-solid fa-desktop"></i>' : '<i class="fa-solid fa-mobile-screen-button"></i>';
+
     // 4. Row rendering
     html += `
       <tr>
@@ -483,7 +523,12 @@ function renderTable() {
         <td><span class="badge ${typeClass}">${cleanType}</span></td>
         <td style="font-family: monospace; font-weight: 600; color: #E91E63;">${e.event_name || '-'}</td>
         <td style="color: var(--text-muted); font-family: monospace;">${e.screen_name || '-'}</td>
-        <td><span class="badge ${sourceClass}">${cleanSource}</span></td>
+        <td>
+          <div style="display: flex; flex-direction: column; gap: 4px; align-items: flex-start;">
+            <span class="badge ${platformClass}">${platformIcon} ${cleanPlatform}</span>
+            <span class="badge ${sourceClass}">${cleanSource}</span>
+          </div>
+        </td>
         <td>
           <button class="btn-action" onclick="showMetadataModal('${escapeHtml(JSON.stringify(e.metadata || {}))}')">
             <i class="fa-solid fa-code"></i> View JSON
@@ -546,7 +591,7 @@ window.showMetadataModal = function(metadataJsonStr) {
 function exportToCSV() {
   if (filteredEvents.length === 0) return;
   
-  const headers = ['id', 'user_id', 'username', 'display_name', 'email', 'event_type', 'event_name', 'screen_name', 'source', 'created_at', 'metadata'];
+  const headers = ['id', 'user_id', 'username', 'display_name', 'email', 'event_type', 'event_name', 'screen_name', 'platform', 'source', 'created_at', 'metadata'];
   
   const csvRows = [
     headers.join(','),
