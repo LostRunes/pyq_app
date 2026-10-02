@@ -1,9 +1,12 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:focus_fox/features/skulk/utils/markdown_utils.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../data/models/doubt.dart';
 import '../../data/models/solution.dart';
 import '../providers/skulk_providers.dart';
 import '../widgets/comment_section.dart';
@@ -33,6 +36,24 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
   void initState() {
     super.initState();
     _retrieveLostData();
+  }
+
+  Future<void> _copyQuestion(Doubt doubt) async {
+    final textToCopy =
+        'Title: ${stripMarkdown(doubt.title)}\n'
+        'Question: ${stripMarkdown(doubt.body)}';
+
+    await Clipboard.setData(ClipboardData(text: textToCopy));
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Copied to clipboard'),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(milliseconds: 800),
+      ),
+    );
   }
 
   Future<void> _retrieveLostData() async {
@@ -186,21 +207,18 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
         );
         if (image == null) return;
 
-        final compressed = await ImageUtils.compressImage(
-          File(image.path),
-        );
+        final compressed = await ImageUtils.compressImage(File(image.path));
         if (compressed == null) return;
 
         if (!mounted) return;
         setState(() {
-          selectedSolutionImages = List.from(
-            selectedSolutionImages,
-          )..add(compressed);
+          selectedSolutionImages = List.from(selectedSolutionImages)
+            ..add(compressed);
         });
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to capture photo: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to capture photo: $e')));
       }
     } else if (action == 'gallery') {
       pickSolutionImages();
@@ -208,9 +226,8 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
       final File? drawnFile = await WhiteboardScreen.show(context);
       if (drawnFile != null && mounted) {
         setState(() {
-          selectedSolutionImages = List.from(
-            selectedSolutionImages,
-          )..add(drawnFile);
+          selectedSolutionImages = List.from(selectedSolutionImages)
+            ..add(drawnFile);
         });
       }
     }
@@ -877,6 +894,26 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
                                   ),
                                 ),
                                 const Spacer(),
+                                // Copy Button
+                                InkWell(
+                                  onTap: () => _copyQuestion(doubt),
+                                  borderRadius: BorderRadius.circular(10),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(9),
+                                    decoration: BoxDecoration(
+                                      color: isDark
+                                          ? const Color(0xFF262626)
+                                          : Colors.grey[100],
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: const Icon(
+                                      Icons.copy_outlined,
+                                      size: 16,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
                                 // Share Button
                                 InkWell(
                                   onTap: () {

@@ -72,3 +72,5 @@ service_account.json
 client_secret*.json
 android/key.properties
 android/app/*.jks
+# Widget Preview related
+.widget_preview/
