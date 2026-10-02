@@ -35,6 +35,35 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
     _retrieveLostData();
   }
 
+  bool _refreshScheduled = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // The detail/solutions/comments providers are keep-alive families, so a
+    // re-opened thread would otherwise show the data cached on first open
+    // (new answers/comments from others never appear). Refresh once if cached.
+    if (_refreshScheduled) return;
+    _refreshScheduled = true;
+    final args = ModalRoute.of(context)?.settings.arguments;
+    final String? id = args is Map<String, dynamic>
+        ? args['doubtId'] as String?
+        : args as String?;
+    if (id == null) return;
+    final hadDetail = ref.exists(doubtDetailProvider(id));
+    final hadSolutions = ref.exists(solutionsNotifierProvider(id));
+    final hadComments = ref.exists(commentsNotifierProvider(id));
+    if (!hadDetail && !hadSolutions && !hadComments) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (hadDetail) ref.invalidate(doubtDetailProvider(id));
+      if (hadSolutions) {
+        ref.read(solutionsNotifierProvider(id).notifier).refresh();
+      }
+      if (hadComments) ref.invalidate(commentsNotifierProvider(id));
+    });
+  }
+
   Future<void> _retrieveLostData() async {
     try {
       final response = await _picker.retrieveLostData();
@@ -198,6 +227,7 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
           )..add(compressed);
         });
       } catch (e) {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to capture photo: $e')),
         );
@@ -242,6 +272,7 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
           .read(solutionsNotifierProvider(doubtId).notifier)
           .addSolution(body, imageUrls: uploadedUrls);
 
+      if (!mounted) return;
       _solutionController.clear();
       setState(() {
         selectedSolutionImages.clear();

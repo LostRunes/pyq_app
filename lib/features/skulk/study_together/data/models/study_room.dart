@@ -48,7 +48,8 @@ class StudyRoom {
       createdBy: json['created_by'] as String?,
       subjectId: json['subject_id'] as String?,
       maxParticipants: json['max_participants'] as int? ?? 20,
-      participantCount: json['participant_count'] as int? ?? 0,
+      // Clamped: a -1 racing the server-side reconcile can briefly dip below 0.
+      participantCount: ((json['participant_count'] as num?)?.toInt() ?? 0).clamp(0, 1 << 30),
       isActive: json['is_active'] as bool? ?? true,
       endedAt: json['ended_at'] != null ? DateTime.parse(json['ended_at'] as String) : null,
       pinnedMessageId: json['pinned_message_id'] as String?,

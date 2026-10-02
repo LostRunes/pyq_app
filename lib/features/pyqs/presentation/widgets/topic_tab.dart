@@ -114,7 +114,10 @@ class _TopicTabState extends ConsumerState<TopicTab> {
         onPressed: isLoading
             ? null
             : () async {
-                ref.read(pdfLoadingProvider.notifier).setLoading(true);
+                // Capture the notifier so `finally` can reset loading even if
+                // this tab is disposed mid-generation (e.g. swiped away).
+                final pdfLoading = ref.read(pdfLoadingProvider.notifier);
+                pdfLoading.setLoading(true);
                 try {
                   final data = await ref.read(
                     subjectPdfDataProvider(subjectId).future,
@@ -135,7 +138,7 @@ class _TopicTabState extends ConsumerState<TopicTab> {
                     );
                   }
                 } finally {
-                  ref.read(pdfLoadingProvider.notifier).setLoading(false);
+                  pdfLoading.setLoading(false);
                 }
               },
         icon: const Icon(Icons.picture_as_pdf_rounded, color: Colors.white),

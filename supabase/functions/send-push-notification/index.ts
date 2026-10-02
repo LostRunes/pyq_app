@@ -14,10 +14,15 @@ serve(async (req) => {
 
   try {
     // 1. Get Webhook Payload
-    const payload = await req.json();
-    const record = payload.record; // The newly inserted row
+    let payload: any;
+    try {
+      payload = await req.json();
+    } catch (_) {
+      payload = null;
+    }
+    const payloadRecord = payload?.record; // The newly inserted row
 
-    if (!record || !record.user_id) {
+    if (!payloadRecord || !payloadRecord.id) {
       return new Response(JSON.stringify({ error: 'Invalid payload record.' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -28,6 +33,23 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Never trust the request body: anyone holding the anon key can call this
+    // function. Re-load the notification row so only notifications that
+    // actually exist in the DB (as the webhook reports) can be pushed, and
+    // with their stored recipient/message.
+    const { data: record, error: recordError } = await supabase
+      .from('notifications')
+      .select('id, user_id, message, post_id, type, answer_id')
+      .eq('id', payloadRecord.id)
+      .maybeSingle();
+
+    if (recordError || !record || !record.user_id) {
+      return new Response(JSON.stringify({ error: 'Notification not found.' }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     // 3. Fetch device tokens for the recipient user
     const { data: tokenRows, error: tokenError } = await supabase
@@ -159,15 +181,18 @@ serve(async (req) => {
     });
 
     await Promise.all(sendPromises);
+    // Keep per-token FCM details in logs only; this endpoint is callable by
+    // anyone with the anon key.
+    console.log('FCM send results:', JSON.stringify(results));
 
-    return new Response(JSON.stringify({ success: true, count: tokenRows.length, results }), {
+    return new Response(JSON.stringify({ success: true, count: tokenRows.length }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
   } catch (error) {
     console.error('Push notification execution error:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: 'Push notification failed' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

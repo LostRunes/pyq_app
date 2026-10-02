@@ -50,7 +50,8 @@ class _AlgoCodeScreenState extends ConsumerState<AlgoCodeScreen> {
           .eq('parent_topic', topic)
           .order('priority_order', ascending: true);
 
-      if (mounted) {
+      // Ignore stale responses if the user switched topics meanwhile
+      if (mounted && _selectedTopic == topic) {
         final parsed = (response as List)
             .map((e) => Map<String, dynamic>.from(e as Map))
             .toList();
@@ -62,7 +63,7 @@ class _AlgoCodeScreenState extends ConsumerState<AlgoCodeScreen> {
       }
     } catch (e, st) {
       debugPrint('Error fetching questions: $e\n$st');
-      if (mounted) {
+      if (mounted && _selectedTopic == topic) {
         setState(() {
           _fetchError = e.toString();
           _isLoadingQuestions = false;

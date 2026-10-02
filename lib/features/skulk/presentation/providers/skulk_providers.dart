@@ -88,6 +88,7 @@ class SkulkFeedNotifier extends AsyncNotifier<List<Doubt>> {
   int _offset = 0;
   bool _hasMore = true;
   bool _loadingMore = false;
+  int _generation = 0; // bumped on every reset so stale loadMore results are dropped
 
   bool get hasMore => _hasMore;
   bool get isLoadingMore => _loadingMore;
@@ -120,6 +121,7 @@ class SkulkFeedNotifier extends AsyncNotifier<List<Doubt>> {
     }
 
     // Reset pagination on filter change
+    _generation++;
     _offset = 0;
     _hasMore = true;
     _loadingMore = false;
@@ -128,6 +130,7 @@ class SkulkFeedNotifier extends AsyncNotifier<List<Doubt>> {
   }
 
   Future<List<Doubt>> _fetchPage({bool reset = false}) async {
+    final generation = _generation;
     final repo = ref.read(skulkRepositoryProvider);
     final filter = ref.read(skulkFeedFilterProvider);
     final search = ref.read(skulkFeedSearchProvider);
@@ -158,7 +161,9 @@ class SkulkFeedNotifier extends AsyncNotifier<List<Doubt>> {
         limit: _pageSize,
         offset: _offset,
       );
-      if (page.length < _pageSize) _hasMore = false;
+      if (page.length < _pageSize && generation == _generation) {
+        _hasMore = false;
+      }
       return page;
     } catch (e) {
       rethrow;
@@ -167,23 +172,32 @@ class SkulkFeedNotifier extends AsyncNotifier<List<Doubt>> {
 
   /// Load next page and append
   Future<void> loadMore() async {
-    if (!_hasMore || _loadingMore) return;
+    // Don't page while the first page is (re)loading — otherwise page 2 can
+    // land on an empty list or be overwritten, dropping/duplicating items.
+    if (!_hasMore || _loadingMore || state.isLoading || !state.hasValue) {
+      return;
+    }
     final current = state.value ?? [];
+    final generation = _generation;
     _loadingMore = true;
     _offset += _pageSize;
 
     try {
       final next = await _fetchPage();
+      // Filters changed / refreshed while this page was in flight — discard it.
+      if (generation != _generation) return;
       state = AsyncData([...current, ...next]);
     } catch (e, st) {
+      if (generation != _generation) return;
       _offset -= _pageSize; // revert
       state = AsyncError(e, st);
     } finally {
-      _loadingMore = false;
+      if (generation == _generation) _loadingMore = false;
     }
   }
 
   Future<void> refresh() async {
+    _generation++;
     _offset = 0;
     _hasMore = true;
     _loadingMore = false;
@@ -238,8 +252,15 @@ final skulkFeedProvider =
 
 /// Active Upvotes Tracker Provider (Maps postId/answerId -> boolean upvoted)
 class UserVotesNotifier extends AsyncNotifier<Map<String, bool>> {
+  // Ids with a toggle RPC in flight — ignore re-taps until it settles so
+  // out-of-order responses / reverts can't desync the vote map and counts.
+  final Set<String> _inFlight = {};
+
   @override
   Future<Map<String, bool>> build() async {
+    // Rebuild when the signed-in user changes (and wait for session restore),
+    // otherwise the previous account's votes (or an empty map) stick around.
+    await ref.watch(authUserProvider.selectAsync((u) => u?.id));
     final repo = ref.watch(skulkRepositoryProvider);
     final rawVotes = await repo.getUserVotes();
     final Map<String, bool> voteMap = {};
@@ -258,7 +279,8 @@ class UserVotesNotifier extends AsyncNotifier<Map<String, bool>> {
   /// Bails out early if votes haven't loaded yet to avoid incorrect toggling.
   Future<void> toggleDoubtVote(String doubtId) async {
     // Guard: don't toggle if vote map isn't loaded yet (prevents wrong-direction toggle)
-    if (!state.hasValue) return;
+    if (!state.hasValue || _inFlight.contains(doubtId)) return;
+    _inFlight.add(doubtId);
     final repo = ref.read(skulkRepositoryProvider);
     final previousState = state.value!;
     final isUpvoted = previousState[doubtId] ?? false;
@@ -355,13 +377,16 @@ class UserVotesNotifier extends AsyncNotifier<Map<String, bool>> {
           );
         }
       }
+    } finally {
+      _inFlight.remove(doubtId);
     }
   }
 
   /// Optimistically toggles an upvote state for a solution
   Future<void> toggleSolutionVote(String solutionId, String doubtId) async {
     // Guard: don't toggle if vote map isn't loaded yet (prevents wrong-direction toggle)
-    if (!state.hasValue) return;
+    if (!state.hasValue || _inFlight.contains(solutionId)) return;
+    _inFlight.add(solutionId);
     final repo = ref.read(skulkRepositoryProvider);
     final previousState = state.value!;
     final isUpvoted = previousState[solutionId] ?? false;
@@ -412,6 +437,8 @@ class UserVotesNotifier extends AsyncNotifier<Map<String, bool>> {
         }
         return s;
       }).toList();
+    } finally {
+      _inFlight.remove(solutionId);
     }
   }
 }
