@@ -179,6 +179,62 @@ class _AlgoCodeScreenState extends ConsumerState<AlgoCodeScreen> {
             ),
           ),
         ),
+          Padding(
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+          child: InkWell(
+            onTap: () => Navigator.pushNamed(context, '/algo_visualizer'),
+            borderRadius: BorderRadius.circular(20),
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? const Color(0xFF1E1B4B).withOpacity(0.4)
+                    : Colors.indigo.withOpacity(0.06),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: const Color(0xFF6366F1).withOpacity(0.35),
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.play_circle_fill_rounded,
+                    color: Color(0xFF818CF8),
+                    size: 32,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Visualizer',
+                          style: GoogleFonts.outfit(
+                            fontWeight: FontWeight.w800,
+                            color: isDark ? Colors.white : Colors.black87,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'See sorting, searching & graph algorithms in action',
+                          style: GoogleFonts.outfit(
+                            fontSize: 11,
+                            color: isDark ? Colors.white70 : Colors.black54,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    color: Color(0xFF818CF8),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        
+        ),
         const SizedBox(height: 24),
         Expanded(
           child: GridView.builder(

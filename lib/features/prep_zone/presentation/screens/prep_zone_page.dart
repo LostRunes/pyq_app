@@ -33,6 +33,15 @@ class PrepZonePage extends ConsumerWidget {
         'lottie': 'json/coding.json',
       },
       {
+        'title': 'Algo Visualizer',
+        'desc': 'Watch algorithms run step by step',
+        'icon': Icons.play_circle_rounded,
+        'route': '/algo_visualizer',
+        'color': const Color(0xFF6366F1), // Indigo
+        'isComingSoon': false,
+        'lottie': 'json/coding.json',      // reuses existing asset
+      },
+      {
         'title': 'KIIT Syllabus',
         'desc': 'Explore subjects & credits',
         'icon': Icons.collections_bookmark_rounded,
