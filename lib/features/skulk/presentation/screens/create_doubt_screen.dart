@@ -1,5 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'dart:typed_data';
+import 'package:path_provider/path_provider.dart';
+import 'package:pasteboard/pasteboard.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
@@ -158,8 +161,9 @@ class _CreateDoubtScreenState extends ConsumerState<CreateDoubtScreen> {
               final batch = student['batch']?.toString() ?? '';
               final section = student['section']?.toString() ?? '';
 
-              final fetchedBranchId = await subjectsRepo
-                  .getBranchIdFromSection(section);
+              final fetchedBranchId = await subjectsRepo.getBranchIdFromSection(
+                section,
+              );
               final fetchedSemester = _getSemesterFromBatch(batch);
               if (mounted) {
                 setState(() {
@@ -246,6 +250,119 @@ class _CreateDoubtScreenState extends ConsumerState<CreateDoubtScreen> {
         ).showSnackBar(SnackBar(content: Text('Failed to pick images: $e')));
       }
     }
+  }
+
+  Future<void> _pasteImage() async {
+    try {
+      final Uint8List? imageBytes = await Pasteboard.image;
+
+      if (imageBytes == null) {
+        return;
+      }
+
+      final directory = await getTemporaryDirectory();
+
+      final file = File(
+        '${directory.path}/pasted_image_${DateTime.now().millisecondsSinceEpoch}.png',
+      );
+
+      await file.writeAsBytes(imageBytes);
+
+      final compressed = await ImageUtils.compressImage(file);
+
+      if (compressed == null || !mounted) return;
+
+      setState(() {
+        selectedImages = List.from(selectedImages)..add(compressed);
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to paste image: $e')));
+    }
+  }
+
+  Future<void> _handleInsertedContent(KeyboardInsertedContent content) async {
+    if (!content.mimeType.startsWith('image/')) {
+      return;
+    }
+
+    final bytes = content.data;
+
+    if (bytes == null || bytes.isEmpty) {
+      return;
+    }
+
+    try {
+      final directory = await getTemporaryDirectory();
+
+      final file = File(
+        '${directory.path}/pasted_image_${DateTime.now().millisecondsSinceEpoch}.png',
+      );
+
+      await file.writeAsBytes(bytes);
+
+      final compressed = await ImageUtils.compressImage(file);
+
+      if (compressed == null || !mounted) return;
+
+      setState(() {
+        selectedImages = List.from(selectedImages)..add(compressed);
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to paste image: $e')));
+    }
+  }
+
+  Future<void> _handlePaste(EditableTextState editableTextState) async {
+    final imageBytes = await Pasteboard.image;
+
+    if (imageBytes != null) {
+      await _pasteImage();
+      return;
+    }
+
+    await editableTextState.pasteText(SelectionChangedCause.toolbar);
+  }
+
+  Widget _buildContextMenu(
+    BuildContext context,
+    EditableTextState editableTextState,
+  ) {
+    final buttonItems = editableTextState.contextMenuButtonItems;
+
+    final pasteIndex = buttonItems.indexWhere(
+      (item) => item.type == ContextMenuButtonType.paste,
+    );
+
+    if (pasteIndex != -1) {
+      buttonItems[pasteIndex] = buttonItems[pasteIndex].copyWith(
+        onPressed: () async {
+          await _handlePaste(editableTextState);
+        },
+      );
+    } else {
+      buttonItems.insert(
+        0,
+        ContextMenuButtonItem(
+          type: ContextMenuButtonType.paste,
+          onPressed: () async {
+            await _handlePaste(editableTextState);
+          },
+        ),
+      );
+    }
+
+    return AdaptiveTextSelectionToolbar.buttonItems(
+      anchors: editableTextState.contextMenuAnchors,
+      buttonItems: buttonItems,
+    );
   }
 
   void _showImageSourceBottomSheet() {
@@ -577,6 +694,12 @@ class _CreateDoubtScreenState extends ConsumerState<CreateDoubtScreen> {
                       maxLines: 1,
                       textInputAction: TextInputAction.next,
                       style: GoogleFonts.outfit(fontSize: 15),
+                      contextMenuBuilder: _buildContextMenu,
+                      contentInsertionConfiguration:
+                          ContentInsertionConfiguration(
+                            allowedMimeTypes: const ['image/*'],
+                            onContentInserted: _handleInsertedContent,
+                          ),
                       decoration: _fieldDecoration('What is your doubt about?'),
                       validator: (v) {
                         if (v == null || v.trim().isEmpty) {
@@ -602,6 +725,12 @@ class _CreateDoubtScreenState extends ConsumerState<CreateDoubtScreen> {
                       keyboardType: TextInputType.multiline,
                       textInputAction: TextInputAction.newline,
                       style: GoogleFonts.outfit(fontSize: 14, height: 1.5),
+                      contextMenuBuilder: _buildContextMenu,
+                      contentInsertionConfiguration:
+                          ContentInsertionConfiguration(
+                            allowedMimeTypes: const ['image/*'],
+                            onContentInserted: _handleInsertedContent,
+                          ),
                       decoration: _fieldDecoration(
                         'Explain your doubt in detail…',
                       ),
