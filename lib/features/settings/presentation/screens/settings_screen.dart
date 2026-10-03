@@ -275,6 +275,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const SizedBox(height: 8),
           branchesAsync.when(
             data: (branches) {
+              if (branches.isEmpty) return const SizedBox.shrink();
               final activeBranchId = _tempBranchId ?? branches.first.id;
               final selectedBranch = branches.firstWhere(
                 (b) => b.id == activeBranchId,
@@ -638,7 +639,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (confirmed == true && mounted) {
       // Capture navigator BEFORE await — context is not safe across async gaps
       final navigator = Navigator.of(context);
-      await signOutCompletely();
+      await signOutCompletely(ref: ref);
       // Navigate to login, clearing the entire stack so user can't press Back
       navigator.pushNamedAndRemoveUntil('/login', (route) => false);
     }

@@ -107,12 +107,41 @@ class PushNotificationService {
     });
 
     // Cold start: app was completely terminated and opened via notification tap.
+    // This runs before runApp(), so there is no navigator yet — stash the data
+    // and let MainNavigationScreen consume it once it is on screen (otherwise
+    // the splash screen's pushReplacement would also wipe the pushed route).
     RemoteMessage? initialMessage = await _fcm.getInitialMessage();
     if (initialMessage != null) {
-      _handleRemoteMessageTap(initialMessage);
+      _pendingLaunchData = initialMessage.data
+          .map((key, value) => MapEntry(key, value.toString()));
+    } else {
+      // Data-only pushes are shown as local notifications by the background
+      // handler, so a cold-start tap on those arrives here instead.
+      final launchDetails =
+          await _localNotifications.getNotificationAppLaunchDetails();
+      final response = launchDetails?.notificationResponse;
+      if (launchDetails?.didNotificationLaunchApp == true &&
+          response != null &&
+          response.notificationResponseType !=
+              NotificationResponseType.selectedNotificationAction) {
+        _pendingLaunchData = _parsePayload(response.payload);
+      }
     }
 
     _isInitialized = true;
+  }
+
+  /// Notification data from the tap that launched the app, if any.
+  static Map<String, String>? _pendingLaunchData;
+
+  /// Navigates to the notification that cold-started the app (if any).
+  /// Call once the main screen is visible so the navigator is ready.
+  static void consumePendingLaunchNotification() {
+    final data = _pendingLaunchData;
+    _pendingLaunchData = null;
+    if (data != null && data.isNotEmpty) {
+      _navigateBasedOnData(data);
+    }
   }
 
   /// Called by the top-level background handler in main.dart.
@@ -185,9 +214,13 @@ class PushNotificationService {
 
   /// Handle tap on a local notification
   static void _handleNotificationTap(String? payload) {
-    if (payload == null) return;
+    final data = _parsePayload(payload);
+    if (data != null) _navigateBasedOnData(data);
+  }
 
-    // Parse simulated Map toString: {post_id: x, type: y, ...}
+  /// Parse simulated Map toString: {post_id: x, type: y, ...}
+  static Map<String, String>? _parsePayload(String? payload) {
+    if (payload == null) return null;
     try {
       final Map<String, String> data = {};
       final clean = payload.replaceAll('{', '').replaceAll('}', '');
@@ -198,9 +231,10 @@ class PushNotificationService {
           data[kv[0].trim()] = kv[1].trim();
         }
       }
-      _navigateBasedOnData(data);
+      return data;
     } catch (e) {
       if (kDebugMode) print('Error parsing notification payload: $e');
+      return null;
     }
   }
 

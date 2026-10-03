@@ -152,7 +152,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         final repository = ref.read(authRepositoryProvider);
         final isUnique = await repository.checkUsernameUnique(cleanValue);
 
-        if (mounted) {
+        // Ignore stale results if the user kept typing while this was in flight.
+        if (mounted && _usernameController.text.trim() == cleanValue) {
           setState(() {
             _isCheckingUsername = false;
             _isUsernameUnique = isUnique;
@@ -162,7 +163,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           });
         }
       } catch (e) {
-        if (mounted) {
+        if (mounted && _usernameController.text.trim() == cleanValue) {
           setState(() {
             _isCheckingUsername = false;
             _isUsernameUnique = null;
@@ -299,7 +300,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     try {
       final repository = ref.read(authRepositoryProvider);
       await repository.signInWithGoogle();
+      // User dismissed the account picker: no session and no signedIn event
+      // will arrive, so clear the spinner here.
+      if (mounted && Supabase.instance.client.auth.currentSession == null) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _isLoading = false;
       });

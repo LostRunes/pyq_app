@@ -32,7 +32,10 @@ class TopicListScreen extends ConsumerWidget {
             onPressed: isLoading
                 ? null
                 : () async {
-                    ref.read(pdfLoadingProvider.notifier).setLoading(true);
+                    // Capture the notifier so `finally` can reset loading even
+                    // if this screen is disposed mid-generation.
+                    final pdfLoading = ref.read(pdfLoadingProvider.notifier);
+                    pdfLoading.setLoading(true);
 
                     try {
                       final data = await ref.read(
@@ -56,7 +59,7 @@ class TopicListScreen extends ConsumerWidget {
                         ).showSnackBar(SnackBar(content: Text('Error: $e')));
                       }
                     } finally {
-                      ref.read(pdfLoadingProvider.notifier).setLoading(false);
+                      pdfLoading.setLoading(false);
                     }
                   },
           ),

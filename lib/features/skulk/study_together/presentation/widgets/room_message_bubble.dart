@@ -47,7 +47,16 @@ class _RoomMessageBubbleState extends State<RoomMessageBubble> with SingleTicker
       vsync: this,
       duration: const Duration(milliseconds: 150),
     );
+    // Single listener for the snap-back animation (was re-added on every
+    // drag end, leaking listeners and fighting over _replyDragOffset).
+    _replyAnimController.addListener(() {
+      setState(() {
+        _replyDragOffset = ui.lerpDouble(_replyAnimStart, 0.0, _replyAnimController.value)!;
+      });
+    });
   }
+
+  double _replyAnimStart = 0.0;
 
   @override
   void dispose() {
@@ -192,13 +201,8 @@ class _RoomMessageBubbleState extends State<RoomMessageBubble> with SingleTicker
         if (_replyDragOffset.abs() >= 50.0) {
           widget.onReply();
         }
+        _replyAnimStart = _replyDragOffset;
         _replyAnimController.forward(from: 0.0);
-        final start = _replyDragOffset;
-        _replyAnimController.addListener(() {
-          setState(() {
-            _replyDragOffset = ui.lerpDouble(start, 0.0, _replyAnimController.value)!;
-          });
-        });
       },
       child: Container(
         clipBehavior: Clip.none,

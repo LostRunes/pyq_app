@@ -28,7 +28,9 @@ class SkulkDbService {
 
     // 1. Text Search Filter (title or body ilike)
     if (searchQuery != null && searchQuery.trim().isNotEmpty) {
-      final cleanSearch = '%${searchQuery.trim()}%';
+      // Strip PostgREST reserved chars so user input can't break/extend the or() filter
+      final cleanSearch =
+          '%${searchQuery.trim().replaceAll(RegExp(r'[,()"\\]'), ' ')}%';
       query = query.or('title.ilike.$cleanSearch,body.ilike.$cleanSearch');
     }
 
