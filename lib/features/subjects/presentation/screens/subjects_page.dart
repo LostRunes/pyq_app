@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:focus_fox/shared/widgets/custom_search_bar.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:focus_fox/services/analytics_service.dart';
 import 'package:focus_fox/features/auth/presentation/screens/main_navigation_screen.dart';
@@ -33,7 +34,10 @@ class SubjectsPage extends ConsumerWidget {
     final searchQuery = ref.watch(subjectsSearchProvider);
 
     final customOrder = ref.watch(
-      subjectOrderProvider((branchId: currentBranchId, semester: currentSemester)),
+      subjectOrderProvider((
+        branchId: currentBranchId,
+        semester: currentSemester,
+      )),
     );
 
     final beeEnabled = ref.watch(beeEnabledProvider);
@@ -59,11 +63,10 @@ class SubjectsPage extends ConsumerWidget {
         },
         child: subjectsAsync.when(
           data: (subjects) {
-            final filtered =
-                subjects.where((subject) {
-                  return FuzzySearch.matches(subject.name, searchQuery) ||
-                      FuzzySearch.matches(subject.code, searchQuery);
-                }).toList();
+            final filtered = subjects.where((subject) {
+              return FuzzySearch.matches(subject.name, searchQuery) ||
+                  FuzzySearch.matches(subject.code, searchQuery);
+            }).toList();
 
             if (customOrder.isNotEmpty) {
               filtered.sort((a, b) {
@@ -679,9 +682,7 @@ class _FlyingBeeOverlayState extends ConsumerState<FlyingBeeOverlay>
     AnalyticsService.logFeatureUsed(
       featureName: 'bee_killed',
       screenName: '/main_navigation',
-      metadata: {
-        'new_count': ref.read(beeTapCountProvider) + 1,
-      },
+      metadata: {'new_count': ref.read(beeTapCountProvider) + 1},
     );
 
     // Increment the quest counter
@@ -1099,7 +1100,9 @@ void _showAddSubjectDialog(
           'Add Subject',
           style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
         ),
-        content: SingleChildScrollView(
+        content: SizedBox(
+          width: 400,
+          height: 450,
           child: _AddSubjectDialogContent(
             initialBranchId: currentBranchId,
             initialSemester: currentSemester,
@@ -1129,12 +1132,132 @@ class _AddSubjectDialogContentState
   late String _selectedBranchId;
   late int _selectedSemester;
   String? _selectedSubjectId;
+  bool _isSearchMode = false;
+  String _searchQuery = '';
+  Timer? _searchDebounce;
+  late Future<Map<Subject, int>> _cachedSubjectsFuture;
+
+  Widget _buildSearchResults(List<Subject> currentSubjects) {
+    return FutureBuilder<Map<Subject, int>>(
+      future: _cachedSubjectsFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Padding(
+            padding: EdgeInsets.all(24),
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        final subjectsWithSemesters = snapshot.data ?? {};
+
+        final currentIds = currentSubjects.map((s) => s.id).toSet();
+
+        final results = subjectsWithSemesters.entries.where((entry) {
+          final subject = entry.key;
+
+          if (currentIds.contains(subject.id)) {
+            return false;
+          }
+
+          if (_searchQuery.trim().isEmpty) {
+            return false;
+          }
+
+          return FuzzySearch.matches(subject.name, _searchQuery);
+        }).toList();
+
+        if (results.isEmpty) {
+          return const Padding(
+            padding: EdgeInsets.all(24),
+            child: Center(child: Text('No matching subjects found 🔍')),
+          );
+        }
+
+        return SizedBox(
+          height: 300,
+          child: ListView.separated(
+            itemCount: results.length,
+            separatorBuilder: (_, __) => const Divider(),
+            itemBuilder: (context, index) {
+              final entry = results[index];
+              final subject = entry.key;
+              final semester = entry.value;
+
+              return ListTile(
+                title: Text(
+                  subject.name,
+                  style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+                ),
+                subtitle: Text(
+                  'Semester $semester',
+                  style: GoogleFonts.outfit(color: Colors.grey),
+                ),
+                onTap: () => _addSubject(subject.id),
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _addSubject(String subjectId) async {
+    try {
+      await ref
+          .read(subjectsRepositoryProvider)
+          .addSubjectToSemester(
+            branchId: widget.initialBranchId,
+            semester: widget.initialSemester,
+            subjectId: subjectId,
+          );
+
+      ref.invalidate(
+        subjectsProvider((
+          branchId: widget.initialBranchId,
+          semester: widget.initialSemester,
+        )),
+      );
+
+      if (context.mounted) {
+        Navigator.pop(context);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Successfully added subject')),
+        );
+      }
+    } on PostgrestException catch (e) {
+      if (context.mounted) {
+        final message = e.code == '23505'
+            ? 'This subject is already added to this branch and semester.'
+            : 'Failed to add subject: ${e.message}';
+
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(message)));
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to add subject: $e')));
+      }
+    }
+  }
 
   @override
   void initState() {
     super.initState();
     _selectedBranchId = widget.initialBranchId;
     _selectedSemester = widget.initialSemester;
+    _cachedSubjectsFuture = ref
+        .read(subjectsRepositoryProvider)
+        .getAllSubjectsWithSemesters(branchId: _selectedBranchId);
+  }
+
+  @override
+  void dispose() {
+    _searchDebounce?.cancel();
+    super.dispose();
   }
 
   @override
@@ -1186,166 +1309,217 @@ class _AddSubjectDialogContentState
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        DropdownButtonFormField<String>(
-          isExpanded: true,
-          value: _selectedBranchId,
-          decoration: InputDecoration(
-            labelText: 'Branch',
-            labelStyle: GoogleFonts.outfit(),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-          items: branches.map((b) {
-            return DropdownMenuItem(
-              value: b.id,
-              child: Text(
-                b.name,
-                style: GoogleFonts.outfit(fontSize: 14),
-                overflow: TextOverflow.ellipsis,
-              ),
-            );
-          }).toList(),
-          onChanged: (val) {
-            if (val != null) {
-              setState(() {
-                _selectedBranchId = val;
-                _selectedSubjectId = null;
-              });
-            }
+        SegmentedButton<bool>(
+          segments: const [
+            ButtonSegment(value: false, label: Text('Browse')),
+            ButtonSegment(value: true, label: Text('Search')),
+          ],
+          selected: {_isSearchMode},
+          onSelectionChanged: (selection) {
+            setState(() {
+              _isSearchMode = selection.first;
+              _searchQuery = '';
+            });
           },
         ),
         const SizedBox(height: 16),
-        DropdownButtonFormField<int>(
-          isExpanded: true,
-          value: _selectedSemester,
-          decoration: InputDecoration(
-            labelText: 'Semester',
-            labelStyle: GoogleFonts.outfit(),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-          items: List.generate(8, (index) => index + 1).map((sem) {
-            return DropdownMenuItem(
-              value: sem,
-              child: Text(
-                'Semester $sem',
-                style: GoogleFonts.outfit(fontSize: 14),
+        if (!_isSearchMode) ...[
+          DropdownButtonFormField<String>(
+            isExpanded: true,
+            value: _selectedBranchId,
+            decoration: InputDecoration(
+              labelText: 'Branch',
+              labelStyle: GoogleFonts.outfit(),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
               ),
-            );
-          }).toList(),
-          onChanged: (val) {
-            if (val != null) {
-              setState(() {
-                _selectedSemester = val;
-                _selectedSubjectId = null;
-              });
-            }
-          },
-        ),
-        const SizedBox(height: 16),
-        DropdownButtonFormField<String>(
-          isExpanded: true,
-          value: _selectedSubjectId,
-          decoration: InputDecoration(
-            labelText: 'Subject',
-            labelStyle: GoogleFonts.outfit(),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-            suffixIcon: isSourceLoading || isCurrentLoading
-                ? const Padding(
-                    padding: EdgeInsets.all(12),
-                    child: SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                  )
-                : null,
-          ),
-          hint: Text(
-            isSourceLoading || isCurrentLoading
-                ? 'Loading subjects...'
-                : 'Select Subject',
-            style: GoogleFonts.outfit(fontSize: 14),
-          ),
-          items: availableSubjects.map((s) {
-            return DropdownMenuItem(
-              value: s.id,
-              child: Text(
-                '${s.name} (${s.code})',
-                style: GoogleFonts.outfit(fontSize: 14),
-                overflow: TextOverflow.ellipsis,
-              ),
-            );
-          }).toList(),
-          onChanged: isSourceLoading || isCurrentLoading
-              ? null
-              : (val) {
-                  setState(() {
-                    _selectedSubjectId = val;
-                  });
-                },
-        ),
-        const SizedBox(height: 24),
-        ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFFFF9F0A),
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
             ),
-            padding: const EdgeInsets.symmetric(vertical: 14),
+            items: branches.map((branch) {
+              return DropdownMenuItem<String>(
+                value: branch.id,
+                child: Text(
+                  branch.name,
+                  style: GoogleFonts.outfit(fontSize: 14),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              );
+            }).toList(),
+            onChanged: (val) {
+              if (val != null) {
+                setState(() {
+                  _selectedBranchId = val;
+                  _selectedSemester = 1;
+                  _selectedSubjectId = null;
+                });
+              }
+            },
           ),
-          onPressed:
-              _selectedSubjectId == null || isSourceLoading || isCurrentLoading
-              ? null
-              : () async {
-                  try {
-                    // Add chosen subject to target/current screen branch & sem
-                    await ref
-                        .read(subjectsRepositoryProvider)
-                        .addSubjectToSemester(
+          const SizedBox(height: 16),
+
+          DropdownButtonFormField<int>(
+            isExpanded: true,
+            value: _selectedSemester,
+            decoration: InputDecoration(
+              labelText: 'Semester',
+              labelStyle: GoogleFonts.outfit(),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            items: List.generate(8, (index) => index + 1).map((sem) {
+              return DropdownMenuItem(
+                value: sem,
+                child: Text(
+                  'Semester $sem',
+                  style: GoogleFonts.outfit(fontSize: 14),
+                ),
+              );
+            }).toList(),
+            onChanged: (val) {
+              if (val != null) {
+                setState(() {
+                  _selectedSemester = val;
+                  _selectedSubjectId = null;
+                });
+              }
+            },
+          ),
+          const SizedBox(height: 16),
+          DropdownButtonFormField<String>(
+            isExpanded: true,
+            value: _selectedSubjectId,
+            decoration: InputDecoration(
+              labelText: 'Subject',
+              labelStyle: GoogleFonts.outfit(),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              suffixIcon: isSourceLoading || isCurrentLoading
+                  ? const Padding(
+                      padding: EdgeInsets.all(12),
+                      child: SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    )
+                  : null,
+            ),
+            hint: Text(
+              isSourceLoading || isCurrentLoading
+                  ? 'Loading subjects...'
+                  : 'Select Subject',
+              style: GoogleFonts.outfit(fontSize: 14),
+            ),
+            items: availableSubjects.map((s) {
+              return DropdownMenuItem(
+                value: s.id,
+                child: Text(
+                  '${s.name} (${s.code})',
+                  style: GoogleFonts.outfit(fontSize: 14),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              );
+            }).toList(),
+            onChanged: isSourceLoading || isCurrentLoading
+                ? null
+                : (val) {
+                    setState(() {
+                      _selectedSubjectId = val;
+                    });
+                  },
+          ),
+        ],
+        if (_isSearchMode) ...[
+          CustomSearchBar(
+            hintText: 'Search subjects...',
+            onChanged: (value) {
+              _searchDebounce?.cancel();
+
+              _searchDebounce = Timer(const Duration(milliseconds: 300), () {
+                if (mounted) {
+                  setState(() {
+                    _searchQuery = value;
+                  });
+                }
+              });
+            },
+          ),
+
+          const SizedBox(height: 12),
+
+          _buildSearchResults(currentSubjects),
+        ],
+
+        if (!_isSearchMode) ...[
+          const SizedBox(height: 24),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFFF9F0A),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              padding: const EdgeInsets.symmetric(vertical: 14),
+            ),
+            onPressed:
+                _selectedSubjectId == null ||
+                    isSourceLoading ||
+                    isCurrentLoading
+                ? null
+                : () async {
+                    try {
+                      // Add chosen subject to target/current screen branch & sem
+                      await ref
+                          .read(subjectsRepositoryProvider)
+                          .addSubjectToSemester(
+                            branchId: widget.initialBranchId,
+                            semester: widget.initialSemester,
+                            subjectId: _selectedSubjectId!,
+                          );
+
+                      // Force invalidate target page subjects Provider so it pulls the non-cached fresh list
+                      ref.invalidate(
+                        subjectsProvider((
                           branchId: widget.initialBranchId,
                           semester: widget.initialSemester,
-                          subjectId: _selectedSubjectId!,
+                        )),
+                      );
+
+                      if (context.mounted) {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Successfully added subject'),
+                          ),
                         );
-
-                    // Force invalidate target page subjects Provider so it pulls the non-cached fresh list
-                    ref.invalidate(subjectsProvider((
-                      branchId: widget.initialBranchId,
-                      semester: widget.initialSemester,
-                    )));
-
-                    if (context.mounted) {
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Successfully added subject'),
-                        ),
-                      );
+                      }
+                    } on PostgrestException catch (e) {
+                      if (context.mounted) {
+                        final message = e.code == '23505'
+                            ? 'This subject is already added to this branch and semester.'
+                            : 'Failed to add subject: ${e.message}';
+                        ScaffoldMessenger.of(
+                          context,
+                        ).showSnackBar(SnackBar(content: Text(message)));
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Failed to add subject: $e')),
+                        );
+                      }
                     }
-                  } on PostgrestException catch (e) {
-                    if (context.mounted) {
-                      final message = e.code == '23505'
-                          ? 'This subject is already added to this branch and semester.'
-                          : 'Failed to add subject: ${e.message}';
-                      ScaffoldMessenger.of(
-                        context,
-                      ).showSnackBar(SnackBar(content: Text(message)));
-                    }
-                  } catch (e) {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Failed to add subject: $e')),
-                      );
-                    }
-                  }
-                },
-          child: Text(
-            'Add Subject',
-            style: GoogleFonts.outfit(
-              fontWeight: FontWeight.bold,
-              fontSize: 15,
+                  },
+            child: Text(
+              'Add Subject',
+              style: GoogleFonts.outfit(
+                fontWeight: FontWeight.bold,
+                fontSize: 15,
+              ),
             ),
           ),
-        ),
+        ],
       ],
     );
   }

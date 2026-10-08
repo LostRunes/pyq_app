@@ -34,7 +34,9 @@ class SubjectsRepository {
   Future<List<Branch>> _refreshBranches() async {
     try {
       final raw = await _rest.getList('branches?select=id,name');
-      final fresh = raw.map((e) => Branch.fromJson(e as Map<String, dynamic>)).toList();
+      final fresh = raw
+          .map((e) => Branch.fromJson(e as Map<String, dynamic>))
+          .toList();
       // Write to cache (keyed by id for easy lookup)
       await _branchBox.clear();
       await _branchBox.putAll({for (var b in fresh) b.id: b});
@@ -58,7 +60,9 @@ class SubjectsRepository {
   Future<List<Year>> _refreshYears() async {
     try {
       final raw = await _rest.getList('years?select=id,name');
-      final fresh = raw.map((e) => Year.fromJson(e as Map<String, dynamic>)).toList();
+      final fresh = raw
+          .map((e) => Year.fromJson(e as Map<String, dynamic>))
+          .toList();
       await _yearBox.clear();
       await _yearBox.putAll({for (var y in fresh) y.id: y});
       return fresh;
@@ -88,10 +92,18 @@ class SubjectsRepository {
         .toList();
 
     if (cached.isNotEmpty) {
-      _refreshSubjects(branchId: branchId, semester: semester, cacheKey: cacheKey);
+      _refreshSubjects(
+        branchId: branchId,
+        semester: semester,
+        cacheKey: cacheKey,
+      );
       return _sortByPriority(cached);
     }
-    return _refreshSubjects(branchId: branchId, semester: semester, cacheKey: cacheKey);
+    return _refreshSubjects(
+      branchId: branchId,
+      semester: semester,
+      cacheKey: cacheKey,
+    );
   }
 
   Future<List<Subject>> _refreshSubjects({
@@ -101,11 +113,12 @@ class SubjectsRepository {
   }) async {
     try {
       // Resolve effective branch for first-year mapper (keeps existing logic)
-      final effectiveBranchId = await FirstYearBranchMapper.getEffectiveBranchId(
-        supabase: _supabase,
-        originalBranchId: branchId,
-        semester: semester,
-      );
+      final effectiveBranchId =
+          await FirstYearBranchMapper.getEffectiveBranchId(
+            supabase: _supabase,
+            originalBranchId: branchId,
+            semester: semester,
+          );
 
       final raw = await _rest.getList(
         'branch_subjects'
@@ -125,8 +138,10 @@ class SubjectsRepository {
       if (userId != null) {
         final customRes = await _supabase
             .from('user_subject_customizations')
-            .select('action, subjects(id, name, code, pyq_drive_link, '
-                'notes_drive_link, course_outcome_link, priority, subject_credit, subject_type, yt_links)')
+            .select(
+              'action, subjects(id, name, code, pyq_drive_link, '
+              'notes_drive_link, course_outcome_link, priority, subject_credit, subject_type, yt_links)',
+            )
             .eq('user_id', userId)
             .eq('branch_id', effectiveBranchId)
             .eq('semester', semester);
@@ -145,16 +160,23 @@ class SubjectsRepository {
       }
 
       // Persist to cache (key = cacheKey + subject.id for uniqueness)
-      for (final oldKey in _subjectBox.keys.where((k) => k.toString().startsWith(cacheKey)).toList()) {
+      for (final oldKey
+          in _subjectBox.keys
+              .where((k) => k.toString().startsWith(cacheKey))
+              .toList()) {
         await _subjectBox.delete(oldKey);
       }
-      await _subjectBox.putAll({for (var s in subjects) '${cacheKey}_${s.id}': s});
+      await _subjectBox.putAll({
+        for (var s in subjects) '${cacheKey}_${s.id}': s,
+      });
 
       return _sortByPriority(subjects);
     } catch (e) {
       log('Subjects background sync failed: $e');
       return _sortByPriority(
-        _subjectBox.values.where((s) => s.key.toString().startsWith(cacheKey)).toList(),
+        _subjectBox.values
+            .where((s) => s.key.toString().startsWith(cacheKey))
+            .toList(),
       );
     }
   }
@@ -181,10 +203,18 @@ class SubjectsRepository {
         .toList();
 
     if (cached.isNotEmpty) {
-      _refreshGlobalSubjects(branchId: branchId, semester: semester, cacheKey: cacheKey);
+      _refreshGlobalSubjects(
+        branchId: branchId,
+        semester: semester,
+        cacheKey: cacheKey,
+      );
       return _sortByPriority(cached);
     }
-    return _refreshGlobalSubjects(branchId: branchId, semester: semester, cacheKey: cacheKey);
+    return _refreshGlobalSubjects(
+      branchId: branchId,
+      semester: semester,
+      cacheKey: cacheKey,
+    );
   }
 
   Future<List<Subject>> _refreshGlobalSubjects({
@@ -193,11 +223,12 @@ class SubjectsRepository {
     required String cacheKey,
   }) async {
     try {
-      final effectiveBranchId = await FirstYearBranchMapper.getEffectiveBranchId(
-        supabase: _supabase,
-        originalBranchId: branchId,
-        semester: semester,
-      );
+      final effectiveBranchId =
+          await FirstYearBranchMapper.getEffectiveBranchId(
+            supabase: _supabase,
+            originalBranchId: branchId,
+            semester: semester,
+          );
 
       final raw = await _rest.getList(
         'branch_subjects'
@@ -212,16 +243,23 @@ class SubjectsRepository {
           .map((e) => Subject.fromJson(e['subjects'] as Map<String, dynamic>))
           .toList();
 
-      for (final oldKey in _subjectBox.keys.where((k) => k.toString().startsWith(cacheKey)).toList()) {
+      for (final oldKey
+          in _subjectBox.keys
+              .where((k) => k.toString().startsWith(cacheKey))
+              .toList()) {
         await _subjectBox.delete(oldKey);
       }
-      await _subjectBox.putAll({for (var s in subjects) '${cacheKey}_${s.id}': s});
+      await _subjectBox.putAll({
+        for (var s in subjects) '${cacheKey}_${s.id}': s,
+      });
 
       return _sortByPriority(subjects);
     } catch (e) {
       log('Global subjects background sync failed: $e');
       return _sortByPriority(
-        _subjectBox.values.where((s) => s.key.toString().startsWith(cacheKey)).toList(),
+        _subjectBox.values
+            .where((s) => s.key.toString().startsWith(cacheKey))
+            .toList(),
       );
     }
   }
@@ -241,14 +279,65 @@ class SubjectsRepository {
     return _refreshAllSubjects();
   }
 
+  Future<Map<Subject, int>> getCachedSubjectsWithSemesters({
+    required String branchId,
+  }) async {
+    final results = <Subject, int>{};
+
+    for (int semester = 1; semester <= 8; semester++) {
+      final cacheKey = 'global_${branchId}_$semester';
+
+      final subjects = _subjectBox.values
+          .where((s) => s.key.toString().startsWith(cacheKey))
+          .toList();
+
+      for (final subject in subjects) {
+        results[subject] = semester;
+      }
+    }
+
+    return results;
+  }
+
+  Future<Map<Subject, int>> getAllSubjectsWithSemesters({
+    required String branchId,
+  }) async {
+    final results = <Subject, int>{};
+
+    final semesterResults = await Future.wait(
+      List.generate(
+        8,
+        (index) => getGlobalSubjectsBySemester(
+          branchId: branchId,
+          semester: index + 1,
+        ),
+      ),
+    );
+
+    for (int i = 0; i < semesterResults.length; i++) {
+      final semester = i + 1;
+
+      for (final subject in semesterResults[i]) {
+        results[subject] = semester;
+      }
+    }
+
+    return results;
+  }
+
   Future<List<Subject>> _refreshAllSubjects() async {
     try {
       final raw = await _rest.getList(
         'subjects?select=id,name,code,pyq_drive_link,notes_drive_link,'
         'course_outcome_link,priority,subject_credit,subject_type,yt_links',
       );
-      final subjects = raw.map((e) => Subject.fromJson(e as Map<String, dynamic>)).toList();
-      for (final oldKey in _subjectBox.keys.where((k) => k.toString().startsWith('all')).toList()) {
+      final subjects = raw
+          .map((e) => Subject.fromJson(e as Map<String, dynamic>))
+          .toList();
+      for (final oldKey
+          in _subjectBox.keys
+              .where((k) => k.toString().startsWith('all'))
+              .toList()) {
         await _subjectBox.delete(oldKey);
       }
       await _subjectBox.putAll({for (var s in subjects) 'all_${s.id}': s});
@@ -256,7 +345,9 @@ class SubjectsRepository {
     } catch (e) {
       log('AllSubjects background sync failed: $e');
       return _sortByPriority(
-        _subjectBox.values.where((s) => s.key.toString().startsWith('all')).toList(),
+        _subjectBox.values
+            .where((s) => s.key.toString().startsWith('all'))
+            .toList(),
       );
     }
   }
