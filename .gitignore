@@ -72,5 +72,12 @@ service_account.json
 client_secret*.json
 android/key.properties
 android/app/*.jks
+
 # Widget Preview related
 .widget_preview/
+
+# Analytics dashboard runtime config (contains API keys)
+analytics_dashboard/env.js
+
+# Supabase CLI local cache
+supabase/.temp/

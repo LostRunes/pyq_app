@@ -175,6 +175,7 @@ class NotificationsScreen extends ConsumerWidget {
     final type = n['type']?.toString();
     final postId = n['post_id']?.toString();
     if (postId == null || postId.isEmpty) return;
+    if (!context.mounted) return;
 
     if (type == 'mention' || type == 'tag') {
       showDialog(

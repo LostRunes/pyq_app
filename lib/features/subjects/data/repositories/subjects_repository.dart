@@ -74,11 +74,19 @@ class SubjectsRepository {
 
   // ── SUBJECTS BY SEMESTER ──────────────────────────────────────────────────
 
+  /// Cache key for the per-user (customized) semester subject list. Includes
+  /// the user id so one account's add/remove customizations are never served
+  /// to another account on the same device.
+  String _semesterCacheKey(String branchId, int semester) {
+    final userId = Supabase.instance.client.auth.currentUser?.id ?? 'anon';
+    return '${userId}_${branchId}_$semester';
+  }
+
   Future<List<Subject>> getSubjectsBySemester({
     required String branchId,
     required int semester,
   }) async {
-    final cacheKey = '${branchId}_$semester';
+    final cacheKey = _semesterCacheKey(branchId, semester);
     final cached = _subjectBox.values
         .where((s) => s.key.toString().startsWith(cacheKey))
         .toList();
@@ -420,7 +428,7 @@ class SubjectsRepository {
 
     // Bust the Hive cache so the next provider refresh fetches fresh from the network
     // (using the original branchId, which is what getSubjectsBySemester uses as the key).
-    final cacheKey = '${branchId}_$semester';
+    final cacheKey = _semesterCacheKey(branchId, semester);
     final staleKeys = _subjectBox.keys
         .where((k) => k.toString().startsWith(cacheKey))
         .toList();
@@ -463,7 +471,7 @@ class SubjectsRepository {
 
     // Bust the Hive cache so the next provider refresh fetches fresh from the network
     // (using the original branchId, which is what getSubjectsBySemester uses as the key).
-    final cacheKey = '${branchId}_$semester';
+    final cacheKey = _semesterCacheKey(branchId, semester);
     final staleKeys = _subjectBox.keys
         .where((k) => k.toString().startsWith(cacheKey))
         .toList();

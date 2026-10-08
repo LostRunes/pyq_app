@@ -996,6 +996,9 @@ void _showDeleteConfirmationDialog(
               ),
             ),
             onPressed: () async {
+              // `context` here is the dialog's, which is unmounted right after
+              // pop, so capture the messenger first or feedback never shows.
+              final messenger = ScaffoldMessenger.of(context);
               Navigator.pop(context);
               try {
                 await ref
@@ -1005,22 +1008,19 @@ void _showDeleteConfirmationDialog(
                       semester: semester,
                       subjectId: subject.id,
                     );
-                ref.invalidate(
-                  subjectsProvider((branchId: branchId, semester: semester)),
+                ref.invalidate(subjectsProvider((
+                  branchId: branchId,
+                  semester: semester,
+                )));
+                messenger.showSnackBar(
+                  SnackBar(
+                    content: Text('Successfully removed ${subject.name}'),
+                  ),
                 );
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Successfully removed ${subject.name}'),
-                    ),
-                  );
-                }
               } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Failed to delete subject: $e')),
-                  );
-                }
+                messenger.showSnackBar(
+                  SnackBar(content: Text('Failed to delete subject: $e')),
+                );
               }
             },
             child: Text(

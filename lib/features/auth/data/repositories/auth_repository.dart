@@ -214,7 +214,9 @@ class AuthRepository {
       final currentYear = DateTime.now().year;
       final admissionYear = batchNum;
       final diff = currentYear - admissionYear;
-      batchNum = (diff + 1).clamp(1, 4);
+      // Don't clamp to 4 here: in Jan-Jun a 4th-year student has diff == 4,
+      // giving 5 -> (2 * 5 - 2) = semester 8. The final clamp(1, 8) bounds it.
+      batchNum = diff + 1;
       debugPrint(
         'Resolved calendar year batch "$batch" (admission year: $admissionYear) to year of study: $batchNum.',
       );

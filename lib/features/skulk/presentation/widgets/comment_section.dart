@@ -69,9 +69,11 @@ class _CommentSectionState extends ConsumerState<CommentSection> {
       await ref
           .read(commentsNotifierProvider(widget.doubtId).notifier)
           .addComment(body, answerId: widget.answerId);
+      if (!mounted) return;
       _commentController.clear();
       FocusScope.of(context).unfocus();
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Failed to publish comment: $e')));

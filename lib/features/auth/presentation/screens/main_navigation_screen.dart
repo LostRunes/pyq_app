@@ -78,6 +78,9 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
       if (mounted) {
         ref.read(selectedSemesterProvider.notifier).setSemester(widget.semester);
         ref.read(selectedBranchIdProvider.notifier).setBranchId(widget.branchId);
+        // Open the notification that cold-started the app, now that the
+        // navigator and the home route are in place.
+        PushNotificationService.consumePendingLaunchNotification();
       }
     });
 

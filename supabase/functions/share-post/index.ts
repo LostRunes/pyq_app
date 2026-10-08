@@ -6,6 +6,22 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Escape user-controlled content before interpolating into HTML / attributes.
+function escapeHtml(value: unknown): string {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+// Only allow http(s) URLs in src/content attributes (blocks javascript: etc.).
+function safeUrl(value: unknown, fallback = ""): string {
+  const v = String(value ?? "");
+  return /^https?:\/\//i.test(v) ? escapeHtml(v) : escapeHtml(fallback);
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -42,12 +58,17 @@ serve(async (req) => {
     return new Response('Post not found', { status: 404, headers: corsHeaders });
   }
 
-  const title = post.title || 'Focus Fox Post';
+  const title = escapeHtml(post.title || 'Focus Fox Post');
   // Truncate body for description
-  const description = post.body ? (post.body.length > 150 ? post.body.substring(0, 150) + '...' : post.body) : 'Join the discussion on Focus Fox!';
+  const description = escapeHtml(post.body ? (post.body.length > 150 ? post.body.substring(0, 150) + '...' : post.body) : 'Join the discussion on Focus Fox!');
   // Get first image if available
-  const imageUrl = (post.image_urls && post.image_urls.length > 0) ? post.image_urls[0] : 'https://raw.githubusercontent.com/lostrunes/assets/main/focus_fox_icon.png'; // fallback icon
-  const authorName = post.user_profiles?.username || 'Focus Fox User';
+  const fallbackImage = 'https://raw.githubusercontent.com/lostrunes/assets/main/focus_fox_icon.png'; // fallback icon
+  const imageUrl = (post.image_urls && post.image_urls.length > 0) ? safeUrl(post.image_urls[0], fallbackImage) : fallbackImage;
+  const authorName = escapeHtml(post.user_profiles?.username || 'Focus Fox User');
+  const avatarUrl = safeUrl(post.user_profiles?.avatar_url);
+  const bodyHtml = escapeHtml(post.body || '');
+  // Embedded in a <script> string literal: JSON-encode and neutralise "<".
+  const postIdJs = JSON.stringify(String(postId)).replace(/</g, '\\u003c');
 
   const html = `<!DOCTYPE html>
 <html lang="en">
@@ -61,7 +82,7 @@ serve(async (req) => {
   <meta property="og:title" content="${title}">
   <meta property="og:description" content="${description}">
   <meta property="og:image" content="${imageUrl}">
-  <meta property="og:url" content="${req.url}">
+  <meta property="og:url" content="${escapeHtml(req.url)}">
   
   <!-- Twitter Meta Tags -->
   <meta name="twitter:card" content="summary_large_image">
@@ -145,7 +166,7 @@ serve(async (req) => {
   <script>
     // Deep link redirection script
     function redirect() {
-      const postId = "${postId}";
+      const postId = ${postIdJs};
       const appSchemeUrl = "focusfox://posts/" + postId;
       
       // Attempt to open custom scheme
@@ -162,11 +183,11 @@ serve(async (req) => {
 </head>
 <body>
   <div class="card">
-    ${post.user_profiles?.avatar_url ? `<img class="avatar" src="${post.user_profiles.avatar_url}" alt="Avatar">` : `<div class="avatar" style="line-height:60px;font-weight:bold;color:#7D4B26;font-size:24px;">F</div>`}
+    ${avatarUrl ? `<img class="avatar" src="${avatarUrl}" alt="Avatar">` : `<div class="avatar" style="line-height:60px;font-weight:bold;color:#7D4B26;font-size:24px;">F</div>`}
     <div class="author">Posted by @${authorName}</div>
     <div class="title">${title}</div>
-    ${post.image_urls && post.image_urls.length > 0 ? `<img class="post-img" src="${post.image_urls[0]}" alt="Post Image">` : ''}
-    <div class="body">${post.body || ''}</div>
+    ${post.image_urls && post.image_urls.length > 0 && safeUrl(post.image_urls[0]) ? `<img class="post-img" src="${safeUrl(post.image_urls[0])}" alt="Post Image">` : ''}
+    <div class="body">${bodyHtml}</div>
     <a href="https://play.google.com/store/apps/details?id=com.reva.focusfox" class="btn">Open in Focus Fox App</a>
   </div>
 </body>
