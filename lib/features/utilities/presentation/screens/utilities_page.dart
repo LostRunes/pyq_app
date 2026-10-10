@@ -63,6 +63,14 @@ class UtilitiesPage extends ConsumerWidget {
         'route': '/focus_timer',
         'color': const Color(0xFFEC4899), // Pink
       },
+      {
+        'title': 'Matrix Solver',
+        'desc': 'Step-by-step Gauss Elimination, Inverse, & Eigen solver',
+        'iconLight': 'assets/images/utilities/matrix_solver_light.png',
+        'iconDark': 'assets/images/utilities/matrix_solver_dark.png',
+        'route': '/matrix_solver',
+        'color': const Color(0xFF8B5CF6), // Purple/Violet
+      },
     ];
 
     final filteredUtils = utils.where((util) {

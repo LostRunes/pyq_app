@@ -18,7 +18,8 @@ class AuthRepository {
   final SupabaseClient _supabase1;
 
   late final GoogleSignIn _googleSignIn = GoogleSignIn(
-    serverClientId: dotenv.env['GOOGLE_WEB_CLIENT_ID'],
+    clientId: kIsWeb ? dotenv.env['GOOGLE_WEB_CLIENT_ID'] : null,
+    serverClientId: !kIsWeb ? dotenv.env['GOOGLE_WEB_CLIENT_ID'] : null,
     scopes: [
       'email',
       'profile',
