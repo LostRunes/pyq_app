@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:flutter/foundation.dart';
 
 class DriveService {
   String get apiKey => dotenv.env['DRIVE_API_KEY'] ?? '';
@@ -109,7 +110,8 @@ class DriveService {
     required String subjectName,
   }) async {
     final googleSignIn = GoogleSignIn(
-      serverClientId: dotenv.env['GOOGLE_WEB_CLIENT_ID'],
+      clientId: kIsWeb ? dotenv.env['GOOGLE_WEB_CLIENT_ID'] : null,
+      serverClientId: !kIsWeb ? dotenv.env['GOOGLE_WEB_CLIENT_ID'] : null,
       scopes: [
         'email',
         'profile',
