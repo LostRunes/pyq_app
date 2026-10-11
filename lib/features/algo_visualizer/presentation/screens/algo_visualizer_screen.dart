@@ -63,30 +63,80 @@ class _AlgoVisualizerScreenState extends ConsumerState<AlgoVisualizerScreen> {
             decoration: const InputDecoration(labelText: 'Algorithm', border: OutlineInputBorder()),
             items: [for (final a in algos)
               DropdownMenuItem(value: a.id, child: Text('${a.name}  •  ${a.complexity}'))],
-            onChanged: (v) { if (v != null) n.selectAlgorithm(v); },
+            onChanged: (v) {
+              if (v != null) {
+                n.selectAlgorithm(v);
+                _arrayCtrl.text = ref.read(algoVizProvider).array.join(', ');
+              }
+            },
           ),
           Padding(padding: const EdgeInsets.only(top: 4, bottom: 8),
             child: Text(s.meta.description, style: GoogleFonts.outfit(fontSize: 12,
               color: isDark ? Colors.white60 : Colors.black54))),
           // editable input (Q2)
           if (!s.isGraph)
-            Row(children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(children: [
               Expanded(child: TextField(controller: _arrayCtrl,
-                decoration: const InputDecoration(labelText: 'Array (comma separated, max 16)',
-                  border: OutlineInputBorder(), isDense: true),
+                decoration: InputDecoration(
+                  labelText: s.isBinarySearch
+                      ? 'Array (auto-sorted for binary search)'
+                      : 'Array (comma separated, max 16)',
+                  border: const OutlineInputBorder(), isDense: true),
                 keyboardType: TextInputType.text)),
               IconButton(tooltip: 'Apply', onPressed: () {
                 final vals = _arrayCtrl.text.split(RegExp(r'[^0-9]+'))
                     .where((e) => e.isNotEmpty).map(int.parse).toList();
                 n.setArray(vals);
+                _arrayCtrl.text = ref.read(algoVizProvider).array.join(', ');
               }, icon: const Icon(Icons.check_rounded)),
-              IconButton(tooltip: 'Shuffle', onPressed: n.shuffleArray,
-                icon: const Icon(Icons.shuffle_rounded)),
+              IconButton(
+                tooltip: s.isBinarySearch ? 'New random set' : 'Shuffle',
+                onPressed: () {
+                n.shuffleArray();
+                _arrayCtrl.text = ref.read(algoVizProvider).array.join(', ');
+              }, icon: const Icon(Icons.shuffle_rounded)),
               IconButton(tooltip: 'Random', onPressed: () {
                 n.randomArray();
                 _arrayCtrl.text = ref.read(algoVizProvider).array.join(', ');
               }, icon: const Icon(Icons.casino_rounded)),
-            ])
+            ]),
+                if (s.isBinarySearch)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF6366F1).withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            s.searchTarget == null
+                                ? 'Target: —'
+                                : 'Target: ${s.searchTarget}',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Color(0xFF818CF8),
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Expanded(
+                          child: Text(
+                            'Binary search needs sorted data — shuffle deals a fresh set, then sorts it.',
+                            style: TextStyle(fontSize: 11, color: Colors.grey),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            )
           else
             Row(children: [
               const Text('Start node: '),

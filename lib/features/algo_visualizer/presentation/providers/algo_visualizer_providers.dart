@@ -7,6 +7,15 @@ import '../../data/models/graph_model.dart';
 import '../../data/models/viz_algorithm.dart';
 import '../../data/models/viz_event.dart';
 
+/// Working input for an algorithm. Binary search must run on sorted
+/// data, so every path (generate + replay + target) uses the sorted view.
+List<int> algoVizEffectiveInput(String algorithmId, List<int> base) {
+  if (algorithmId == 'binary_search') {
+    return AlgorithmRegistry.prepareInput(algorithmId, base);
+  }
+  return List<int>.from(base);
+}
+
 class AlgoVizState {
   const AlgoVizState({
     this.algorithmId = 'bubble_sort',
@@ -63,6 +72,17 @@ class AlgoVizState {
   bool get isGraph => meta.inputKind == InputKind.graph;
   bool get isFinished => cursor >= events.length && events.isNotEmpty;
   double get progress => events.isEmpty ? 0 : cursor / events.length;
+  bool get isBinarySearch => algorithmId == 'binary_search';
+
+  /// Value binary search is looking for (derived from the sorted input).
+  /// Null for every other algorithm. Used by the UI so the user can see
+  /// the target instead of guessing from step messages.
+  int? get searchTarget {
+    if (!isBinarySearch || array.isEmpty) return null;
+    final sorted = algoVizEffectiveInput(algorithmId, array);
+    if (sorted.isEmpty) return null;
+    return AlgorithmRegistry.binarySearchTarget(sorted);
+  }
 
   AlgoVizState copyWith({
     String? algorithmId, List<int>? array, int? startNode,
@@ -113,21 +133,40 @@ class AlgoVizNotifier extends Notifier<AlgoVizState> {
   }
 
   // ---- public API used by Screen/Controls ----
+  /// Working input for an algorithm. Binary search must run on sorted
+  /// data, so every path (generate + replay) uses the sorted view.
+  static List<int> effectiveInput(String algorithmId, List<int> base) =>
+      algoVizEffectiveInput(algorithmId, base);
+
   void selectAlgorithm(String id) {
     _stopTimer();
-    final s = state.copyWith(algorithmId: id, playing: false);
-    state = _rebuild(s, s.array, 0, generate: true);
+    // Keep base/display/text in sync: binary search stores the sorted
+    // array as its base so shuffle/play never flip sorted<->unsorted.
+    final base =
+        id == 'binary_search' ? effectiveInput(id, state.array) : state.array;
+    final s = state.copyWith(algorithmId: id, array: base, playing: false);
+    state = _rebuild(s, base, 0, generate: true);
   }
 
   void setArray(List<int> arr) {
     arr = arr.where((v) => v >= 0 && v <= 999).toList();
     if (arr.isEmpty || arr.length > 16) return;
     _stopTimer();
-    final s = state.copyWith(array: arr, playing: false);
-    state = _rebuild(s, arr, 0, generate: true);
+    // Same sync rule as selectAlgorithm: binary search base is sorted.
+    final base = state.algorithmId == 'binary_search'
+        ? effectiveInput(state.algorithmId, arr)
+        : arr;
+    final s = state.copyWith(array: base, playing: false);
+    state = _rebuild(s, base, 0, generate: true);
   }
 
   void shuffleArray() {
+    // Permuting the same multiset is invisible for binary search because
+    // the display is the sorted view — so deal fresh values instead.
+    if (state.algorithmId == 'binary_search') {
+      randomArray();
+      return;
+    }
     final rnd = math.Random();
     final arr = List<int>.from(state.array)..shuffle(rnd);
     setArray(arr);
@@ -182,9 +221,10 @@ class AlgoVizNotifier extends Notifier<AlgoVizState> {
   // ---- core: regenerate events, then replay 0..cursor ----
   AlgoVizState _rebuild(AlgoVizState s, List<int> base, int cursor, {bool generate = false}) {
     List<VizEvent> events = s.events;
-    List<int> input = List<int>.from(base);
+    // Always derive the working array the same way so replay (next/prev)
+    // can never flip between sorted and unsorted mid-playback.
+    List<int> input = effectiveInput(s.algorithmId, base);
     if (generate || events.isEmpty) {
-      if (s.algorithmId == 'binary_search') input = AlgorithmRegistry.prepareInput(s.algorithmId, base);
       events = AlgorithmRegistry.generate(
         id: s.algorithmId, array: input, graph: demoGraph, start: s.startNode,
       ).toList();
