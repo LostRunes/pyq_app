@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:ui' as ui;
@@ -6,8 +7,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter/gestures.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../data/models/room_message.dart';
+import '../../../presentation/providers/block_providers.dart';
 
-class RoomMessageBubble extends StatefulWidget {
+class RoomMessageBubble extends ConsumerStatefulWidget {
   final RoomMessage message;
   final double dragOffset;
   final VoidCallback onReply;
@@ -33,10 +35,10 @@ class RoomMessageBubble extends StatefulWidget {
   });
 
   @override
-  State<RoomMessageBubble> createState() => _RoomMessageBubbleState();
+  ConsumerState<RoomMessageBubble> createState() => _RoomMessageBubbleState();
 }
 
-class _RoomMessageBubbleState extends State<RoomMessageBubble> with SingleTickerProviderStateMixin {
+class _RoomMessageBubbleState extends ConsumerState<RoomMessageBubble> with SingleTickerProviderStateMixin {
   double _replyDragOffset = 0.0;
   late final AnimationController _replyAnimController;
 
@@ -674,6 +676,21 @@ class _RoomMessageBubbleState extends State<RoomMessageBubble> with SingleTicker
                     _showReportConfirmation(context);
                   },
                 ),
+                ListTile(
+                  leading: const Icon(Icons.block_rounded, color: Colors.redAccent),
+                  title: Text('Block User', style: GoogleFonts.outfit(color: Colors.redAccent)),
+                  onTap: () {
+                    Navigator.pop(context);
+                    confirmAndBlockUser(
+                      this.context,
+                      ref,
+                      userId: widget.message.userId,
+                      displayName: widget.message.senderDisplayName ??
+                          widget.message.senderUsername ??
+                          '',
+                    );
+                  },
+                ),
               ],
               const SizedBox(height: 12),
             ],
@@ -722,14 +739,46 @@ class _RoomMessageBubbleState extends State<RoomMessageBubble> with SingleTicker
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Thank you! Message reported successfully.')),
-              );
+              _submitReport();
             },
             child: Text('Report', style: GoogleFonts.outfit(color: Colors.redAccent)),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _submitReport() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final client = Supabase.instance.client;
+    final reporterId = client.auth.currentUser?.id;
+    if (reporterId == null) return;
+
+    try {
+      await client.from('message_reports').insert({
+        'reporter_id': reporterId,
+        'message_id': widget.message.id,
+        'room_id': widget.message.roomId,
+        'reported_user_id': widget.message.userId,
+        'message_text': widget.message.message,
+        'reason': 'inappropriate',
+      });
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Thank you! Message reported successfully.')),
+      );
+    } on PostgrestException catch (e) {
+      // Unique (reporter, message): this user already reported it.
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(e.code == '23505'
+              ? 'You have already reported this message.'
+              : 'Failed to report message: ${e.message}'),
+        ),
+      );
+    } catch (e) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('Failed to report message: $e')),
+      );
+    }
   }
 }
