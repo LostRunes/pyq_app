@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:focus_fox/features/algo_visualizer/presentation/screens/algo_visualizer_screen.dart';
 import 'package:focus_fox/features/subjects/presentation/screens/branch_year_selection_screen.dart';
 import 'package:focus_fox/features/auth/presentation/screens/main_navigation_screen.dart';
 import 'package:focus_fox/features/pyqs/presentation/screens/topic_list_screen.dart';
@@ -208,6 +209,11 @@ class AppRouter {
       case '/algo_code':
         return ParallaxPageRoute(
           child: const AlgoCodeScreen(),
+          settings: settings,
+        );
+        case '/algo_visualizer':
+        return ParallaxPageRoute(
+          child: const AlgoVisualizerScreen(),
           settings: settings,
         );
       case '/gate_prep':
