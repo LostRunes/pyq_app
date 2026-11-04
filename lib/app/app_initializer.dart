@@ -1,8 +1,8 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../core/config/env.dart';
 import '../firebase_options.dart';
 import '../services/push_notification_service.dart';
 
@@ -18,22 +18,22 @@ class AppInitializer {
       debugPrint('Firebase initialization failed: $e');
     }
 
-    try {
-      await dotenv.load(fileName: ".env");
-    } catch (e) {
-      debugPrint('dotenv load failed: $e');
+    final missing = Env.missingKeys;
+    if (missing.isNotEmpty) {
+      debugPrint(
+        'Missing build config: ${missing.join(', ')}. '
+        'Run with --dart-define-from-file=.env',
+      );
     }
 
     try {
-      final url = dotenv.env['SUPABASE_2_URL'] ?? '';
-      final anonKey = dotenv.env['SUPABASE_2_KEY'] ?? '';
-      if (url.isNotEmpty && anonKey.isNotEmpty) {
+      if (Env.supabase2Url.isNotEmpty && Env.supabase2AnonKey.isNotEmpty) {
         await Supabase.initialize(
-          url: url,
-          anonKey: anonKey,
+          url: Env.supabase2Url,
+          anonKey: Env.supabase2AnonKey,
         );
       } else {
-        debugPrint('Supabase credentials missing in .env');
+        debugPrint('Supabase credentials missing: run with --dart-define-from-file=.env');
       }
     } catch (e) {
       debugPrint('Supabase initialization failed: $e');

@@ -1,6 +1,6 @@
 import 'dart:developer';
 import 'package:dio/dio.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:focus_fox/core/config/env.dart';
 
 class _SupabaseAuthInterceptor extends Interceptor {
   final String apiKey;
@@ -28,14 +28,14 @@ class SupabaseRestClient {
   SupabaseRestClient._() {
     _dio = Dio(
       BaseOptions(
-        baseUrl: '${dotenv.env['SUPABASE_URL']!}/rest/v1/',
+        baseUrl: '${Env.supabaseUrl}/rest/v1/',
         contentType: 'application/json',
         connectTimeout: const Duration(seconds: 10),
         receiveTimeout: const Duration(seconds: 8),
         sendTimeout: const Duration(seconds: 8),
       ),
     )..interceptors.add(
-        _SupabaseAuthInterceptor(dotenv.env['SUPABASE_SERVICE']!),
+        _SupabaseAuthInterceptor(Env.supabaseAnonKey),
       );
   }
 
