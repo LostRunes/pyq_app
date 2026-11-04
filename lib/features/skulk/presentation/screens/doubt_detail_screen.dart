@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../data/models/doubt.dart';
 import '../../data/models/solution.dart';
+import '../providers/block_providers.dart';
 import '../providers/skulk_providers.dart';
 import '../widgets/comment_section.dart';
 import '../widgets/solution_tile.dart';
@@ -415,7 +416,11 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
 
     // Watch states
     final doubtAsync = ref.watch(doubtDetailProvider(doubtId));
-    final solutions = ref.watch(solutionsNotifierProvider(doubtId));
+    final blockedUserIds = ref.watch(blockedUserIdsProvider);
+    final solutions = ref
+        .watch(solutionsNotifierProvider(doubtId))
+        .where((s) => !blockedUserIds.contains(s.userId))
+        .toList();
     final voteState = ref.watch(userVotesProvider);
     final isUpvoted = voteState.value?[doubtId] ?? false;
 

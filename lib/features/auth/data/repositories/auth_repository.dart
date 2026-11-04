@@ -1,8 +1,11 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math';
+import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:focus_fox/features/subjects/data/models/branch.dart';
 import '../../../../services/analytics_service.dart';
@@ -80,6 +83,113 @@ class AuthRepository {
         rethrow;
       }
     }
+  }
+
+  /// Sign in with Apple (required on iOS alongside Google, App Store 4.8).
+  /// Returns the user's name from Apple, which Apple only shares on the very
+  /// first sign-in; null if the user cancelled or no name was shared.
+  Future<String?> signInWithApple() async {
+    // Apple embeds sha256(rawNonce) in the ID token; Supabase verifies it
+    // against the raw nonce, so a stolen token can't be replayed.
+    final rawNonce = _generateRawNonce();
+    final hashedNonce = sha256.convert(utf8.encode(rawNonce)).toString();
+
+    final AuthorizationCredentialAppleID credential;
+    try {
+      credential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+        nonce: hashedNonce,
+      );
+    } on SignInWithAppleAuthorizationException catch (e) {
+      if (e.code == AuthorizationErrorCode.canceled) return null;
+      rethrow;
+    }
+
+    final idToken = credential.identityToken;
+    if (idToken == null) {
+      throw Exception('Sign in with Apple failed: no identity token returned.');
+    }
+
+    // 1. Main auth instance
+    await Supabase.instance.client.auth.signInWithIdToken(
+      provider: OAuthProvider.apple,
+      idToken: idToken,
+      nonce: rawNonce,
+    );
+
+    // 2. Content & customizations instance
+    try {
+      await _supabase1.auth.signInWithIdToken(
+        provider: OAuthProvider.apple,
+        idToken: idToken,
+        nonce: rawNonce,
+      );
+    } catch (e) {
+      debugPrint('[AuthRepository] Supabase 1 client Apple sign-in failed: $e');
+    }
+
+    final fullName = [credential.givenName, credential.familyName]
+        .whereType<String>()
+        .where((part) => part.trim().isNotEmpty)
+        .join(' ');
+    return fullName.isEmpty ? null : fullName;
+  }
+
+  String _generateRawNonce([int length = 32]) {
+    const charset =
+        '0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._';
+    final random = Random.secure();
+    return List.generate(
+      length,
+      (_) => charset[random.nextInt(charset.length)],
+    ).join();
+  }
+
+  /// Permanently deletes the signed-in user's account (App Store 5.1.1(v)).
+  /// Throws if the main account could not be deleted; the caller should then
+  /// sign the user out locally with signOutCompletely().
+  Future<void> deleteAccount() async {
+    final mainUserId = Supabase.instance.client.auth.currentUser?.id;
+    if (mainUserId == null) throw Exception('Not signed in');
+
+    // 1. Main project: profile, Skulk content, rooms, progress, analytics and
+    //    the login itself (database function delete_my_account). If this
+    //    fails nothing is deleted, so the error is shown to the user.
+    await Supabase.instance.client.rpc('delete_my_account');
+
+    // 2. Content project: its own login for the same person.
+    try {
+      if (_supabase1.auth.currentSession == null) {
+        await recoverSupabase1Session();
+      }
+      if (_supabase1.auth.currentSession != null) {
+        await _supabase1.rpc('delete_my_account');
+      }
+    } catch (e) {
+      debugPrint('[AuthRepository] Content project account deletion failed: $e');
+    }
+    try {
+      await _supabase1.auth.signOut(scope: SignOutScope.local);
+    } catch (_) {}
+
+    // 3. Subject customizations are keyed by the main user id. With the
+    //    content session cleared, this client is back on its own key.
+    try {
+      await _supabase1
+          .from('user_subject_customizations')
+          .delete()
+          .eq('user_id', mainUserId);
+    } catch (e) {
+      debugPrint('[AuthRepository] Deleting subject customizations failed: $e');
+    }
+
+    // 4. Revoke the app's Google access (no-op for Apple sign-in users).
+    try {
+      await _googleSignIn.disconnect();
+    } catch (_) {}
   }
 
   Future<void> recoverSupabase1Session() async {

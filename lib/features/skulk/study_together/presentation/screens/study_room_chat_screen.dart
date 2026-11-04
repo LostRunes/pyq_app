@@ -9,6 +9,7 @@ import '../../data/models/study_room.dart';
 import '../../data/models/room_message.dart';
 import '../../../utils/image_utils.dart';
 import '../../../data/services/cloudinary_service.dart';
+import '../../../presentation/providers/block_providers.dart';
 import '../providers/study_together_providers.dart';
 import '../widgets/room_message_bubble.dart';
 import '../widgets/voice_panel.dart';
@@ -589,7 +590,11 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen>
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final messages = ref.watch(roomChatProvider(widget.room.id));
+    final blockedUserIds = ref.watch(blockedUserIdsProvider);
+    final messages = ref
+        .watch(roomChatProvider(widget.room.id))
+        .where((m) => !blockedUserIds.contains(m.userId))
+        .toList();
     final presenceCount = ref.watch(roomPresenceProvider(widget.room.id));
     final chatNotifier = ref.read(roomChatProvider(widget.room.id).notifier);
     final typingUsers = ref.watch(roomTypingProvider(widget.room.id));

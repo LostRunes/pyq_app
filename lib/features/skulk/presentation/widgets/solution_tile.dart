@@ -5,6 +5,7 @@ import 'package:focus_fox/features/skulk/utils/markdown_utils.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../data/models/solution.dart';
+import '../providers/block_providers.dart';
 import '../providers/skulk_providers.dart';
 import 'report_bottom_sheet.dart';
 import 'share_solution_sheet.dart';
@@ -211,6 +212,13 @@ class SolutionTile extends ConsumerWidget {
                       target: ReportTarget.solution,
                       targetId: solution.id,
                     );
+                  } else if (value == 'block') {
+                    confirmAndBlockUser(
+                      context,
+                      ref,
+                      userId: solution.userId,
+                      displayName: solution.authorDisplayName,
+                    );
                   }
                 },
                 itemBuilder: (context) => [
@@ -290,6 +298,7 @@ class SolutionTile extends ConsumerWidget {
                       ],
                     ),
                   ),
+                  if (!isOwnSolution) blockUserMenuItem(),
                 ],
               ),
             ],

@@ -29,6 +29,7 @@ environment:
 # versions available, run `flutter pub outdated`.
 dependencies:
   app_links: ^7.0.0
+  crypto: ^3.0.7
   cupertino_icons: ^1.0.8
   dio: ^5.7.0
   file_picker: ^11.0.2
@@ -67,6 +68,7 @@ dependencies:
   printing: ^5.12.0
   share_plus: ^12.0.2
   shared_preferences: ^2.5.5
+  sign_in_with_apple: ^7.0.1
   supabase_flutter: ^2.5.2
   url_launcher: ^6.3.2
   webview_flutter: ^4.8.0
