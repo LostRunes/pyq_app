@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:focus_fox/core/config/env.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -21,8 +21,8 @@ class AuthRepository {
   final SupabaseClient _supabase1;
 
   late final GoogleSignIn _googleSignIn = GoogleSignIn(
-    clientId: kIsWeb ? dotenv.env['GOOGLE_WEB_CLIENT_ID'] : null,
-    serverClientId: !kIsWeb ? dotenv.env['GOOGLE_WEB_CLIENT_ID'] : null,
+    clientId: kIsWeb ? Env.googleWebClientIdOrNull : null,
+    serverClientId: !kIsWeb ? Env.googleWebClientIdOrNull : null,
     scopes: [
       'email',
       'profile',
@@ -241,15 +241,20 @@ class AuthRepository {
     return profile;
   }
 
+  /// Looks up one student through the resolve-student Edge Function, so the
+  /// app never needs read access to the whole students table.
   Future<Map<String, dynamic>?> _getStudentByRollNo(String rollNo) async {
     try {
-      final res = await _supabase1
-          .from('students')
-          .select()
-          .eq('roll_no', rollNo)
-          .maybeSingle();
-      return res;
+      final res = await _supabase1.functions.invoke(
+        'resolve-student',
+        body: {'roll_no': rollNo},
+      );
+      if (res.status != 200) return null;
+      final data = res.data as Map<String, dynamic>?;
+      if (data == null || data['found'] != true) return null;
+      return data;
     } catch (e) {
+      debugPrint('[AuthRepository] resolve-student failed: $e');
       return null;
     }
   }

@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:focus_fox/core/config/env.dart';
 import 'package:focus_fox/features/subjects/data/repositories/subjects_repository.dart';
 import 'package:focus_fox/features/pyqs/data/repositories/pyq_repository.dart';
 import '../services/ai_service.dart';
@@ -10,14 +10,16 @@ import '../services/push_notification_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'providers/prefs_provider.dart';
 
-/// Primary DB client using the service role key.
-/// This bypasses RLS — necessary because the user's auth session lives on
-/// the secondary DB (Supabase.instance.client), so auth.uid() is always
-/// null on this client and RLS policies would silently block all writes.
+/// Content DB client using the anon key.
+/// Content tables (branches, subjects, topics, questions, gate_*, aptitude_*,
+/// etc.) have RLS enabled with public-read policies, so the anon key is
+/// enough for every read. The service_role key must never be in the app:
+/// writes go through Edge Functions (manage-subject-customization on the
+/// main project, resolve-student here).
 final supabase1ClientProvider = Provider<SupabaseClient>((ref) {
   return SupabaseClient(
-    dotenv.env['SUPABASE_URL']!,
-    dotenv.env['SUPABASE_SERVICE']!,
+    Env.supabaseUrl,
+    Env.supabaseAnonKey,
   );
 });
 
