@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { AccessToken } from 'npm:livekit-server-sdk';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 declare const Deno: any;
 
@@ -23,15 +24,58 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const body = await req.json();
-    const { room_id, identity, name } = body;
+    // Verify the caller's JWT. The anon key alone passes the gateway's
+    // verify_jwt check, so we must resolve an actual user here.
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+    );
+    const jwt = authHeader.replace(/^Bearer\s+/i, '');
+    const { data: userData, error: userError } = await supabase.auth.getUser(jwt);
+    const user = userData?.user;
+    if (userError || !user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
-    if (!room_id || !identity) {
-      return new Response(JSON.stringify({ error: 'Missing room_id or identity' }), {
+    let body: any;
+    try {
+      body = await req.json();
+    } catch (_) {
+      body = null;
+    }
+    const room_id = body?.room_id;
+    const name = body?.name;
+
+    if (!room_id || typeof room_id !== 'string') {
+      return new Response(JSON.stringify({ error: 'Missing room_id' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    // Identity is always the authenticated user's id (never trust the body),
+    // so a caller cannot impersonate another participant.
+    const identity = user.id;
+
+    // Only issue tokens for existing, active, voice-enabled study rooms.
+    const { data: roomRow, error: roomError } = await supabase
+      .from('study_rooms')
+      .select('id, is_voice_enabled, is_active')
+      .eq('id', room_id)
+      .maybeSingle();
+    // Mirrors the app: is_active null is treated as active.
+    if (roomError || !roomRow || roomRow.is_voice_enabled !== true || roomRow.is_active === false) {
+      return new Response(JSON.stringify({ error: 'Room not found or not a voice room' }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const displayName =
+      typeof name === 'string' && name.trim() ? name.trim().slice(0, 64) : identity;
 
     // 2. Fetch LiveKit API Keys from Env
     const apiKey = Deno.env.get('LIVEKIT_API_KEY');
@@ -48,7 +92,7 @@ Deno.serve(async (req: Request) => {
     // 3. Create AccessToken
     const at = new AccessToken(apiKey, apiSecret, {
       identity: identity,
-      name: name || identity,
+      name: displayName,
       ttl: 7200,
     });
 
@@ -60,10 +104,10 @@ Deno.serve(async (req: Request) => {
       canPublishData: true,
     });
 
-    const jwt = await at.toJwt();
+    const livekitJwt = await at.toJwt();
 
     return new Response(
-      JSON.stringify({ token: jwt, ws_url: wsUrl }),
+      JSON.stringify({ token: livekitJwt, ws_url: wsUrl }),
       {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -71,7 +115,7 @@ Deno.serve(async (req: Request) => {
     );
   } catch (error: any) {
     console.error('Error generating token:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: 'Failed to generate token' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

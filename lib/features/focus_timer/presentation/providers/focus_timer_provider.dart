@@ -86,9 +86,18 @@ class FocusTimerNotifier extends Notifier<FocusTimerState> {
       isRunning: state.isRunning,
     );
 
+    // Track against the wall clock instead of counting ticks, so the timer
+    // stays accurate when ticks are delayed/throttled (e.g. app backgrounded).
+    final endTime = DateTime.now().add(
+      Duration(seconds: state.secondsRemaining),
+    );
+
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (state.secondsRemaining > 0) {
-        state = state.copyWith(secondsRemaining: state.secondsRemaining - 1);
+      final remainingMs = endTime.difference(DateTime.now()).inMilliseconds;
+      final remaining = remainingMs <= 0 ? 0 : (remainingMs / 1000).round();
+      if (remaining > 0) {
+        if (remaining == state.secondsRemaining) return;
+        state = state.copyWith(secondsRemaining: remaining);
         PushNotificationService.showFocusTimerNotification(
           secondsRemaining: state.secondsRemaining,
           durationSeconds: state.durationSeconds,

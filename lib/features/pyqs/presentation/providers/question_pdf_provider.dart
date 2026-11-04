@@ -27,6 +27,7 @@ final questionPdfMatchProvider = FutureProvider.family<QuestionPdfMatchResult?, 
       .from('question_topics')
       .select('topics(subject_id)')
       .eq('question_id', questionId)
+      .limit(1)
       .maybeSingle();
 
   if (questionTopicRes == null) return null;

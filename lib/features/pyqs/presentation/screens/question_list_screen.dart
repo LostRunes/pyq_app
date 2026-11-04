@@ -44,7 +44,10 @@ class _QuestionListScreenState extends ConsumerState<QuestionListScreen> {
             onPressed: isLoading
                 ? null
                 : () async {
-                    ref.read(pdfLoadingProvider.notifier).setLoading(true);
+                    // Capture the notifier so `finally` can reset loading even
+                    // if this screen is disposed mid-generation.
+                    final pdfLoading = ref.read(pdfLoadingProvider.notifier);
+                    pdfLoading.setLoading(true);
 
                     try {
                       final fullQuestions = await ref.read(
@@ -62,11 +65,13 @@ class _QuestionListScreenState extends ConsumerState<QuestionListScreen> {
                         '${widget.topicName.replaceAll(' ', '_')}_Questions.pdf',
                       );
                     } catch (e) {
-                      ScaffoldMessenger.of(
-                        context,
-                      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(
+                          context,
+                        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+                      }
                     } finally {
-                      ref.read(pdfLoadingProvider.notifier).setLoading(false);
+                      pdfLoading.setLoading(false);
                     }
                   },
           ),
@@ -135,33 +140,31 @@ class _QuestionListScreenState extends ConsumerState<QuestionListScreen> {
                     }
                   }
 
-                  // Apply difficulty sorting
-                  if (_difficultySort != null) {
+                  // Apply year sorting (primary) and difficulty sorting
+                  // (secondary) in a single comparator so that one sort does
+                  // not discard the other.
+                  if (_yearSort != null || _difficultySort != null) {
                     filteredQuestions.sort((a, b) {
-                      final valA = getDifficultyValue(a.difficulty);
-                      final valB = getDifficultyValue(b.difficulty);
-                      if (_difficultySort == 'Easy to Hard') {
-                        return valA.compareTo(valB);
-                      } else {
-                        return valB.compareTo(valA);
+                      if (_yearSort != null) {
+                        final yearA = a.pyqSources.isNotEmpty
+                            ? (int.tryParse(a.pyqSources.first.year) ?? 0)
+                            : 0;
+                        final yearB = b.pyqSources.isNotEmpty
+                            ? (int.tryParse(b.pyqSources.first.year) ?? 0)
+                            : 0;
+                        final byYear = _yearSort == 'Ascending'
+                            ? yearA.compareTo(yearB)
+                            : yearB.compareTo(yearA);
+                        if (byYear != 0) return byYear;
                       }
-                    });
-                  }
-
-                  // Apply year sorting
-                  if (_yearSort != null) {
-                    filteredQuestions.sort((a, b) {
-                      final yearA = a.pyqSources.isNotEmpty
-                          ? (int.tryParse(a.pyqSources.first.year) ?? 0)
-                          : 0;
-                      final yearB = b.pyqSources.isNotEmpty
-                          ? (int.tryParse(b.pyqSources.first.year) ?? 0)
-                          : 0;
-                      if (_yearSort == 'Ascending') {
-                        return yearA.compareTo(yearB);
-                      } else {
-                        return yearB.compareTo(yearA);
+                      if (_difficultySort != null) {
+                        final valA = getDifficultyValue(a.difficulty);
+                        final valB = getDifficultyValue(b.difficulty);
+                        return _difficultySort == 'Easy to Hard'
+                            ? valA.compareTo(valB)
+                            : valB.compareTo(valA);
                       }
+                      return 0;
                     });
                   }
 

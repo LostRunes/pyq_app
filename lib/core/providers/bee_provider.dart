@@ -28,7 +28,9 @@ class BeeTapCountNotifier extends Notifier<int> {
         // If the user identity changed (account switch or fresh login after logout),
         // reset the local count to 0 first so we don't push stale data into the new
         // user's record. The sync will then pull the correct remote count.
-        if (prevUser?.id != newUser.id) {
+        // Skip the very first emission (initial session restore on startup):
+        // `previous` has no value yet, so this is not an account change.
+        if ((previous?.hasValue ?? false) && prevUser?.id != newUser.id) {
           state = 0;
           final prefs = ref.read(sharedPrefsProvider);
           prefs.setInt(_key, 0);

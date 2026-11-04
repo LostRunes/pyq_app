@@ -83,6 +83,7 @@ class _GateQuestionDetailScreenState extends ConsumerState<GateQuestionDetailScr
           selectedAnswer: option.optionText,
           isCorrect: isCorrectAns,
           marks: question.marks,
+          questionType: question.questionType,
         );
 
     setState(() {
@@ -98,20 +99,45 @@ class _GateQuestionDetailScreenState extends ConsumerState<GateQuestionDetailScr
     final question = _questions[_currentIndex];
     final correctAnsStr = question.correctAnswerText ?? '';
 
-    // Simple comparison: check if strings match exactly (lowercase, trimmed)
-    final isCorrect = input.toLowerCase() == correctAnsStr.toLowerCase();
+    final isCorrect = _isNatCorrect(input, correctAnsStr);
 
     ref.read(gateStatsProvider.notifier).recordAnswer(
           questionId: question.id,
           selectedAnswer: input,
           isCorrect: isCorrect,
           marks: question.marks,
+          questionType: question.questionType,
         );
 
     setState(() {
       _submittedNatAnswer = input;
       _isAnswered = true;
     });
+  }
+
+  /// NAT answers are numeric and GATE keys are often ranges ("2.4 to 2.6"),
+  /// so compare numerically (inclusive range / tolerance) before falling
+  /// back to a case-insensitive string match. "2.50" must match "2.5".
+  static bool _isNatCorrect(String input, String correct) {
+    final a = input.trim();
+    final c = correct.trim();
+    final value = double.tryParse(a);
+    if (value != null) {
+      final range = RegExp(
+        r'^(-?\d*\.?\d+)\s*(?:to|–|—|:|,|\s-\s|-)\s*(-?\d*\.?\d+)$',
+        caseSensitive: false,
+      ).firstMatch(c);
+      if (range != null) {
+        final lo = double.parse(range.group(1)!);
+        final hi = double.parse(range.group(2)!);
+        final min = lo < hi ? lo : hi;
+        final max = lo < hi ? hi : lo;
+        return value >= min - 1e-9 && value <= max + 1e-9;
+      }
+      final exact = double.tryParse(c);
+      if (exact != null) return (value - exact).abs() < 1e-9;
+    }
+    return a.toLowerCase() == c.toLowerCase();
   }
 
   void _nextQuestion() {
@@ -484,8 +510,8 @@ class _GateQuestionDetailScreenState extends ConsumerState<GateQuestionDetailScr
                           borderRadius: BorderRadius.circular(12),
                         ),
                         suffixIcon: _isAnswered
-                            ? (_submittedNatAnswer?.toLowerCase() ==
-                                    (question.correctAnswerText ?? '').toLowerCase()
+                            ? (_isNatCorrect(_submittedNatAnswer ?? '',
+                                    question.correctAnswerText ?? '')
                                 ? const Icon(Icons.check_circle_rounded, color: Colors.green)
                                 : const Icon(Icons.cancel_rounded, color: Colors.red))
                             : null,

@@ -6,6 +6,7 @@ let allEvents = [];
 let filteredEvents = [];
 let currentPage = 1;
 const pageSize = 10;
+let loadGeneration = 0; // bumped on every fetchData so a stale load stops
 
 // Chart Instances
 let timelineChart = null;
@@ -20,6 +21,7 @@ const elDbSplit = document.getElementById('stat-db-split');
 const elSearchInput = document.getElementById('search-input');
 const elFilterType = document.getElementById('filter-event-type');
 const elFilterSource = document.getElementById('filter-source');
+const elFilterPlatform = document.getElementById('filter-platform');
 const elBtnRefresh = document.getElementById('btn-refresh');
 const elBtnExport = document.getElementById('btn-export');
 const elBtnPrev = document.getElementById('btn-prev');
@@ -43,12 +45,27 @@ document.addEventListener('DOMContentLoaded', async () => {
   fetchData();
 });
 
-// Load variables from .env file
+// Load variables from env.js or .env file
 async function loadEnv() {
+  // First check if window.ENV exists (loaded via env.js script)
+  if (typeof window.ENV !== 'undefined' && window.ENV) {
+    SUPABASE_URL = window.ENV.SUPABASE_2_URL || window.ENV.SUPABASE_URL || '';
+    SUPABASE_ANON_KEY = window.ENV.SUPABASE_2_KEY || window.ENV.SUPABASE_KEY || '';
+    if (SUPABASE_URL && SUPABASE_ANON_KEY) {
+      return;
+    }
+  }
+
   try {
-    const response = await fetch('../.env');
-    if (!response.ok) {
-      throw new Error(`Failed to fetch .env file: ${response.statusText}`);
+    let response;
+    try {
+      response = await fetch('./.env');
+      if (!response.ok) throw new Error();
+    } catch (e) {
+      response = await fetch('../.env');
+    }
+    if (!response || !response.ok) {
+      throw new Error(`Failed to fetch .env file: ${response ? response.statusText : '404 Not Found'}`);
     }
     const text = await response.text();
     const env = {};
@@ -73,7 +90,9 @@ async function loadEnv() {
     SUPABASE_ANON_KEY = env.SUPABASE_2_KEY || env.SUPABASE_KEY || '';
   } catch (error) {
     console.error('Error loading .env file:', error);
-    updateStatus('disconnected', '<i class="fa-solid fa-circle-xmark"></i> Env Load Error');
+    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+      updateStatus('disconnected', '<i class="fa-solid fa-circle-xmark"></i> Env Load Error');
+    }
   }
 }
 
@@ -117,6 +136,11 @@ function setupEventListeners() {
     filterAndRender();
   });
 
+  elFilterPlatform.addEventListener('change', () => {
+    currentPage = 1;
+    filterAndRender();
+  });
+
   elBtnPrev.addEventListener('click', () => {
     if (currentPage > 1) {
       currentPage--;
@@ -144,7 +168,7 @@ function setupEventListeners() {
   });
 }
 
-// Fetch unified data (Supabase first, then Neon DB in background)
+// Fetch every event from Supabase (recent) and Neon (archive)
 async function fetchData() {
   if (!supabaseClient) return;
   
@@ -157,71 +181,141 @@ async function fetchData() {
     </tr>
   `;
   
+  const gen = ++loadGeneration;
+  allEvents = [];
+  filteredEvents = [];
+  currentPage = 1;
+
+  const seenIds = new Set(); // a row can briefly exist in both while archiving
+  let lastRender = 0;
+  const failures = [];
+  const loadedBySource = {};
+
   try {
-    // 1. Fetch from local Supabase events (instant)
-    const { data, error } = await supabaseClient
-      .from('v_supabase_analytics')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(1000);
+    // Recent events (Supabase) first, then the archive (Neon), newest days first
+    for (const [source, label] of [['supabase', 'recent'], ['neon', 'Neon archive']]) {
+      const { total, failedPages } = await loadAllEvents(supabaseClient, source, {
+        isCancelled: () => gen !== loadGeneration,
+        onRows: (rows, loaded, expected) => {
+          if (gen !== loadGeneration) return;
+          for (const row of rows) {
+            if (seenIds.has(row.id)) continue;
+            seenIds.add(row.id);
+            allEvents.push(row);
+          }
+          const pct = expected ? Math.min(99, Math.floor((loaded / expected) * 100)) : 0;
+          updateStatus('loading', `<i class="fa-solid fa-circle-notch fa-spin"></i> Loading ${label}: ${loaded.toLocaleString()} / ${expected.toLocaleString()} (${pct}%)`);
+          if (Date.now() - lastRender > 2000) {
+            lastRender = Date.now();
+            sortAndRender();
+          }
+        },
+      });
+      if (gen !== loadGeneration) return;
+      loadedBySource[source] = total;
+      if (failedPages > 0) failures.push(`${failedPages} ${label} page(s)`);
+      sortAndRender();
+    }
 
-    if (error) throw error;
-
-    allEvents = data || [];
-    filteredEvents = [...allEvents];
-    currentPage = 1;
-
-    updateStatus('connected', '<i class="fa-solid fa-circle-check"></i> Connected (Supabase Only)');
-    filterAndRender();
-
-    // 2. Fetch Neon DB logs in the background asynchronously
-    fetchNeonData();
+    const expectedTotal = (loadedBySource.supabase || 0) + (loadedBySource.neon || 0);
+    if (failures.length > 0) {
+      updateStatus('disconnected', `<i class="fa-solid fa-triangle-exclamation"></i> Loaded ${allEvents.length.toLocaleString()} of ${expectedTotal.toLocaleString()} (${failures.join(', ')} failed, press Refresh)`);
+    } else {
+      updateStatus('connected', `<i class="fa-solid fa-circle-check"></i> Connected (${allEvents.length.toLocaleString()} events)`);
+    }
   } catch (error) {
-    console.error('Error fetching Supabase data:', error);
+    if (gen !== loadGeneration) return;
+    console.error('Error fetching analytics:', error);
     const errorMsg = error.message || (typeof error === 'object' ? JSON.stringify(error) : error);
+    const hint = error.code === 'PGRST202'
+      ? ' Run sql/03_supabase_dashboard_api.sql in Supabase first.'
+      : '';
     updateStatus('disconnected', `<i class="fa-solid fa-triangle-exclamation"></i> Fetch Failed`);
     elBody.innerHTML = `
       <tr>
         <td colspan="7" class="loading-placeholder" style="color: #F44336;">
-          <i class="fa-solid fa-circle-xmark"></i> Failed to retrieve analytics.<br>
-          <span style="font-size: 12px; font-family: monospace; opacity: 0.8;">Details: ${errorMsg}</span>
+          <i class="fa-solid fa-circle-xmark"></i> Failed to retrieve analytics.${escapeHtml(hint)}<br>
+          <span style="font-size: 12px; font-family: monospace; opacity: 0.8;">Details: ${escapeHtml(errorMsg)}</span>
         </td>
       </tr>
     `;
   }
 }
 
-// Asynchronously fetch Neon DB events and merge them
-async function fetchNeonData() {
-  try {
-    updateStatus('loading', '<i class="fa-solid fa-circle-notch fa-spin"></i> Loading Neon DB Archives...');
-    
-    const { data: neonData, error } = await supabaseClient
-      .from('v_neon_analytics')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(1000);
+// Newest first. Timestamps are ISO-8601 UTC strings, which sort correctly as
+// plain strings and avoid parsing dates millions of times on 250k+ rows.
+function compareNewestFirst(a, b) {
+  return a.created_at < b.created_at ? 1 : a.created_at > b.created_at ? -1 : 0;
+}
 
-    if (error) throw error;
+function sortAndRender() {
+  allEvents.sort(compareNewestFirst);
+  filterAndRender();
+}
 
-    if (neonData && neonData.length > 0) {
-      // Merge events, keeping only unique records
-      const existingIds = new Set(allEvents.map(e => e.id));
-      const uniqueNeon = neonData.filter(e => !existingIds.has(e.id));
-      
-      allEvents = [...allEvents, ...uniqueNeon];
-      
-      // Sort combined array descending by date
-      allEvents.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-      
-      filterAndRender();
-    }
-    
-    updateStatus('connected', '<i class="fa-solid fa-circle-check"></i> Connected');
-  } catch (error) {
-    console.warn('Neon DB background fetch failed/timed out (expected on cold start):', error);
-    updateStatus('connected', '<i class="fa-solid fa-circle-check"></i> Connected (Neon Offline/Waking)');
+// Loads every event of one source ('supabase' or 'neon') through the
+// analytics_bounds / analytics_events_page database functions, which filter,
+// sort and limit on the source database before anything crosses the network.
+// The full range is split into one-day slices fetched in parallel; inside a
+// slice, pages continue from a (created_at, id) cursor so rows sharing a
+// timestamp are never skipped.
+async function loadAllEvents(client, source, { onRows, isCancelled, concurrency = 6 }) {
+  const PAGE = 2000;
+  const DAY_MS = 24 * 60 * 60 * 1000;
+
+  const { data: bounds, error: boundsError } = await client.rpc('analytics_bounds', { p_source: source });
+  if (boundsError) throw boundsError;
+  const total = bounds?.count || 0;
+  if (!total || !bounds.oldest) return { total, failedPages: 0 };
+
+  // Newest day first, so recent data shows up first
+  const slices = [];
+  const startMs = Date.parse(bounds.oldest);
+  for (let end = Date.parse(bounds.newest) + 1000; end > startMs; end -= DAY_MS) {
+    slices.push([new Date(Math.max(end - DAY_MS, startMs)).toISOString(), new Date(end).toISOString()]);
   }
+
+  let loaded = 0;
+  let failedPages = 0;
+
+  async function fetchPage(from, to, cursor) {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const { data, error } = await client.rpc('analytics_events_page', {
+        p_source: source,
+        p_from: from,
+        p_to: to,
+        p_cursor_ts: cursor ? cursor.created_at : null,
+        p_cursor_id: cursor ? cursor.id : null,
+        p_limit: PAGE,
+      });
+      if (!error) return data || [];
+      console.warn(`${source} page ${from}..${to} failed (attempt ${attempt + 1}):`, error);
+      await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
+    }
+    return null;
+  }
+
+  async function loadSlice([from, to]) {
+    let cursor = null;
+    while (!isCancelled()) {
+      const rows = await fetchPage(from, to, cursor);
+      if (rows === null) { failedPages++; return; }
+      if (rows.length === 0) return;
+      loaded += rows.length;
+      onRows(rows, loaded, Math.max(total, loaded));
+      if (rows.length < PAGE) return;
+      cursor = rows[rows.length - 1];
+    }
+  }
+
+  let next = 0;
+  const workers = Array.from({ length: Math.min(concurrency, slices.length) }, async () => {
+    while (next < slices.length && !isCancelled()) {
+      await loadSlice(slices[next++]);
+    }
+  });
+  await Promise.all(workers);
+  return { total, failedPages };
 }
 
 // Perform client-side filter, search and update charts + table
@@ -229,6 +323,7 @@ function filterAndRender() {
   const searchQuery = elSearchInput.value.toLowerCase().trim();
   const selectedType = elFilterType.value;
   const selectedSource = elFilterSource.value;
+  const selectedPlatform = elFilterPlatform.value;
 
   filteredEvents = allEvents.filter(event => {
     // 1. Search Query mapping
@@ -246,7 +341,10 @@ function filterAndRender() {
     // 3. Source Filter
     const matchSource = selectedSource === 'all' || event.source === selectedSource;
 
-    return matchSearch && matchType && matchSource;
+    // 4. Platform Filter
+    const matchPlatform = selectedPlatform === 'all' || (event.platform || 'app') === selectedPlatform;
+
+    return matchSearch && matchType && matchSource && matchPlatform;
   });
 
   updateStats();
@@ -261,10 +359,19 @@ function updateStats() {
 
   // 2. Active users
   const uniqueUsers = new Set();
+  const uniqueDesktopUsers = new Set();
+  const uniqueAppUsers = new Set();
   filteredEvents.forEach(e => {
-    if (e.user_id) uniqueUsers.add(e.user_id);
+    if (e.user_id) {
+      uniqueUsers.add(e.user_id);
+      if (e.platform === 'desktop') {
+        uniqueDesktopUsers.add(e.user_id);
+      } else {
+        uniqueAppUsers.add(e.user_id);
+      }
+    }
   });
-  elActiveUsers.innerText = uniqueUsers.size.toLocaleString();
+  elActiveUsers.innerHTML = `${uniqueUsers.size.toLocaleString()} <span style="font-size: 11px; font-weight: 500; opacity: 0.8; display: block; margin-top: 4px;">(${uniqueDesktopUsers.size} Desktop / ${uniqueAppUsers.size} Mobile)</span>`;
 
   // 3. Most used feature
   const featureCounts = {};
@@ -298,9 +405,10 @@ function updateStats() {
 function updateCharts() {
   // --- 1. Timeline Chart (Events over time) ---
   const dailyData = {};
+  const dayFormat = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' });
   filteredEvents.forEach(e => {
     if (e.created_at) {
-      const dateStr = new Date(e.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+      const dateStr = dayFormat.format(new Date(e.created_at));
       dailyData[dateStr] = (dailyData[dateStr] || 0) + 1;
     }
   });
@@ -321,10 +429,10 @@ function updateCharts() {
   timelineChart = new Chart(ctxTimeline, {
     type: 'line',
     data: {
-      labels: timelineLabels.slice(-10), // Limit to last 10 days for clarity
+      labels: timelineLabels.slice(-30), // Last 30 days
       datasets: [{
         label: 'Event Count',
-        data: timelineValues.slice(-10),
+        data: timelineValues.slice(-30),
         borderColor: '#FF9F0A',
         borderWidth: 3,
         pointBackgroundColor: '#FF9F0A',
@@ -448,24 +556,29 @@ function renderTable() {
   }
 
   let html = '';
-  pageItems.forEach(e => {
+  pageItems.forEach((e, i) => {
     // 1. Date conversion
     const localDate = e.created_at 
       ? new Date(e.created_at).toLocaleString() 
       : '-';
 
     // 2. User display details
-    const uName = e.username || 'anonymous';
-    const dName = e.display_name || 'Guest User';
-    const email = e.email || 'no-email@session';
-    const avatarLetter = (e.display_name || 'U').charAt(0).toUpperCase();
+    // DB-sourced strings are user-controlled: escape before innerHTML
+    const uName = escapeHtml(e.username || 'anonymous');
+    const dName = escapeHtml(e.display_name || 'Guest User');
+    const email = escapeHtml(e.email || 'no-email@session');
+    const avatarLetter = escapeHtml((e.display_name || 'U').charAt(0).toUpperCase());
 
     // 3. Badges mapping
-    const typeClass = `badge-type-${(e.event_type || 'other').replace('_', '').replace('view', 'page').replace('entry', 'page')}`;
-    const cleanType = (e.event_type || 'other').replaceAll('_', ' ');
+    const typeClass = `badge-type-${escapeHtml(e.event_type || 'other').replace('_', '').replace('view', 'page').replace('entry', 'page')}`;
+    const cleanType = escapeHtml((e.event_type || 'other').replaceAll('_', ' '));
 
-    const sourceClass = `badge-source-${e.source}`;
+    const sourceClass = `badge-source-${escapeHtml(e.source)}`;
     const cleanSource = e.source === 'supabase' ? 'Supabase' : 'Neon DB';
+
+    const platformClass = `badge-platform-${escapeHtml(e.platform || 'app')}`;
+    const cleanPlatform = e.platform === 'desktop' ? 'Desktop' : 'Mobile';
+    const platformIcon = e.platform === 'desktop' ? '<i class="fa-solid fa-desktop"></i>' : '<i class="fa-solid fa-mobile-screen-button"></i>';
 
     // 4. Row rendering
     html += `
@@ -481,11 +594,16 @@ function renderTable() {
           </div>
         </td>
         <td><span class="badge ${typeClass}">${cleanType}</span></td>
-        <td style="font-family: monospace; font-weight: 600; color: #E91E63;">${e.event_name || '-'}</td>
-        <td style="color: var(--text-muted); font-family: monospace;">${e.screen_name || '-'}</td>
-        <td><span class="badge ${sourceClass}">${cleanSource}</span></td>
+        <td style="font-family: monospace; font-weight: 600; color: #E91E63;">${escapeHtml(e.event_name || '-')}</td>
+        <td style="color: var(--text-muted); font-family: monospace;">${escapeHtml(e.screen_name || '-')}</td>
         <td>
-          <button class="btn-action" onclick="showMetadataModal('${escapeHtml(JSON.stringify(e.metadata || {}))}')">
+          <div style="display: flex; flex-direction: column; gap: 4px; align-items: flex-start;">
+            <span class="badge ${platformClass}">${platformIcon} ${cleanPlatform}</span>
+            <span class="badge ${sourceClass}">${cleanSource}</span>
+          </div>
+        </td>
+        <td>
+          <button class="btn-action" onclick="showEventMetadata(${startIdx + i})">
             <i class="fa-solid fa-code"></i> View JSON
           </button>
         </td>
@@ -542,11 +660,19 @@ window.showMetadataModal = function(metadataJsonStr) {
   }
 };
 
+// Look up by row index instead of inlining JSON into an onclick string
+// (entity-decoded quotes in metadata could break out of the JS literal).
+window.showEventMetadata = function(idx) {
+  const ev = filteredEvents[idx];
+  elModalCode.innerText = JSON.stringify((ev && ev.metadata) || {}, null, 2);
+  elModal.style.display = 'block';
+};
+
 // Export records as CSV download
 function exportToCSV() {
   if (filteredEvents.length === 0) return;
   
-  const headers = ['id', 'user_id', 'username', 'display_name', 'email', 'event_type', 'event_name', 'screen_name', 'source', 'created_at', 'metadata'];
+  const headers = ['id', 'user_id', 'username', 'display_name', 'email', 'event_type', 'event_name', 'screen_name', 'platform', 'source', 'created_at', 'metadata'];
   
   const csvRows = [
     headers.join(','),
@@ -563,19 +689,20 @@ function exportToCSV() {
     })
   ];
 
-  const csvContent = 'data:text/csv;charset=utf-8,' + csvRows.join('\n');
-  const encodedUri = encodeURI(csvContent);
+  // Blob instead of a data: URI, which browsers cap far below 250k+ rows
+  const url = URL.createObjectURL(new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8' }));
   const link = document.createElement('a');
-  link.setAttribute('href', encodedUri);
+  link.setAttribute('href', url);
   link.setAttribute('download', `focus_fox_analytics_${new Date().toISOString().split('T')[0]}.csv`);
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 // Helper to escape HTML characters
 function escapeHtml(text) {
-  return text
+  return String(text ?? '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')

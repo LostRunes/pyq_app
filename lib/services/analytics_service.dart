@@ -24,6 +24,7 @@ class AnalyticsService {
         'event_name': eventName,
         'screen_name': screenName,
         'metadata': metadata ?? {},
+        'platform': 'app',
       });
     } catch (e) {
       debugPrint('Failed to log event to Supabase: $e');

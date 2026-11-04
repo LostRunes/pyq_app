@@ -264,10 +264,12 @@ class PersonalRoomCard extends ConsumerWidget {
                   title: Text('Leave Room', style: GoogleFonts.outfit(color: Colors.orange)),
                   onTap: () async {
                     Navigator.pop(context);
+                    // Use ref before awaiting: removing the room disposes this
+                    // card, and using a disposed WidgetRef throws.
+                    ref.invalidate(studyRoomsProvider);
                     await ref
                         .read(joinedRoomIdsProvider.notifier)
                         .removeRoom(room.id);
-                    ref.invalidate(studyRoomsProvider);
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text('Left room: ${room.name}')),
@@ -315,10 +317,11 @@ class PersonalRoomCard extends ConsumerWidget {
                   await ref
                       .read(roomOperationsProvider)
                       .deleteRoom(room.id);
+                  // Use ref before the next await (card may be disposed after).
+                  ref.invalidate(studyRoomsProvider);
                   await ref
                       .read(joinedRoomIdsProvider.notifier)
                       .removeRoom(room.id);
-                  ref.invalidate(studyRoomsProvider);
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text('Room "${room.name}" deleted.')),

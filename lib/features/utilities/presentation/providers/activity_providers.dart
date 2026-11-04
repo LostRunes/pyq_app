@@ -105,11 +105,15 @@ class ToDoListNotifier extends Notifier<List<ToDoTask>> {
   }
 
   Future<void> removeTask(String id) async {
-    final task = state.firstWhere((t) => t.id == id);
+    final idx = state.indexWhere((t) => t.id == id);
+    if (idx == -1) return;
+    final task = state[idx];
+    // Remove synchronously before awaiting so a rapid double-tap can't
+    // decrement the activity count twice.
+    state = state.where((t) => t.id != id).toList();
     if (task.isCompleted && task.completedDate != null) {
       await ref.read(activityProvider.notifier).decrementActivity(task.completedDate!);
     }
-    state = state.where((t) => t.id != id).toList();
     await _save();
   }
 

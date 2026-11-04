@@ -84,6 +84,15 @@ class _DriveExplorerTabState extends ConsumerState<DriveExplorerTab> {
     }
   }
 
+  String? _tryExtractFolderId(String? link) {
+    if (link == null || link.isEmpty) return null;
+    try {
+      return extractFolderId(link);
+    } catch (_) {
+      return null;
+    }
+  }
+
   String _appendAuthUser(String url) {
     try {
       final email = Supabase.instance.client.auth.currentUser?.email;
@@ -106,7 +115,11 @@ class _DriveExplorerTabState extends ConsumerState<DriveExplorerTab> {
 
     Widget content;
 
-    if (widget.driveLink == null || widget.driveLink!.isEmpty) {
+    // extractFolderId throws on non-folder links; treat those as unlinked
+    // instead of crashing the build.
+    final String? folderId = _tryExtractFolderId(widget.driveLink);
+
+    if (folderId == null) {
       content = SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         child: Container(
@@ -133,7 +146,6 @@ class _DriveExplorerTabState extends ConsumerState<DriveExplorerTab> {
         ),
       );
     } else {
-      final folderId = extractFolderId(widget.driveLink!);
       final filesAsync = ref.watch(driveFolderContentsProvider(folderId));
 
       content = filesAsync.when(
@@ -253,8 +265,7 @@ class _DriveExplorerTabState extends ConsumerState<DriveExplorerTab> {
       );
     }
 
-    if (widget.driveLink != null && widget.driveLink!.isNotEmpty) {
-      final folderId = extractFolderId(widget.driveLink!);
+    if (folderId != null) {
       content = RefreshIndicator(
         onRefresh: () async {
           final _ = await ref.refresh(driveFolderContentsProvider(folderId).future);

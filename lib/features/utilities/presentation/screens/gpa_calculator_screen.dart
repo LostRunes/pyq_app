@@ -490,6 +490,10 @@ class _GpaCalculatorScreenState extends ConsumerState<GpaCalculatorScreen> {
                                           const SizedBox(width: 8),
                                           Expanded(
                                             child: TextFormField(
+                                              // Keyed by row identity so the
+                                              // field re-initialises when rows
+                                              // are removed or replaced.
+                                              key: ObjectKey(course),
                                               initialValue:
                                                   course['name'] as String? ??
                                                   '',
@@ -563,7 +567,16 @@ class _GpaCalculatorScreenState extends ConsumerState<GpaCalculatorScreen> {
                                                     theme.colorScheme.onSurface,
                                                 fontSize: 13,
                                               ),
-                                              items: [1.0, 2.0, 3.0, 4.0, 5.0]
+                                              // Include the current value so
+                                              // DB credits outside 1-5 don't
+                                              // trip the dropdown assertion.
+                                              items:
+                                                  ({
+                                                    1.0, 2.0, 3.0, 4.0, 5.0,
+                                                    (course['credits'] as num?)
+                                                            ?.toDouble() ??
+                                                        3.0,
+                                                  }.toList()..sort())
                                                   .map(
                                                     (c) => DropdownMenuItem(
                                                       value: c,

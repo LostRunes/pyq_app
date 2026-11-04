@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:flutter/foundation.dart';
 
 class DriveService {
   String get apiKey => dotenv.env['DRIVE_API_KEY'] ?? '';
@@ -11,17 +12,36 @@ class DriveService {
       "1_hu36qpVvi-7HZJEJi3JKF597qZepRiA";
 
   Future<List<dynamic>> fetchFolderContents(String folderId) async {
-    final url =
-        "https://www.googleapis.com/drive/v3/files"
-        "?q='$folderId'+in+parents+and+trashed=false"
-        "&key=$apiKey"
-        "&fields=files(id,name,mimeType,webViewLink,iconLink,thumbnailLink)";
+    final files = <dynamic>[];
+    String? pageToken;
 
-    final response = await http.get(Uri.parse(url));
+    // Drive returns at most 100 items per page by default — follow
+    // nextPageToken so large folders aren't silently truncated.
+    do {
+      final url =
+          "https://www.googleapis.com/drive/v3/files"
+          "?q='$folderId'+in+parents+and+trashed=false"
+          "&key=$apiKey"
+          "&pageSize=1000"
+          "&fields=nextPageToken,files(id,name,mimeType,webViewLink,iconLink,thumbnailLink)"
+          "${pageToken != null ? '&pageToken=${Uri.encodeQueryComponent(pageToken)}' : ''}";
 
-    final data = jsonDecode(response.body);
+      final response = await http.get(Uri.parse(url));
 
-    return data["files"] ?? [];
+      // Surface HTTP errors (bad key, quota, permissions) instead of
+      // rendering them as an empty folder.
+      if (response.statusCode != 200) {
+        throw Exception(
+          "Failed to fetch Google Drive folder: ${response.statusCode} - ${response.body}",
+        );
+      }
+
+      final data = jsonDecode(response.body);
+      files.addAll((data["files"] as List<dynamic>?) ?? const []);
+      pageToken = data["nextPageToken"] as String?;
+    } while (pageToken != null && pageToken.isNotEmpty);
+
+    return files;
   }
 
   Future<String?> findFolderByName(
@@ -29,7 +49,11 @@ class DriveService {
     String parentFolderId,
     String accessToken,
   ) async {
-    final nameEscaped = name.replaceAll("'", "\\'");
+    // Escape for the Drive query literal, then URL-encode so names containing
+    // '&', '+', '#' etc. don't truncate/alter the query string.
+    final nameEscaped = Uri.encodeQueryComponent(
+      name.replaceAll(r'\', r'\\').replaceAll("'", "\\'"),
+    );
     final url =
         "https://www.googleapis.com/drive/v3/files"
         "?q=name='$nameEscaped'+and+mimeType='application/vnd.google-apps.folder'+and+'$parentFolderId'+in+parents+and+trashed=false"
@@ -86,7 +110,8 @@ class DriveService {
     required String subjectName,
   }) async {
     final googleSignIn = GoogleSignIn(
-      serverClientId: dotenv.env['GOOGLE_WEB_CLIENT_ID'],
+      clientId: kIsWeb ? dotenv.env['GOOGLE_WEB_CLIENT_ID'] : null,
+      serverClientId: !kIsWeb ? dotenv.env['GOOGLE_WEB_CLIENT_ID'] : null,
       scopes: [
         'email',
         'profile',
@@ -132,7 +157,7 @@ class DriveService {
     final boundary = "upload_boundary_${DateTime.now().millisecondsSinceEpoch}";
     final header =
         "--$boundary\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n"
-        '{"name": "$filename", "parents": ["$subjectFolderId"]}\r\n\r\n'
+        '${jsonEncode({"name": filename, "parents": [subjectFolderId]})}\r\n\r\n'
         "--$boundary\r\nContent-Type: $mimeType\r\n\r\n";
     final footer = "\r\n--$boundary--\r\n";
 

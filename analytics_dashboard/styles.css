@@ -475,6 +475,18 @@ select option {
   border: 1px solid rgba(0, 240, 255, 0.2);
 }
 
+.badge-platform-desktop {
+  background: rgba(179, 136, 255, 0.08);
+  color: #B388FF;
+  border: 1px solid rgba(179, 136, 255, 0.2);
+}
+
+.badge-platform-app {
+  background: rgba(0, 240, 255, 0.08);
+  color: var(--neon-color);
+  border: 1px solid rgba(0, 240, 255, 0.2);
+}
+
 .badge-type-feature {
   background: rgba(94, 53, 177, 0.15);
   color: #B388FF;

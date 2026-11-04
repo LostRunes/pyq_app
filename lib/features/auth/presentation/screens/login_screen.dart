@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/providers/auth_provider.dart';
 import '../../../../core/providers.dart';
@@ -152,7 +154,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         final repository = ref.read(authRepositoryProvider);
         final isUnique = await repository.checkUsernameUnique(cleanValue);
 
-        if (mounted) {
+        // Ignore stale results if the user kept typing while this was in flight.
+        if (mounted && _usernameController.text.trim() == cleanValue) {
           setState(() {
             _isCheckingUsername = false;
             _isUsernameUnique = isUnique;
@@ -162,7 +165,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           });
         }
       } catch (e) {
-        if (mounted) {
+        if (mounted && _usernameController.text.trim() == cleanValue) {
           setState(() {
             _isCheckingUsername = false;
             _isUsernameUnique = null;
@@ -299,7 +302,49 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     try {
       final repository = ref.read(authRepositoryProvider);
       await repository.signInWithGoogle();
+      // User dismissed the account picker: no session and no signedIn event
+      // will arrive, so clear the spinner here.
+      if (mounted && Supabase.instance.client.auth.currentSession == null) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+      });
+      _showErrorSnackBar(e.toString());
+    }
+  }
+
+  /// Sign in with Apple is offered on Apple platforms (App Store 4.8).
+  bool get _showAppleSignIn =>
+      !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.iOS ||
+          defaultTargetPlatform == TargetPlatform.macOS);
+
+  Future<void> _signInWithApple() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final repository = ref.read(authRepositoryProvider);
+      final appleName = await repository.signInWithApple();
+      // Apple shares the name only on the first sign-in: prefill the
+      // profile setup's display name with it.
+      if (appleName != null && _displayNameController.text.trim().isEmpty) {
+        _displayNameController.text = appleName;
+      }
+      // User cancelled: no session and no signedIn event will arrive.
+      if (mounted && Supabase.instance.client.auth.currentSession == null) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
       setState(() {
         _isLoading = false;
       });
@@ -462,6 +507,26 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             isLoading: _isLoading,
                             onPressed: _signInWithGoogle,
                           ),
+                          if (_showAppleSignIn) ...[
+                            const SizedBox(height: 12),
+                            IgnorePointer(
+                              ignoring: _isLoading,
+                              child: Opacity(
+                                opacity: _isLoading ? 0.5 : 1,
+                                child: SignInWithAppleButton(
+                                  text: 'Continue with Apple',
+                                  height: 52,
+                                  borderRadius: const BorderRadius.all(
+                                    Radius.circular(24),
+                                  ),
+                                  style: isDark
+                                      ? SignInWithAppleButtonStyle.white
+                                      : SignInWithAppleButtonStyle.black,
+                                  onPressed: _signInWithApple,
+                                ),
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),

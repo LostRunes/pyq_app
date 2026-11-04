@@ -151,23 +151,18 @@ class _GhostTextState extends State<GhostText>
             final start = index * step;
             final end = (index + 1) * step;
 
-            final anim = CurvedAnimation(
-              parent: _controller,
-              curve: Interval(start, end, curve: Curves.easeOut),
-            );
+            // Transform the value directly: creating a CurvedAnimation here
+            // on every frame registers a status listener on _controller each
+            // time and never removes it.
+            final t = Interval(
+              start,
+              end,
+              curve: Curves.easeOut,
+            ).transform(_controller.value);
 
-            final opacity = Tween<double>(
-              begin: 0.0,
-              end: 1.0,
-            ).animate(anim).value;
-            final slide = Tween<double>(
-              begin: 8.0,
-              end: 0.0,
-            ).animate(anim).value;
-            final letterSpacing = Tween<double>(
-              begin: 4.0,
-              end: 0.0,
-            ).animate(anim).value;
+            final opacity = t;
+            final slide = 8.0 * (1.0 - t);
+            final letterSpacing = 4.0 * (1.0 - t);
 
             return Opacity(
               opacity: opacity,

@@ -56,6 +56,7 @@ class _MascotAvatarSelectorState extends ConsumerState<MascotAvatarSelector> {
         maxHeight: 512,
       );
       if (pickedFile == null) {
+        if (!mounted) return;
         setState(() {
           _isUploading = false;
         });
@@ -75,6 +76,7 @@ class _MascotAvatarSelectorState extends ConsumerState<MascotAvatarSelector> {
 
       final publicUrl = supabase.storage.from('avatars').getPublicUrl(fileName);
 
+      if (!mounted) return;
       setState(() {
         _customUploadedUrl = publicUrl;
         _isUploading = false;
@@ -83,6 +85,7 @@ class _MascotAvatarSelectorState extends ConsumerState<MascotAvatarSelector> {
       widget.onSelected(publicUrl);
     } catch (e) {
       debugPrint('Error uploading avatar: $e');
+      if (!mounted) return;
       setState(() {
         _isUploading = false;
       });

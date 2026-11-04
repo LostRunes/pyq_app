@@ -59,22 +59,31 @@ class PyqRepository {
 
     final topicIds = topics.map((t) => t.id).toList();
 
-    // 2. Fetch all question_topics for these topics
-    final qtRes = await _supabase
-        .from('question_topics')
-        .select('topic_id, question_id')
-        .filter('topic_id', 'in', topicIds);
-    final qtList = qtRes as List;
+    final List qtList;
+    final List qpmList;
+    try {
+      // 2. Fetch all question_topics for these topics
+      final qtRes = await _supabase
+          .from('question_topics')
+          .select('topic_id, question_id')
+          .filter('topic_id', 'in', topicIds);
+      qtList = qtRes as List;
 
-    final allQuestionIds = qtList.map((e) => e['question_id']).toSet().toList();
-    if (allQuestionIds.isEmpty) return topics;
+      final allQuestionIds =
+          qtList.map((e) => e['question_id']).toSet().toList();
+      if (allQuestionIds.isEmpty) return topics;
 
-    // 3. Fetch all question_pyq_map with source years for these questions
-    final qpmRes = await _supabase
-        .from('question_pyq_map')
-        .select('question_id, pyq_sources(year)')
-        .filter('question_id', 'in', allQuestionIds);
-    final qpmList = qpmRes as List;
+      // 3. Fetch all question_pyq_map with source years for these questions
+      final qpmRes = await _supabase
+          .from('question_pyq_map')
+          .select('question_id, pyq_sources(year)')
+          .filter('question_id', 'in', allQuestionIds);
+      qpmList = qpmRes as List;
+    } catch (e) {
+      // Scoring is best-effort: still show (cached) topics when offline.
+      log('Topic importance fetch failed for $subjectId: $e');
+      return topics;
+    }
 
     // 4. Calculate scores for each topic
     for (var topic in topics) {
@@ -96,7 +105,8 @@ class PyqRepository {
             if (source is List && source.isNotEmpty) return source[0]['year'];
             return null;
           })
-          .whereType<int>()
+          .where((y) => y != null)
+          .map((y) => y.toString())
           .toSet()
           .length;
 
@@ -123,7 +133,10 @@ class PyqRepository {
           'questions(id, question_text, difficulty, question_pyq_map(pyq_sources(id, year, exam_type, season, question_number)))',
         )
         .eq('topic_id', topicId);
-    return (res as List).map((e) => Question.fromJson(e['questions'])).toList();
+    return (res as List)
+        .where((e) => e['questions'] != null)
+        .map((e) => Question.fromJson(e['questions']))
+        .toList();
   }
 
   Future<Question> getQuestionDetail(String questionId) async {
@@ -141,6 +154,7 @@ class PyqRepository {
         .select('pyq_sources(id, year, exam_type, season, question_number)')
         .eq('question_id', questionId);
     return (res as List)
+        .where((e) => e['pyq_sources'] is Map)
         .map((e) => PyqSource.fromJson(e['pyq_sources']))
         .toList();
   }
@@ -204,22 +218,19 @@ class PyqRepository {
       );
       // Fallback in case RPC is not deployed yet or has error
       final questions = await getQuestionsByTopic(topicId);
-      List<QuestionFull> fullQuestions = [];
-      await Future.wait(
+      // Future.wait preserves input order, so questions keep the topic order.
+      return Future.wait(
         questions.map((q) async {
           final pyqs = await getPyqSourcesForQuestion(q.id);
           final images = await getImagesForQuestion(q.id);
-          fullQuestions.add(
-            QuestionFull(
-              text: q.questionText,
-              difficulty: q.difficulty,
-              imageUrls: images.map((i) => i.imageUrl).toList(),
-              pyqMeta: pyqs,
-            ),
+          return QuestionFull(
+            text: q.questionText,
+            difficulty: q.difficulty,
+            imageUrls: images.map((i) => i.imageUrl).toList(),
+            pyqMeta: pyqs,
           );
         }),
       );
-      return fullQuestions;
     }
   }
 

@@ -136,9 +136,11 @@ class StudyTogetherScreenState extends ConsumerState<StudyTogetherScreen> {
                   final room = await ref
                       .read(roomOperationsProvider)
                       .findRoomByCode(code);
+                  // NOTE: the dialog's `context` is unmounted once popped, so
+                  // use this State's context for post-await UI.
                   if (room == null) {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
+                    if (mounted) {
+                      ScaffoldMessenger.of(this.context).showSnackBar(
                         const SnackBar(
                           content: Text('Room not found or archived'),
                         ),
@@ -150,21 +152,21 @@ class StudyTogetherScreenState extends ConsumerState<StudyTogetherScreen> {
                   await ref
                       .read(joinedRoomIdsProvider.notifier)
                       .addRoom(room.id);
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
+                  if (mounted) {
+                    ScaffoldMessenger.of(this.context).showSnackBar(
                       SnackBar(
                         content: Text('Successfully joined room: ${room.name}'),
                       ),
                     );
                     Navigator.pushNamed(
-                      context,
+                      this.context,
                       '/study-together/chat',
                       arguments: room,
                     );
                   }
                 } catch (e) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
+                  if (mounted) {
+                    ScaffoldMessenger.of(this.context).showSnackBar(
                       SnackBar(content: Text('Error joining room: $e')),
                     );
                   }
@@ -361,16 +363,17 @@ class StudyTogetherScreenState extends ConsumerState<StudyTogetherScreen> {
                           await ref
                               .read(joinedRoomIdsProvider.notifier)
                               .addRoom(newRoom.id);
-                          if (context.mounted) {
+                          // Sheet context is unmounted after pop; use State's.
+                          if (mounted) {
                             Navigator.pushNamed(
-                              context,
+                              this.context,
                               '/study-together/chat',
                               arguments: newRoom,
                             );
                           }
                         } catch (e) {
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
+                          if (mounted) {
+                            ScaffoldMessenger.of(this.context).showSnackBar(
                               SnackBar(
                                 content: Text('Failed to create room: $e'),
                               ),
@@ -396,7 +399,6 @@ class StudyTogetherScreenState extends ConsumerState<StudyTogetherScreen> {
   void showAddSubjectRoomDialog(BuildContext context) {
     final allRoomsAsync = ref.read(studyRoomsProvider);
     final joinedNotifier = ref.read(joinedRoomIdsProvider.notifier);
-    final joinedIds = ref.read(joinedRoomIdsProvider);
     final branchSubjectsMapAsync = ref.watch(branchSubjectsMapProvider);
 
     showDialog(
@@ -518,7 +520,11 @@ class StudyTogetherScreenState extends ConsumerState<StudyTogetherScreen> {
                                 itemCount: filtered.length,
                                 itemBuilder: (context, index) {
                                   final room = filtered[index];
-                                  final isAdded = joinedIds.contains(room.id);
+                                  // Read fresh each build: a captured list goes
+                                  // stale after add/remove toggles.
+                                  final isAdded = ref
+                                      .read(joinedRoomIdsProvider)
+                                      .contains(room.id);
 
                                   String subInfo = room.subjectId ?? '';
                                   final metaList =

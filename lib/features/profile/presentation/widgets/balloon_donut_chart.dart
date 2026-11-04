@@ -60,6 +60,9 @@ class _InteractiveBalloonDonutState extends State<InteractiveBalloonDonut>
     // Restart animation if segments or target changed significantly
     if (oldWidget.segments.length != widget.segments.length ||
         oldWidget.totalTarget != widget.totalTarget) {
+      // Selected index may now be out of range (segments[_selectedIndex!]).
+      _selectedIndex = null;
+      _tooltipPosition = null;
       _controller.forward(from: 0);
     }
   }

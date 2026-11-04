@@ -9,6 +9,7 @@ import '../../data/models/study_room.dart';
 import '../../data/models/room_message.dart';
 import '../../../utils/image_utils.dart';
 import '../../../data/services/cloudinary_service.dart';
+import '../../../presentation/providers/block_providers.dart';
 import '../providers/study_together_providers.dart';
 import '../widgets/room_message_bubble.dart';
 import '../widgets/voice_panel.dart';
@@ -95,7 +96,7 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen>
                       );
                       if (image == null) return;
                       final compressed = await ImageUtils.compressImage(File(image.path));
-                      if (compressed == null) return;
+                      if (compressed == null || !mounted) return;
                       setState(() {
                         _selectedImages.add(compressed);
                       });
@@ -130,6 +131,7 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen>
                         images.map((img) => ImageUtils.compressImage(File(img.path))),
                       );
                       final valid = compressedList.whereType<File>().toList();
+                      if (!mounted) return;
                       setState(() {
                         _selectedImages.addAll(valid);
                       });
@@ -165,6 +167,24 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen>
     final route = ModalRoute.of(context);
     if (route is PageRoute) {
       appRouteObserver.subscribe(this, route);
+    }
+  }
+
+  bool _hasPopped = false;
+
+  /// Pops this screen at most once. Room deletion (realtime) and the
+  /// countdown timer can both fire, and rebuilds during the exit transition
+  /// would otherwise pop the route underneath this one as well.
+  void _popOnce() {
+    if (_hasPopped || !mounted) return;
+    final route = ModalRoute.of(context);
+    if (route == null || !route.isActive || route.isFirst) return;
+    _hasPopped = true;
+    if (route.isCurrent) {
+      Navigator.pop(context);
+    } else {
+      // Something (dialog/sheet/other screen) is on top: remove just this route.
+      Navigator.removeRoute(context, route);
     }
   }
 
@@ -488,7 +508,7 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen>
           );
         }
       } finally {
-        setState(() => _isSending = false);
+        if (mounted) setState(() => _isSending = false);
       }
       return;
     }
@@ -570,7 +590,11 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen>
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final messages = ref.watch(roomChatProvider(widget.room.id));
+    final blockedUserIds = ref.watch(blockedUserIdsProvider);
+    final messages = ref
+        .watch(roomChatProvider(widget.room.id))
+        .where((m) => !blockedUserIds.contains(m.userId))
+        .toList();
     final presenceCount = ref.watch(roomPresenceProvider(widget.room.id));
     final chatNotifier = ref.read(roomChatProvider(widget.room.id).notifier);
     final typingUsers = ref.watch(roomTypingProvider(widget.room.id));
@@ -580,10 +604,8 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen>
 
     // If the room has been deleted from DB, pop the screen
     roomAsync.whenData((room) {
-      if (room == null && Navigator.canPop(context)) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          Navigator.pop(context);
-        });
+      if (room == null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => _popOnce());
       }
     });
 
@@ -680,11 +702,7 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen>
                 endedAt: activeRoom.endedAt!,
                 roomId: activeRoom.id,
                 roomName: activeRoom.name,
-                onTimerFinished: () {
-                  if (Navigator.canPop(context)) {
-                    Navigator.pop(context);
-                  }
-                },
+                onTimerFinished: _popOnce,
               ),
             ],
             // Show voice panel only if voice is enabled AND the room is still active

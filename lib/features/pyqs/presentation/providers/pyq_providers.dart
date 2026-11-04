@@ -284,6 +284,27 @@ class TrackedTopicsNotifier extends Notifier<Set<String>> {
     }
     state = newState;
     await prefs.setStringList(_key, newState.toList());
+
+    // Sync to Supabase (otherwise _syncFromSupabase reverts this on next launch)
+    final supabase = ref.read(supabase2ClientProvider);
+    // Auth session lives on the secondary DB (Supabase.instance.client)
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user != null && topicIds.isNotEmpty) {
+      try {
+        final now = DateTime.now().toIso8601String();
+        await supabase.from('student_topic_progress').upsert([
+          for (final topicId in topicIds)
+            {
+              'user_id': user.id,
+              'topic_id': topicId,
+              'is_tracked': track,
+              'updated_at': now,
+            },
+        ]);
+      } catch (e, st) {
+        debugPrint('Error syncing tracked topics to secondary Supabase: $e\n$st');
+      }
+    }
   }
 
   bool isTracked(String topicId) => state.contains(topicId);
