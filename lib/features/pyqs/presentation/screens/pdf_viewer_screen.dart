@@ -51,12 +51,6 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
             _localPath = file.path;
             _isLoading = false;
           });
-        } else {
-          // Screen closed while downloading: dispose() already ran with a null
-          // _localPath, so clean up the temp file here to avoid leaking it.
-          try {
-            await file.delete();
-          } catch (_) {}
         }
       } else {
         throw Exception('Server returned status code: ${response.statusCode}');
@@ -178,7 +172,6 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
                   pageFling: true,
                   pageSnap: true,
                   onError: (error) {
-                    if (!mounted) return;
                     setState(() {
                       _errorMessage = error.toString();
                     });

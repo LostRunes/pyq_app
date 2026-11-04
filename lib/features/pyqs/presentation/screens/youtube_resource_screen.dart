@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart' as yt_explode;
@@ -109,7 +108,6 @@ class _YoutubeResourceScreenState extends State<YoutubeResourceScreen> {
         }).toList();
 
         // Default active video to the first one in the playlist
-        if (!mounted) return;
         if (_playlistVideos.isNotEmpty) {
           _activeVideoId = _playlistVideos.first.id;
           _activeVideoTitle = _playlistVideos.first.title;
@@ -118,7 +116,6 @@ class _YoutubeResourceScreenState extends State<YoutubeResourceScreen> {
       } else if (_videoId != null) {
         // Fetch single video metadata
         final video = await yt.videos.get(_videoId!);
-        if (!mounted) return;
         _resourceTitle = video.title;
         _author = video.author;
         _description = video.description;
@@ -130,8 +127,6 @@ class _YoutubeResourceScreenState extends State<YoutubeResourceScreen> {
         throw Exception("Could not detect video or playlist ID from the URL.");
       }
     } catch (e) {
-      debugPrint('YoutubeExplode failed: $e');
-      if (!mounted) return;
       setState(() {
         _errorMessage =
             "Failed to load metadata. You can still watch it directly on YouTube!";
@@ -141,6 +136,7 @@ class _YoutubeResourceScreenState extends State<YoutubeResourceScreen> {
           _initPlayer(_activeVideoId!);
         }
       });
+      debugPrint('YoutubeExplode failed: $e');
     } finally {
       yt.close();
       if (mounted) {
@@ -468,9 +464,6 @@ class _YoutubeResourceScreenState extends State<YoutubeResourceScreen> {
                                   icon: const Icon(Icons.share_rounded),
                                   label: const Text('Share Video Link'),
                                   onPressed: () {
-                                    Clipboard.setData(
-                                      ClipboardData(text: _url),
-                                    );
                                     ScaffoldMessenger.of(
                                       context,
                                     ).showSnackBar(

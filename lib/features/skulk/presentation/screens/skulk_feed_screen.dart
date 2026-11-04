@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../subjects/presentation/providers/subjects_providers.dart';
-import '../providers/block_providers.dart';
 import '../providers/skulk_providers.dart';
 import '../widgets/doubt_card.dart';
 import '../widgets/doubt_card_skeleton.dart';
@@ -56,7 +55,6 @@ class _SkulkFeedScreenState extends ConsumerState<SkulkFeedScreen> {
     // Watch the active doubts feed list from state provider
     final doubtsAsync = ref.watch(skulkFeedProvider);
     final feedNotifier = ref.read(skulkFeedProvider.notifier);
-    final blockedUserIds = ref.watch(blockedUserIdsProvider);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -144,10 +142,7 @@ class _SkulkFeedScreenState extends ConsumerState<SkulkFeedScreen> {
                   ),
                 ),
               ),
-              data: (allDoubts) {
-                final doubtsList = allDoubts
-                    .where((d) => !blockedUserIds.contains(d.userId))
-                    .toList();
+              data: (doubtsList) {
                 if (doubtsList.isEmpty) {
                   return Padding(
                     padding: const EdgeInsets.only(top: 80),

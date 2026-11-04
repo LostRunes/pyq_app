@@ -58,15 +58,9 @@ class LiveKitService {
 
   /// Disconnects from the current room
   Future<void> disconnect() async {
-    final room = _room;
-    if (room != null) {
+    if (_room != null) {
+      await _room!.disconnect();
       _room = null;
-      try {
-        await room.disconnect();
-      } finally {
-        // Release engine/signal/event listeners; disconnect() alone leaks them.
-        await room.dispose();
-      }
     }
   }
 

@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../data/models/doubt.dart';
-import '../providers/block_providers.dart';
 import '../providers/skulk_providers.dart';
 import 'report_bottom_sheet.dart';
 import 'share_doubt_sheet.dart';
@@ -228,13 +227,6 @@ class DoubtCard extends ConsumerWidget {
                         target: ReportTarget.doubt,
                         targetId: doubt.id,
                       );
-                    } else if (value == 'block') {
-                      await confirmAndBlockUser(
-                        context,
-                        ref,
-                        userId: doubt.userId,
-                        displayName: doubt.authorDisplayName,
-                      );
                     }
                   },
                   itemBuilder: (_) => [
@@ -297,7 +289,6 @@ class DoubtCard extends ConsumerWidget {
                         ],
                       ),
                     ),
-                    if (!isOwnDoubt) blockUserMenuItem(),
                   ],
                 ),
               ],

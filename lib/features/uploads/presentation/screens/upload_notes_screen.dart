@@ -440,7 +440,6 @@ class _UploadNotesScreenState extends ConsumerState<UploadNotesScreen> {
                       ElevatedButton.icon(
                         icon: const Icon(Icons.cloud_upload_rounded),
                         onPressed: _isUploadingNotes ? null : () async {
-                          final uploadedFiles = <PlatformFile>[];
                           try {
                             setState(() {
                               _isUploadingNotes = true;
@@ -477,7 +476,6 @@ class _UploadNotesScreenState extends ConsumerState<UploadNotesScreen> {
                                   'semester': _uploadSemester,
                                 });
                               }
-                              uploadedFiles.add(file);
                             }
 
                             if (context.mounted) {
@@ -513,13 +511,6 @@ class _UploadNotesScreenState extends ConsumerState<UploadNotesScreen> {
                             }
                           } catch (e) {
                             if (context.mounted) {
-                              // Drop files that already made it to Drive so a
-                              // retry does not upload duplicates.
-                              setState(() {
-                                _selectedFiles.removeWhere(
-                                  uploadedFiles.contains,
-                                );
-                              });
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   content: Text('Upload failed: $e 😢'),

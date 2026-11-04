@@ -291,6 +291,7 @@ class RoomChatNotifier extends Notifier<List<RoomMessage>> {
   final String roomId;
 
   static const int _pageSize = 50;
+  int _offset = 0;
   bool _hasMore = true;
   bool _isLoadingMore = false;
   RealtimeChannel? _realtimeChannel;
@@ -377,6 +378,7 @@ class RoomChatNotifier extends Notifier<List<RoomMessage>> {
   }
 
   Future<void> refresh() async {
+    _offset = 0;
     _hasMore = true;
     await _loadInitialMessages();
   }
@@ -385,26 +387,21 @@ class RoomChatNotifier extends Notifier<List<RoomMessage>> {
   Future<void> loadMore() async {
     if (!_hasMore || _isLoadingMore) return;
     _isLoadingMore = true;
+    _offset += _pageSize;
 
     final repo = ref.read(studyTogetherRepositoryProvider);
     try {
-      // Offset by what is actually loaded: realtime inserts/deletes shift the
-      // server-side ordering, so a fixed page counter would re-fetch or skip rows.
       final nextPage = await repo.getRoomMessages(
         roomId,
         limit: _pageSize,
-        offset: state.length,
+        offset: _offset,
       );
       if (nextPage.length < _pageSize) {
         _hasMore = false;
       }
-      final existingIds = state.map((m) => m.id).toSet();
-      state = [
-        ...state,
-        ...nextPage.where((m) => !existingIds.contains(m.id)),
-      ];
+      state = [...state, ...nextPage];
     } catch (_) {
-      // keep current state; user can retry by scrolling
+      _offset -= _pageSize; // Revert offset if fails
     } finally {
       _isLoadingMore = false;
     }
@@ -715,30 +712,11 @@ class VoiceRoomNotifier extends Notifier<VoiceRoomState> {
 
   Room? get room => _liveKitService.room;
 
-  /// Incremented on every join/leave so stale in-flight joins can detect
-  /// they were superseded and bail out.
-  int _joinSeq = 0;
-
-  /// Room whose participant_count we incremented (and must decrement once).
-  String? _countedRoomId;
-
-  EventsListener<RoomEvent>? _roomEventsListener;
-
   Future<void> joinVoice(StudyRoom room, String username) async {
     final roomId = room.id;
-    if (state.activeRoomId == roomId &&
-        (state.status == VoiceConnectionStatus.connected ||
-            state.status == VoiceConnectionStatus.connecting)) {
+    if (state.activeRoomId == roomId && state.status == VoiceConnectionStatus.connected) {
       return;
     }
-
-    // Switching rooms: properly leave the previous one first so its
-    // participant_count is decremented and its listeners are removed.
-    if (state.activeRoomId != null) {
-      await leaveVoice();
-    }
-
-    final seq = ++_joinSeq;
 
     state = state.copyWith(
       activeRoomId: roomId,
@@ -755,37 +733,15 @@ class VoiceRoomNotifier extends Notifier<VoiceRoomState> {
                           user?.email?.split('@').first ?? 
                           username;
       final tokenData = await _liveKitService.fetchToken(roomId, identity, displayName);
-      if (seq != _joinSeq) return; // left / superseded while fetching token
 
       final wsUrl = tokenData['ws_url'] as String;
       final token = tokenData['token'] as String;
 
       final room = await _liveKitService.connect(wsUrl, token);
-      if (seq != _joinSeq) {
-        // User left while connecting: don't leave an orphan live connection.
-        if (identical(_liveKitService.room, room)) {
-          await _liveKitService.disconnect();
-        }
-        return;
-      }
       room.addListener(_onRoomChange);
-      _roomEventsListener = room.createListener()
-        ..on<RoomDisconnectedEvent>((_) {
-          // Server/network-initiated disconnect: clean up state and count.
-          if (seq == _joinSeq) Future.microtask(leaveVoice);
-        });
 
       await _liveKitService.setMicEnabled(true);
-      if (seq != _joinSeq) return;
       await _repository.updateRoomParticipantCount(roomId, 1);
-      if (seq != _joinSeq) {
-        // leaveVoice ran before the increment was recorded; undo it.
-        try {
-          await _repository.updateRoomParticipantCount(roomId, -1);
-        } catch (_) {}
-        return;
-      }
-      _countedRoomId = roomId;
 
       state = state.copyWith(
         status: VoiceConnectionStatus.connected,
@@ -794,13 +750,9 @@ class VoiceRoomNotifier extends Notifier<VoiceRoomState> {
 
       _updateParticipants();
     } catch (e) {
-      if (seq != _joinSeq) return;
-      // Tear down any half-open connection (e.g. mic permission denied after
-      // connect) so we don't keep receiving audio while showing "failed".
-      await _disposeRoomListeners();
-      await _liveKitService.disconnect();
-      await _decrementCountIfNeeded();
-      state = VoiceRoomState(status: VoiceConnectionStatus.failed);
+      state = state.copyWith(
+        status: VoiceConnectionStatus.failed,
+      );
       if (kDebugMode) {
         print('Failed to join voice room: $e');
       }
@@ -811,38 +763,23 @@ class VoiceRoomNotifier extends Notifier<VoiceRoomState> {
     final roomId = state.activeRoomId;
     if (roomId == null) return;
 
-    _joinSeq++;
-    state = VoiceRoomState();
-
-    await _disposeRoomListeners();
-    await _liveKitService.disconnect();
-    await _decrementCountIfNeeded();
-  }
-
-  Future<void> _disposeRoomListeners() async {
     room?.removeListener(_onRoomChange);
-    final listener = _roomEventsListener;
-    _roomEventsListener = null;
-    await listener?.dispose();
-  }
+    await _liveKitService.disconnect();
 
-  Future<void> _decrementCountIfNeeded() async {
-    final counted = _countedRoomId;
-    _countedRoomId = null;
-    if (counted == null) return;
     try {
-      await _repository.updateRoomParticipantCount(counted, -1);
+      await _repository.updateRoomParticipantCount(roomId, -1);
     } catch (e) {
       // ignore
     }
+
+    state = VoiceRoomState();
   }
 
   Future<void> toggleMute() async {
     final room = this.room;
-    final localParticipant = room?.localParticipant;
-    if (room == null || localParticipant == null) return;
+    if (room == null) return;
 
-    final currentlyMuted = !localParticipant.isMicrophoneEnabled();
+    final currentlyMuted = !room.localParticipant!.isMicrophoneEnabled();
     await _liveKitService.setMicEnabled(currentlyMuted);
     
     state = state.copyWith(
@@ -886,9 +823,6 @@ class VoiceRoomNotifier extends Notifier<VoiceRoomState> {
         // ignore
       }
     }
-
-    // Room was left/switched while the profile lookup was in flight.
-    if (!identical(this.room, room)) return;
 
     final list = <VoiceParticipant>[];
 
