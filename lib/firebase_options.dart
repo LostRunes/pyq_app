@@ -58,7 +58,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyDDv9ZV8ImEgL_68VRhKPnotj5V9c9KjVc',
-    appId: '1:359937070047:ios:ca6fb69b61ec55e35d2a6a',
+    appId: '1:359937070047:ios:729bda84dac60a4b5d2a6a',
     messagingSenderId: '359937070047',
     projectId: 'focusfox-cc167',
     storageBucket: 'focusfox-cc167.firebasestorage.app',
@@ -67,7 +67,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions macos = FirebaseOptions(
     apiKey: 'AIzaSyDDv9ZV8ImEgL_68VRhKPnotj5V9c9KjVc',
-    appId: '1:359937070047:ios:ca6fb69b61ec55e35d2a6a',
+    appId: '1:359937070047:ios:729bda84dac60a4b5d2a6a',
     messagingSenderId: '359937070047',
     projectId: 'focusfox-cc167',
     storageBucket: 'focusfox-cc167.firebasestorage.app',

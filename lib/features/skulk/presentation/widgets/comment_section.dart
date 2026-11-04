@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../data/models/comment.dart';
-import '../providers/block_providers.dart';
 import '../providers/skulk_providers.dart';
 import 'report_bottom_sheet.dart';
 
@@ -70,11 +69,9 @@ class _CommentSectionState extends ConsumerState<CommentSection> {
       await ref
           .read(commentsNotifierProvider(widget.doubtId).notifier)
           .addComment(body, answerId: widget.answerId);
-      if (!mounted) return;
       _commentController.clear();
       FocusScope.of(context).unfocus();
     } catch (e) {
-      if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Failed to publish comment: $e')));
@@ -154,11 +151,9 @@ class _CommentSectionState extends ConsumerState<CommentSection> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final allComments = ref.watch(commentsNotifierProvider(widget.doubtId));
-    final blockedUserIds = ref.watch(blockedUserIdsProvider);
 
     // Filter comments based on whether they are for the main doubt or a specific answer
     final comments = allComments.where((c) {
-      if (blockedUserIds.contains(c.userId)) return false;
       if (widget.answerId == null) {
         return c.answerId == null;
       } else {
@@ -382,13 +377,6 @@ class _CommentSectionState extends ConsumerState<CommentSection> {
                                   target: ReportTarget.comment,
                                   targetId: c.id,
                                 );
-                              } else if (value == 'block') {
-                                await confirmAndBlockUser(
-                                  context,
-                                  ref,
-                                  userId: c.userId,
-                                  displayName: c.authorDisplayName,
-                                );
                               }
                             },
                             itemBuilder: (context) => [
@@ -451,7 +439,6 @@ class _CommentSectionState extends ConsumerState<CommentSection> {
                                   ],
                                 ),
                               ),
-                              if (!isOwnComment) blockUserMenuItem(),
                             ],
                           ),
                         ],

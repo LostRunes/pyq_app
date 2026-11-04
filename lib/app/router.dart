@@ -36,7 +36,6 @@ import 'package:focus_fox/features/skulk/study_together/data/models/study_room.d
 import 'package:focus_fox/features/utilities/presentation/screens/todo_dashboard_screen.dart';
 import 'package:focus_fox/features/utilities/presentation/screens/scientific_calculator_screen.dart';
 import 'package:focus_fox/features/utilities/presentation/screens/global_resources_screen.dart';
-import 'package:focus_fox/features/utilities/presentation/screens/matrix_app/matrix_app_screen.dart';
 import 'package:focus_fox/shared/presentation/transitions/parallax_page_route.dart';
 
 class AppRouter {
@@ -192,12 +191,6 @@ class AppRouter {
       case '/todo_dashboard':
         return ParallaxPageRoute(
           child: const ToDoDashboardScreen(),
-          settings: settings,
-        );
-      case '/matrix_solver':
-      case '/matrix_app_pro':
-        return ParallaxPageRoute(
-          child: const MatrixAppScreen(),
           settings: settings,
         );
       case '/syllabus':

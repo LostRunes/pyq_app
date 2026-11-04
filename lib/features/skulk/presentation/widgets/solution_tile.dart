@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:focus_fox/features/skulk/utils/markdown_utils.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../data/models/solution.dart';
-import '../providers/block_providers.dart';
 import '../providers/skulk_providers.dart';
 import 'report_bottom_sheet.dart';
 import 'share_solution_sheet.dart';
@@ -28,22 +25,6 @@ class SolutionTile extends ConsumerWidget {
     required this.onDelete,
     required this.onCommentTap,
   });
-
-  Future<void> _copySolution(BuildContext context, Solution solution) async {
-    final textToCopy = 'Answer: ${stripMarkdown(solution.body)}';
-
-    await Clipboard.setData(ClipboardData(text: textToCopy));
-
-    if (!context.mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Copied to clipboard'),
-        behavior: SnackBarBehavior.floating,
-        duration: Duration(milliseconds: 800),
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -212,13 +193,6 @@ class SolutionTile extends ConsumerWidget {
                       target: ReportTarget.solution,
                       targetId: solution.id,
                     );
-                  } else if (value == 'block') {
-                    confirmAndBlockUser(
-                      context,
-                      ref,
-                      userId: solution.userId,
-                      displayName: solution.authorDisplayName,
-                    );
                   }
                 },
                 itemBuilder: (context) => [
@@ -298,7 +272,6 @@ class SolutionTile extends ConsumerWidget {
                       ],
                     ),
                   ),
-                  if (!isOwnSolution) blockUserMenuItem(),
                 ],
               ),
             ],
@@ -341,10 +314,7 @@ class SolutionTile extends ConsumerWidget {
                         ? () {
                             ref
                                 .read(userVotesProvider.notifier)
-                                .toggleSolutionVote(
-                                  solution.id,
-                                  solution.postId,
-                                );
+                                .toggleSolutionVote(solution.id, solution.postId);
                           }
                         : null,
                     borderRadius: BorderRadius.circular(8),
@@ -406,37 +376,6 @@ class SolutionTile extends ConsumerWidget {
                           const SizedBox(width: 4),
                           Text(
                             'Comment',
-                            style: GoogleFonts.outfit(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.grey,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-
-                  // Copy Answer Button
-                  InkWell(
-                    onTap: () => _copySolution(context, solution),
-                    borderRadius: BorderRadius.circular(8),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 5,
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.copy_outlined,
-                            size: 14,
-                            color: Colors.grey,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Copy',
                             style: GoogleFonts.outfit(
                               fontSize: 12,
                               fontWeight: FontWeight.w500,

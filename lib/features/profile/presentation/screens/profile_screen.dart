@@ -149,13 +149,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   int _getSemesterFromBatch(String batch) {
     final match = RegExp(r'\d+').firstMatch(batch);
     if (match == null) return 1;
-    var batchNum = int.parse(match.group(0)!);
-
-    // Calendar admission year (e.g. 2023) -> relative year, same as
-    // AuthRepository._getSemesterFromBatch; otherwise it always clamps to 8.
-    if (batchNum > 2000) {
-      batchNum = DateTime.now().year - batchNum + 1;
-    }
+    final batchNum = int.parse(match.group(0)!);
 
     final month = DateTime.now().month;
     final isEvenSemester = month >= 1 && month <= 6;
@@ -260,7 +254,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     if (confirmed == true && mounted) {
       // Capture navigator BEFORE await — context is not safe across async gaps
       final navigator = Navigator.of(context);
-      await signOutCompletely(ref: ref);
+      await signOutCompletely();
       navigator.pushNamedAndRemoveUntil('/login', (route) => false);
     }
   }
@@ -884,7 +878,7 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
     if (_debounce?.isActive ?? false) _debounce!.cancel();
 
     final cleanValue = value.trim();
-    if (cleanValue.toLowerCase() == widget.currentUsername.toLowerCase()) {
+    if (cleanValue == widget.currentUsername) {
       setState(() {
         _isCheckingUsername = false;
         _isUsernameUnique = true;
@@ -922,11 +916,10 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
         final res = await Supabase.instance.client
             .from('user_profiles')
             .select('id')
-            .eq('username', cleanValue.toLowerCase())
+            .eq('username', cleanValue)
             .maybeSingle();
 
-        // Ignore stale results if the user kept typing while this was in flight.
-        if (mounted && _usernameController.text.trim() == cleanValue) {
+        if (mounted) {
           setState(() {
             _isCheckingUsername = false;
             _isUsernameUnique = res == null;
@@ -948,7 +941,7 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
   }
 
   Future<void> _saveChanges() async {
-    final username = _usernameController.text.trim().toLowerCase();
+    final username = _usernameController.text.trim();
     final displayName = _displayNameController.text.trim();
 
     if (username.isEmpty || _isUsernameUnique != true) return;

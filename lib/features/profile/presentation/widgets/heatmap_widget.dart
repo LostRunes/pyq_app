@@ -26,14 +26,7 @@ class StudyActivityHeatmap extends ConsumerWidget {
     // Start date is 15 weeks ago, aligned to the start of the week
     final startOffset = today.weekday - 1; // days since Monday
     final totalDays = 15 * 7;
-    // Monday of the week 14 weeks ago, so the last column is the current week
-    // (Mon..Sun) and rows line up with the M/W/F labels. Built from calendar
-    // fields (not Duration) so DST shifts can't move a cell to the wrong day.
-    final startDate = DateTime(
-      today.year,
-      today.month,
-      today.day - (totalDays - 7) - startOffset,
-    );
+    final startDate = today.subtract(Duration(days: totalDays - 1 + startOffset));
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -118,11 +111,7 @@ class StudyActivityHeatmap extends ConsumerWidget {
                               child: Column(
                                 children: List.generate(7, (dayIdx) {
                                   final dayOffset = weekIdx * 7 + dayIdx;
-                                  final currentDay = DateTime(
-                                    startDate.year,
-                                    startDate.month,
-                                    startDate.day + dayOffset,
-                                  );
+                                  final currentDay = startDate.add(Duration(days: dayOffset));
                                   final dateStr = _formatDate(currentDay);
                                   final count = activity[dateStr] ?? 0;
 

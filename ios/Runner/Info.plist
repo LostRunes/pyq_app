@@ -32,17 +32,7 @@
 				<string>focusfox</string>
 			</array>
 		</dict>
-		<dict>
-			<key>CFBundleTypeRole</key>
-			<string>Editor</string>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>com.googleusercontent.apps.1024878697346-225h0qfo7k4t40ct8su52p4inc5af5u3</string>
-			</array>
-		</dict>
 	</array>
-	<key>GIDClientID</key>
-	<string>1024878697346-225h0qfo7k4t40ct8su52p4inc5af5u3.apps.googleusercontent.com</string>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
