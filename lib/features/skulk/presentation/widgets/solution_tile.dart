@@ -8,6 +8,7 @@ import '../../data/models/solution.dart';
 import '../providers/block_providers.dart';
 import '../providers/skulk_providers.dart';
 import 'report_bottom_sheet.dart';
+import 'rich_answer_text.dart';
 import 'share_solution_sheet.dart';
 import 'package:focus_fox/shared/widgets/common/cloudinary_image_gallery.dart';
 
@@ -306,7 +307,7 @@ class SolutionTile extends ConsumerWidget {
           const SizedBox(height: 10),
 
           // Solution Text Body
-          Text(
+          RichAnswerText(
             solution.body,
             style: GoogleFonts.outfit(
               fontSize: 14,

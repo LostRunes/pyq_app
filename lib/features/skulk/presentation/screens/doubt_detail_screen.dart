@@ -14,6 +14,9 @@ import '../widgets/comment_section.dart';
 import '../widgets/solution_tile.dart';
 import '../widgets/report_bottom_sheet.dart';
 import '../widgets/share_doubt_sheet.dart';
+import '../widgets/rich_answer_text.dart';
+import '../widgets/symbol_panel.dart';
+import '../../utils/answer_text_utils.dart';
 import 'package:focus_fox/shared/widgets/common/cloudinary_image_gallery.dart';
 import '../../data/services/cloudinary_service.dart';
 import '../../utils/image_utils.dart';
@@ -28,7 +31,10 @@ class DoubtDetailScreen extends ConsumerStatefulWidget {
 
 class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
   final TextEditingController _solutionController = TextEditingController();
+  final FocusNode _solutionFocus = FocusNode();
   bool _isSubmittingSolution = false;
+  bool _composerFocused = false;
+  bool _showSymbolPanel = false;
 
   final ImagePicker _picker = ImagePicker();
   List<File> selectedSolutionImages = [];
@@ -37,6 +43,65 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
   void initState() {
     super.initState();
     _retrieveLostData();
+    _solutionFocus.addListener(() {
+      if (!mounted) return;
+      setState(() {
+        _composerFocused = _solutionFocus.hasFocus;
+        // Keyboard and symbol panel take the same space; one at a time.
+        if (_solutionFocus.hasFocus) _showSymbolPanel = false;
+      });
+    });
+  }
+
+  void _toggleSymbolPanel() {
+    if (_showSymbolPanel) {
+      setState(() => _showSymbolPanel = false);
+      _solutionFocus.requestFocus();
+    } else {
+      _solutionFocus.unfocus();
+      setState(() => _showSymbolPanel = true);
+    }
+  }
+
+  void _showAnswerPreview() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(ctx).size.height * 0.75,
+        ),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Preview',
+                style: GoogleFonts.outfit(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 16,
+                ),
+              ),
+              const SizedBox(height: 12),
+              RichAnswerText(
+                _solutionController.text,
+                style: GoogleFonts.outfit(
+                  fontSize: 14,
+                  height: 1.45,
+                  color: isDark ? Colors.grey[200] : Colors.grey[900],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _copyQuestion(Doubt doubt) async {
@@ -267,11 +332,12 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
   @override
   void dispose() {
     _solutionController.dispose();
+    _solutionFocus.dispose();
     super.dispose();
   }
 
   void _submitSolution(String doubtId) async {
-    final body = _solutionController.text.trim();
+    final body = cleanAnswerText(_solutionController.text).trim();
     if (body.isEmpty && selectedSolutionImages.isEmpty) return;
 
     setState(() {
@@ -294,6 +360,7 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
       _solutionController.clear();
       setState(() {
         selectedSolutionImages.clear();
+        _showSymbolPanel = false;
       });
       FocusScope.of(context).unfocus();
 
@@ -341,7 +408,9 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
           ),
           content: TextField(
             controller: editController,
-            maxLines: 4,
+            minLines: 3,
+            maxLines: 10,
+            inputFormatters: const [AnswerTextFormatter()],
             style: GoogleFonts.outfit(fontSize: 14),
             decoration: InputDecoration(
               hintText: 'Edit your explanation...',
@@ -364,7 +433,7 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
             ),
             ElevatedButton(
               onPressed: () async {
-                final text = editController.text.trim();
+                final text = cleanAnswerText(editController.text).trim();
                 if (text.isNotEmpty) {
                   await ref
                       .read(solutionsNotifierProvider(doubtId).notifier)
@@ -1119,6 +1188,7 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
                   vertical: 12,
                 ),
                 child: SafeArea(
+                  bottom: !_showSymbolPanel,
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -1184,82 +1254,187 @@ class _DoubtDetailScreenState extends ConsumerState<DoubtDetailScreen> {
                           ),
                         ),
                       ],
-                      Row(
-                        children: [
-                          IconButton(
-                            icon: Icon(
-                              Icons.add_a_photo_outlined,
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
-                            onPressed: _showSolutionImageSourceBottomSheet,
-                          ),
-                          Expanded(
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: isDark
-                                    ? const Color(0xFF2A2A2A)
-                                    : Colors.grey[100],
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                              ),
-                              child: TextField(
-                                controller: _solutionController,
-                                maxLines: null,
-                                keyboardType: TextInputType.multiline,
-                                style: GoogleFonts.outfit(fontSize: 13),
-                                decoration: InputDecoration(
-                                  hintText: 'Share a helpful solution...',
-                                  hintStyle: GoogleFonts.outfit(
-                                    fontSize: 13,
-                                    color: Colors.grey,
-                                  ),
-                                  border: InputBorder.none,
-                                  enabledBorder: InputBorder.none,
-                                  focusedBorder: InputBorder.none,
-                                  filled: false,
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    vertical: 10,
+                      ValueListenableBuilder<TextEditingValue>(
+                        valueListenable: _solutionController,
+                        builder: (context, value, _) {
+                          final text = value.text;
+                          final hasFormatting = RegExp(
+                            r'[$*#`|]|\\\(|\\\[',
+                          ).hasMatch(text);
+                          // Grow a little while writing so more of the
+                          // answer is visible; long answers scroll inside.
+                          final expanded = _composerFocused ||
+                              _showSymbolPanel ||
+                              text.isNotEmpty;
+                          return Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              if (hasFormatting)
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: TextButton.icon(
+                                    onPressed: _showAnswerPreview,
+                                    icon: const Icon(
+                                      Icons.visibility_outlined,
+                                      size: 16,
+                                    ),
+                                    label: Text(
+                                      'Preview',
+                                      style: GoogleFonts.outfit(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    style: TextButton.styleFrom(
+                                      visualDensity: VisualDensity.compact,
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                      ),
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          GestureDetector(
-                            onTap: _isSubmittingSolution
-                                ? null
-                                : () => _submitSolution(doubtId),
-                            child: CircleAvatar(
-                              radius: 20,
-                              backgroundColor: Theme.of(
-                                context,
-                              ).colorScheme.primary,
-                              child: _isSubmittingSolution
-                                  ? const SizedBox(
-                                      width: 16,
-                                      height: 16,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        valueColor: AlwaysStoppedAnimation(
-                                          Colors.white,
+                              Row(
+                                // Buttons stay pinned to the top of the box
+                                // however tall the text gets.
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  IconButton(
+                                    icon: Icon(
+                                      Icons.add_a_photo_outlined,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.primary,
+                                    ),
+                                    onPressed:
+                                        _showSolutionImageSourceBottomSheet,
+                                  ),
+                                  Expanded(
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        color: isDark
+                                            ? const Color(0xFF2A2A2A)
+                                            : Colors.grey[100],
+                                        borderRadius: BorderRadius.circular(
+                                          20,
                                         ),
                                       ),
-                                    )
-                                  : const Icon(
-                                      Icons.send_rounded,
-                                      size: 16,
-                                      color: Colors.white,
+                                      padding: const EdgeInsets.only(
+                                        left: 2,
+                                        right: 14,
+                                      ),
+                                      child: Row(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          IconButton(
+                                            tooltip: _showSymbolPanel
+                                                ? 'Keyboard'
+                                                : 'Emoji, symbols & equations',
+                                            visualDensity:
+                                                VisualDensity.compact,
+                                            icon: Icon(
+                                              _showSymbolPanel
+                                                  ? Icons.keyboard_outlined
+                                                  : Icons
+                                                        .emoji_emotions_outlined,
+                                              size: 22,
+                                              color: _showSymbolPanel
+                                                  ? Theme.of(
+                                                      context,
+                                                    ).colorScheme.primary
+                                                  : Colors.grey,
+                                            ),
+                                            onPressed: _toggleSymbolPanel,
+                                          ),
+                                          Expanded(
+                                            child: TextField(
+                                              controller: _solutionController,
+                                              focusNode: _solutionFocus,
+                                              minLines: expanded ? 3 : 1,
+                                              maxLines: 8,
+                                              keyboardType:
+                                                  TextInputType.multiline,
+                                              textCapitalization:
+                                                  TextCapitalization.sentences,
+                                              inputFormatters: const [
+                                                AnswerTextFormatter(),
+                                              ],
+                                              style: GoogleFonts.outfit(
+                                                fontSize: 13.5,
+                                                height: 1.35,
+                                              ),
+                                              decoration: InputDecoration(
+                                                hintText:
+                                                    'Share a helpful solution...',
+                                                hintStyle: GoogleFonts.outfit(
+                                                  fontSize: 13,
+                                                  color: Colors.grey,
+                                                ),
+                                                border: InputBorder.none,
+                                                enabledBorder: InputBorder.none,
+                                                focusedBorder: InputBorder.none,
+                                                filled: false,
+                                                isDense: true,
+                                                contentPadding:
+                                                    const EdgeInsets.symmetric(
+                                                      vertical: 12,
+                                                    ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                            ),
-                          ),
-                        ],
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 2),
+                                    child: GestureDetector(
+                                      onTap: _isSubmittingSolution
+                                          ? null
+                                          : () => _submitSolution(doubtId),
+                                      child: CircleAvatar(
+                                        radius: 20,
+                                        backgroundColor: Theme.of(
+                                          context,
+                                        ).colorScheme.primary,
+                                        child: _isSubmittingSolution
+                                            ? const SizedBox(
+                                                width: 16,
+                                                height: 16,
+                                                child:
+                                                    CircularProgressIndicator(
+                                                      strokeWidth: 2,
+                                                      valueColor:
+                                                          AlwaysStoppedAnimation(
+                                                            Colors.white,
+                                                          ),
+                                                    ),
+                                              )
+                                            : const Icon(
+                                                Icons.send_rounded,
+                                                size: 16,
+                                                color: Colors.white,
+                                              ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          );
+                        },
                       ),
                     ],
                   ),
                 ),
               ),
+              if (_showSymbolPanel)
+                SafeArea(
+                  top: false,
+                  child: SymbolPanel(controller: _solutionController),
+                ),
             ],
           );
         },
