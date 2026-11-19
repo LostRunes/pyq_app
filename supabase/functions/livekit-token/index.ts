@@ -74,6 +74,20 @@ Deno.serve(async (req: Request) => {
       });
     }
 
+    // Members the host removed from this room cannot rejoin the call.
+    const { data: ban } = await supabase
+      .from('room_bans')
+      .select('user_id')
+      .eq('room_id', room_id)
+      .eq('user_id', identity)
+      .maybeSingle();
+    if (ban) {
+      return new Response(JSON.stringify({ error: 'You were removed from this room' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const displayName =
       typeof name === 'string' && name.trim() ? name.trim().slice(0, 64) : identity;
 

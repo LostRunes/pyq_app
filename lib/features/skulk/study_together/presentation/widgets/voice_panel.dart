@@ -3,16 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../providers/study_together_providers.dart';
 import 'speaking_indicator.dart';
+import 'room_moderation.dart';
 import '../../../../../core/providers/user_profile_provider.dart';
 import '../../data/models/study_room.dart';
 
 class VoicePanel extends ConsumerWidget {
   final StudyRoom room;
-  
-  const VoicePanel({
-    super.key,
-    required this.room,
-  });
+
+  const VoicePanel({super.key, required this.room});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -20,9 +18,10 @@ class VoicePanel extends ConsumerWidget {
     final theme = Theme.of(context);
     final voiceState = ref.watch(voiceRoomNotifierProvider);
     final voiceNotifier = ref.read(voiceRoomNotifierProvider.notifier);
-    
+
     final userProfile = ref.watch(userProfileProvider).value;
-    final username = userProfile?['display_name'] ?? userProfile?['username'] ?? 'User';
+    final username =
+        userProfile?['display_name'] ?? userProfile?['username'] ?? 'User';
 
     // If we're disconnected or in a different room, show the Join Voice bar
     if (voiceState.activeRoomId != roomId) {
@@ -70,7 +69,9 @@ class VoicePanel extends ConsumerWidget {
                       'Study together with real-time audio',
                       style: GoogleFonts.outfit(
                         fontSize: 11,
-                        color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
+                        color: theme.colorScheme.onSurface.withValues(
+                          alpha: 0.55,
+                        ),
                       ),
                     ),
                   ],
@@ -82,7 +83,10 @@ class VoicePanel extends ConsumerWidget {
                 },
                 borderRadius: BorderRadius.circular(12),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: theme.colorScheme.primary,
                     borderRadius: BorderRadius.circular(12),
@@ -249,58 +253,75 @@ class VoicePanel extends ConsumerWidget {
               spacing: 10,
               runSpacing: 10,
               children: participants.map((p) {
-                return Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: p.isSpeaking
-                        ? const Color(0xFF10B981).withValues(alpha: 0.08)
-                        : theme.colorScheme.surface,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: p.isSpeaking
-                          ? const Color(0xFF10B981).withValues(alpha: 0.4)
-                          : theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
-                      width: 1.5,
-                    ),
+                // Tap another speaker to report them (or remove them, if
+                // you host this custom room).
+                return GestureDetector(
+                  onTap: () => showRoomMemberActions(
+                    context,
+                    ref,
+                    room: room,
+                    userId: p.identity,
+                    displayName: p.name,
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      SpeakingIndicator(
-                        isSpeaking: p.isSpeaking,
-                        child: CircleAvatar(
-                          radius: 10,
-                          backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1),
-                          child: Text(
-                            p.name.isNotEmpty ? p.name[0].toUpperCase() : 'U',
-                            style: GoogleFonts.outfit(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: theme.colorScheme.primary,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: p.isSpeaking
+                          ? const Color(0xFF10B981).withValues(alpha: 0.08)
+                          : theme.colorScheme.surface,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: p.isSpeaking
+                            ? const Color(0xFF10B981).withValues(alpha: 0.4)
+                            : theme.colorScheme.outlineVariant.withValues(
+                                alpha: 0.4,
+                              ),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SpeakingIndicator(
+                          isSpeaking: p.isSpeaking,
+                          child: CircleAvatar(
+                            radius: 10,
+                            backgroundColor: theme.colorScheme.primary
+                                .withValues(alpha: 0.1),
+                            child: Text(
+                              p.name.isNotEmpty ? p.name[0].toUpperCase() : 'U',
+                              style: GoogleFonts.outfit(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: theme.colorScheme.primary,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        p.name,
-                        style: GoogleFonts.outfit(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: p.isSpeaking
-                              ? const Color(0xFF10B981)
-                              : theme.colorScheme.onSurface,
+                        const SizedBox(width: 6),
+                        Text(
+                          p.name,
+                          style: GoogleFonts.outfit(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: p.isSpeaking
+                                ? const Color(0xFF10B981)
+                                : theme.colorScheme.onSurface,
+                          ),
                         ),
-                      ),
-                      if (p.isMuted) ...[
-                        const SizedBox(width: 4),
-                        Icon(
-                          Icons.mic_off_rounded,
-                          size: 11,
-                          color: Colors.red[400],
-                        ),
+                        if (p.isMuted) ...[
+                          const SizedBox(width: 4),
+                          Icon(
+                            Icons.mic_off_rounded,
+                            size: 11,
+                            color: Colors.red[400],
+                          ),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
                 );
               }).toList(),

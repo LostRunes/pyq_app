@@ -157,6 +157,63 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen>
     _scrollController.addListener(_onScroll);
     _messageController.addListener(_onCursorChanged);
     _fetchUsers();
+    _watchRemoval();
+  }
+
+  RealtimeChannel? _banChannel;
+  bool _removedHandled = false;
+
+  /// Closes the room if the host removes this user (now or earlier).
+  void _watchRemoval() {
+    final client = Supabase.instance.client;
+    final me = client.auth.currentUser?.id;
+    if (me == null) return;
+    final roomId = widget.room.id;
+
+    client
+        .from('room_bans')
+        .select('room_id')
+        .eq('room_id', roomId)
+        .eq('user_id', me)
+        .maybeSingle()
+        .then((row) {
+          if (row != null) _onRemovedFromRoom();
+        })
+        .catchError((_) {});
+
+    _banChannel = client
+        .channel('room-ban-$roomId-$me')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: 'room_bans',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'user_id',
+            value: me,
+          ),
+          callback: (payload) {
+            if (payload.newRecord['room_id']?.toString() == roomId) {
+              _onRemovedFromRoom();
+            }
+          },
+        )
+        .subscribe();
+  }
+
+  void _onRemovedFromRoom() {
+    if (_removedHandled || !mounted) return;
+    _removedHandled = true;
+    final voice = ref.read(voiceRoomNotifierProvider);
+    if (voice.activeRoomId == widget.room.id) {
+      ref.read(voiceRoomNotifierProvider.notifier).leaveVoice();
+    }
+    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+      SnackBar(
+        content: Text('You were removed from "${widget.room.name}" by the host.'),
+      ),
+    );
+    _popOnce();
   }
 
   @override
@@ -218,6 +275,9 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen>
   @override
   void dispose() {
     appRouteObserver.unsubscribe(this);
+    if (_banChannel != null) {
+      Supabase.instance.client.removeChannel(_banChannel!);
+    }
     _typingTimer?.cancel();
     _messageController.removeListener(_onCursorChanged);
     _messageController.dispose();
@@ -847,6 +907,7 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen>
                               message: msg,
                               dragOffset: offset,
                               isPinned: _pinnedMessageId == msg.id,
+                              room: activeRoom,
                               onPinToggle: () => _pinnedMessageId == msg.id ? _unpinMessage() : _pinMessage(msg),
                               onReply: () {
                                 setState(() {
@@ -907,6 +968,7 @@ class _StudyRoomChatScreenState extends ConsumerState<StudyRoomChatScreen>
                             message: msg,
                             dragOffset: offset,
                             isPinned: _pinnedMessageId == msg.id,
+                            room: activeRoom,
                             onPinToggle: () => _pinnedMessageId == msg.id ? _unpinMessage() : _pinMessage(msg),
                             onReply: () {
                               setState(() {

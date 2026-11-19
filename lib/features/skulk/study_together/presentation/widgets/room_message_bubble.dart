@@ -7,6 +7,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter/gestures.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../data/models/room_message.dart';
+import '../../data/models/study_room.dart';
+import 'room_moderation.dart';
 import '../../../presentation/providers/block_providers.dart';
 
 class RoomMessageBubble extends ConsumerStatefulWidget {
@@ -21,6 +23,9 @@ class RoomMessageBubble extends ConsumerStatefulWidget {
   final bool isPinned;
   final VoidCallback? onPinToggle;
 
+  /// Room the message belongs to; enables Report/Remove user actions.
+  final StudyRoom? room;
+
   const RoomMessageBubble({
     super.key,
     required this.message,
@@ -32,6 +37,7 @@ class RoomMessageBubble extends ConsumerStatefulWidget {
     this.onReact,
     this.isPinned = false,
     this.onPinToggle,
+    this.room,
   });
 
   @override
@@ -676,6 +682,37 @@ class _RoomMessageBubbleState extends ConsumerState<RoomMessageBubble> with Sing
                     _showReportConfirmation(context);
                   },
                 ),
+                ListTile(
+                  leading: const Icon(Icons.flag_outlined, color: Colors.redAccent),
+                  title: Text('Report User', style: GoogleFonts.outfit(color: Colors.redAccent)),
+                  onTap: () {
+                    Navigator.pop(context);
+                    showReportUserSheet(
+                      this.context,
+                      userId: widget.message.userId,
+                      displayName: widget.message.senderDisplayName ??
+                          widget.message.senderUsername ??
+                          '',
+                      roomId: widget.room?.id ?? widget.message.roomId,
+                    );
+                  },
+                ),
+                if (isRoomHost(widget.room))
+                  ListTile(
+                    leading: const Icon(Icons.person_remove_alt_1_rounded, color: Colors.redAccent),
+                    title: Text('Remove from Room', style: GoogleFonts.outfit(color: Colors.redAccent)),
+                    onTap: () {
+                      Navigator.pop(context);
+                      confirmAndRemoveFromRoom(
+                        this.context,
+                        room: widget.room!,
+                        userId: widget.message.userId,
+                        displayName: widget.message.senderDisplayName ??
+                            widget.message.senderUsername ??
+                            '',
+                      );
+                    },
+                  ),
                 ListTile(
                   leading: const Icon(Icons.block_rounded, color: Colors.redAccent),
                   title: Text('Block User', style: GoogleFonts.outfit(color: Colors.redAccent)),
