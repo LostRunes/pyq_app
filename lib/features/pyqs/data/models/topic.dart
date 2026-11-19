@@ -14,7 +14,10 @@ class Topic extends HiveObject {
   final String? summary;
   
   // Recalculated dynamically at runtime, so we do not store it in Hive.
+  // importanceScore counts every PYQ (Endsem view); midsemImportanceScore
+  // counts only midsem papers.
   double importanceScore;
+  double midsemImportanceScore;
 
   Topic({
     required this.id,
@@ -22,7 +25,11 @@ class Topic extends HiveObject {
     required this.name,
     this.summary,
     this.importanceScore = 0.0,
+    this.midsemImportanceScore = 0.0,
   });
+
+  double scoreFor({required bool midsem}) =>
+      midsem ? midsemImportanceScore : importanceScore;
 
   factory Topic.fromJson(Map<String, dynamic> json) => Topic(
     id: json['id'] as String,

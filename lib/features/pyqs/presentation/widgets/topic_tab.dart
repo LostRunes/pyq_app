@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../shared/widgets/segmented_toggle.dart';
 import '../../../../services/pdf_service.dart';
+import '../../../../core/providers/prefs_provider.dart';
 import '../../data/models/topic.dart';
 import '../providers/pyq_providers.dart';
 import 'topic_card.dart';
@@ -19,6 +20,19 @@ class TopicTab extends ConsumerStatefulWidget {
 class _TopicTabState extends ConsumerState<TopicTab> {
   String _sortMode = 'Sequential'; // Default to Sequential
 
+  // Exam the importance ranking is for; shared key with desktop's
+  // localStorage (focus_fox_importance_exam). Stored per device.
+  static const _examPrefKey = 'focus_fox_importance_exam';
+  late bool _midsem =
+      ref.read(sharedPrefsProvider).getString(_examPrefKey) == 'midsem';
+
+  void _setExam(bool midsem) {
+    setState(() => _midsem = midsem);
+    ref
+        .read(sharedPrefsProvider)
+        .setString(_examPrefKey, midsem ? 'midsem' : 'endsem');
+  }
+
   @override
   Widget build(BuildContext context) {
     final topicsAsync = ref.watch(dashboardTopicsProvider(widget.subjectId));
@@ -31,18 +45,20 @@ class _TopicTabState extends ConsumerState<TopicTab> {
 
         // Sort copy of topics based on current sort mode
         final List<Topic> displayedTopics = List<Topic>.from(topics);
+        // Sequential view keeps the overall (Endsem) bars, as before.
+        final midsem = _sortMode == 'Importance' && _midsem;
         if (_sortMode == 'Importance') {
           displayedTopics.sort(
-            (a, b) => b.importanceScore.compareTo(a.importanceScore),
+            (a, b) => b
+                .scoreFor(midsem: midsem)
+                .compareTo(a.scoreFor(midsem: midsem)),
           );
         }
 
-        // Calculate max score for normalization
-        final maxScore = topics.isEmpty
-            ? 1.0
-            : topics
-                  .map((t) => t.importanceScore)
-                  .reduce((a, b) => a > b ? a : b);
+        // Calculate max score for normalization (in the current exam view)
+        final maxScore = topics
+            .map((t) => t.scoreFor(midsem: midsem))
+            .reduce((a, b) => a > b ? a : b);
 
         return ListView(
           padding: const EdgeInsets.all(20),
@@ -64,11 +80,22 @@ class _TopicTabState extends ConsumerState<TopicTab> {
                 });
               },
             ),
+            if (_sortMode == 'Importance') ...[
+              const SizedBox(height: 10),
+              SegmentedToggle(
+                options: const ['Midsem', 'Endsem'],
+                selectedOption: _midsem ? 'Midsem' : 'Endsem',
+                onSelected: (val) => _setExam(val == 'Midsem'),
+              ),
+            ],
             const SizedBox(height: 16),
             ...displayedTopics.map((topic) {
               final progress = maxScore == 0
                   ? 0.0
-                  : (topic.importanceScore / maxScore).clamp(0.0, 1.0);
+                  : (topic.scoreFor(midsem: midsem) / maxScore).clamp(
+                      0.0,
+                      1.0,
+                    );
               return TopicCard(
                 topic: topic,
                 importanceProgress: progress,

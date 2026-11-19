@@ -76,7 +76,7 @@ class PyqRepository {
       // 3. Fetch all question_pyq_map with source years for these questions
       final qpmRes = await _supabase
           .from('question_pyq_map')
-          .select('question_id, pyq_sources(year)')
+          .select('question_id, pyq_sources(year, exam_type)')
           .filter('question_id', 'in', allQuestionIds);
       qpmList = qpmRes as List;
     } catch (e) {
@@ -85,7 +85,31 @@ class PyqRepository {
       return topics;
     }
 
-    // 4. Calculate scores for each topic
+    // 4. Calculate scores for each topic, for both exam views.
+    //    score = questions*2 + unique_years*3 + pyq_rows
+    //    Endsem view: every PYQ row (midsem + endsem); questions = all
+    //    questions linked to the topic. Midsem view: only rows from midsem
+    //    papers; questions = those with at least one midsem row.
+    Map? sourceOf(dynamic qpm) {
+      final source = qpm['pyq_sources'];
+      if (source is Map) return source;
+      if (source is List && source.isNotEmpty && source[0] is Map) {
+        return source[0] as Map;
+      }
+      return null;
+    }
+
+    bool isMidsem(dynamic qpm) =>
+        sourceOf(qpm)?['exam_type']?.toString().trim().toLowerCase() ==
+        'midsem';
+
+    int uniqueYears(Iterable rows) => rows
+        .map((qpm) => sourceOf(qpm)?['year'])
+        .where((y) => y != null)
+        .map((y) => y.toString())
+        .toSet()
+        .length;
+
     for (var topic in topics) {
       final topicQuestionIds = qtList
           .where((qt) => qt['topic_id'] == topic.id)
@@ -95,24 +119,16 @@ class PyqRepository {
       final relatedPyqs = qpmList
           .where((qpm) => topicQuestionIds.contains(qpm['question_id']))
           .toList();
+      topic.importanceScore = topicQuestionIds.length * 2.0 +
+          uniqueYears(relatedPyqs) * 3.0 +
+          relatedPyqs.length;
 
-      final totalQuestions = topicQuestionIds.length;
-      final totalPyqs = relatedPyqs.length;
-      final uniqueYears = relatedPyqs
-          .map((qpm) {
-            final source = qpm['pyq_sources'];
-            if (source is Map) return source['year'];
-            if (source is List && source.isNotEmpty) return source[0]['year'];
-            return null;
-          })
-          .where((y) => y != null)
-          .map((y) => y.toString())
-          .toSet()
-          .length;
-
-      // Formula: score = (questions * 2) + (unique_years * 3) + (total_pyqs)
-      double score = (totalQuestions * 2.0) + (uniqueYears * 3.0) + totalPyqs;
-      topic.importanceScore = score;
+      final midsemPyqs = relatedPyqs.where(isMidsem).toList();
+      final midsemQuestions =
+          midsemPyqs.map((qpm) => qpm['question_id']).toSet().length;
+      topic.midsemImportanceScore = midsemQuestions * 2.0 +
+          uniqueYears(midsemPyqs) * 3.0 +
+          midsemPyqs.length;
     }
 
     return topics;
